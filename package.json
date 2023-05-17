@@ -1,0 +1,41 @@
+{
+  "name": "backend-server",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server",
+    "start": "node server",
+    "pm2": "pm2 start npm --name 'backend' -- start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  },
+  "dependencies": {
+    "@apollo/server": "^4.5.0",
+    "@prisma/client": "^4.11.0",
+    "apollo-server": "^3.11.1",
+    "apollo-server-express": "^3.12.0",
+    "aws-sdk": "^2.1342.0",
+    "axios": "^1.3.4",
+    "bcryptjs": "^2.4.3",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "graphql": "^16.6.0",
+    "graphql-upload": "^16.0.2",
+    "jsonwebtoken": "^9.0.0",
+    "mailgun-js": "^0.22.0",
+    "multer": "^1.4.5-lts.1",
+    "multer-s3": "^3.0.1",
+    "prisma": "^4.11.0"
+  },
+  "engines": {
+    "node": "18.15.0",
+    "npm": "9.5.0"
+  }
+}

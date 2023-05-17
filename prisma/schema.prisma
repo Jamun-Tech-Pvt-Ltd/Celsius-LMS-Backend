@@ -1,0 +1,314 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model jmkcrsinfo {
+  crs_id          Int          @id @default(autoincrement())
+  crs_name        String       @db.VarChar(200)
+  crs_desc        String       @db.VarChar(1000)
+  crs_duration    Int
+  crs_rate        Int
+  crs_cat         String?      @db.VarChar(1000)
+  crs_cat_id      String?      @db.VarChar(1000)
+  crs_con         String?      @db.VarChar(1000)
+  crs_con_id      String?      @db.VarChar(1000)
+  crs_ins         String       @db.VarChar(200)
+  crs_type        String       @db.VarChar(200)
+  crs_nxt_st_date DateTime?    @db.Date
+  crs_image       String?      @db.VarChar(1000)
+  crs_image_key   String?      @db.VarChar(1000)
+  jmkcrstest      jmkcrstest[]
+  jmkstdinfo      jmkstdinfo[]
+  jmkvidinfo      jmkvidinfo[]
+}
+
+model jmkstdinfo {
+  std_id            Int            @id @default(autoincrement())
+  std_fname         String         @db.VarChar(20)
+  std_mname         String?        @db.VarChar(20)
+  std_lname         String         @db.VarChar(20)
+  std_email         String         @db.VarChar(30)
+  std_mobile        String         @db.VarChar(15)
+  std_join_dt       DateTime?      @db.Date
+  std_birth_dt      DateTime?      @db.Date
+  std_high_ql       String?        @db.VarChar(40)
+  crs_id            Int?
+  std_status        Int?
+  std_paidup        Int?
+  std_due           Int?
+  std_password      String         @db.VarChar(16)
+  crs_complete      Boolean?       @default(false)
+  crs_complete_date DateTime?      @db.Date
+  std_remark        String?        @db.VarChar(1000)
+  crs_ecp_st_d      DateTime?      @db.Date
+  std_pic           String?        @db.VarChar(200)
+  std_pic_key       String?        @db.VarChar(100)
+  std_verifyed      Boolean        @default(false)
+  jmkgrvinfo        jmkgrvinfo[]
+  jmkcrsinfo        jmkcrsinfo?    @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
+  jmkstdreview      jmkstdreview[]
+
+  @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
+}
+
+model jmkstdreview {
+  std_id        Int
+  std_rate      String     @db.VarChar(200)
+  std_rate_date DateTime   @db.Date
+  serial        Int        @id @default(autoincrement())
+  jmkstdinfo    jmkstdinfo @relation(fields: [std_id], references: [std_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkstdinfo_std_id_fk")
+
+  @@index([std_id], map: "jmkstdinfo_std_id_fk")
+}
+
+model sp_cl_info {
+  client_id      Int       @id @default(autoincrement())
+  client_fname   String?   @db.VarChar(20)
+  client_mname   String?   @db.VarChar(20)
+  client_lname   String?   @db.VarChar(20)
+  client_tech1   String?   @db.VarChar(20)
+  client_tech2   String?   @db.VarChar(20)
+  client_tech3   String?   @db.VarChar(20)
+  client_otechs  String?   @db.VarChar(100)
+  dt_start       DateTime? @db.Date
+  client_email   String?   @db.VarChar(30)
+  client_contact String?   @db.VarChar(20)
+}
+
+model sp_dev_connect {
+  connect_id   Int       @id @default(autoincrement())
+  developer_id Int?
+  client_id    Int?
+  start_time   DateTime? @db.DateTime(0)
+  end_time     DateTime? @db.DateTime(0)
+}
+
+model jmkvidinfo {
+  vid_id      Int        @id @default(autoincrement())
+  vid_name    String     @db.VarChar(100)
+  vid_loc     String?    @db.VarChar(1000)
+  crs_id      Int
+  vid_date    DateTime   @db.Date
+  vid_summary String?    @db.VarChar(10000)
+  jmkcrsinfo  jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "crs_id_vid_fk")
+
+  @@index([crs_id], map: "crs_id_vid_fk")
+}
+
+model jmkgrvinfo {
+  grv_id     Int        @id @default(autoincrement())
+  std_id     Int
+  grv_date   DateTime   @db.Date
+  grv_type   String     @db.VarChar(30)
+  grv_desc   String     @db.VarChar(200)
+  grv_rate   String     @db.VarChar(30)
+  jmkstdinfo jmkstdinfo @relation(fields: [std_id], references: [std_id], onDelete: NoAction, onUpdate: NoAction, map: "grv_std_fk")
+
+  @@index([std_id], map: "grv_std_fk")
+}
+
+model jmkcontact {
+  serial   Int     @id @default(autoincrement())
+  cmobile  String? @db.VarChar(15)
+  cemail   String? @db.VarChar(30)
+  csubject String? @db.VarChar(50)
+  cmessage String? @db.VarChar(200)
+  cfname   String? @db.VarChar(200)
+  clname   String? @db.VarChar(200)
+}
+
+model jmkreview {
+  serial Int      @id @default(autoincrement())
+  rate   String   @db.VarChar(200)
+  date   DateTime @db.Date
+}
+
+model jmkstddemo {
+  serial       Int       @id @default(autoincrement())
+  std_fname    String?   @db.VarChar(20)
+  std_mname    String?   @db.VarChar(20)
+  std_lname    String?   @db.VarChar(20)
+  std_mobile   String?   @db.VarChar(15)
+  std_email    String?   @db.VarChar(30)
+  std_demo_dt  DateTime? @db.Date
+  std_demo_crs String?   @db.VarChar(200)
+}
+
+model jmkfgpasswd {
+  sr_no            Int       @id @default(autoincrement())
+  std_email        String?   @db.VarChar(30)
+  std_email_status String?   @db.VarChar(1)
+  req_date         DateTime? @db.Date
+}
+
+model jmktrinfo {
+  tr_id         Int       @id @default(autoincrement())
+  tr_fname      String    @db.VarChar(30)
+  tr_mname      String?   @db.VarChar(30)
+  tr_lname      String    @db.VarChar(30)
+  tr_mobile     String?   @db.VarChar(15)
+  tr_email      String?   @db.VarChar(30)
+  tr_city       String?   @db.VarChar(50)
+  tr_country    String?   @db.VarChar(50)
+  tr_main_tech1 String?   @db.VarChar(30)
+  tr_main_tech2 String?   @db.VarChar(30)
+  tr_main_tech3 String?   @db.VarChar(30)
+  tr_dob        DateTime? @db.Date
+  tr_verifyed   Boolean   @default(false)
+  tr_password   String    @db.VarChar(16)
+  tr_resume     String?   @db.VarChar(100)
+  tr_github     String?   @db.VarChar(50)
+  tr_linkedin   String?   @db.VarChar(50)
+  tr_resume_key String?   @db.VarChar(100)
+}
+
+model jmkstdcrsinfo {
+  serial            Int       @id @default(autoincrement())
+  crs_id            Int?
+  crs_start_dt      DateTime? @db.Date
+  std_id            Int?
+  std_crs_verirfy   Boolean   @default(false)
+  discount          Int?
+  amt_paid          Int?
+  amt_due           Int?
+  crs_complete      Boolean?  @default(false)
+  crs_complete_date DateTime? @db.Date
+}
+
+model jmkquesans {
+  ques_id  Int     @id @default(autoincrement())
+  question String? @db.VarChar(100)
+  ans1     String? @db.VarChar(100)
+  ans2     String? @db.VarChar(100)
+  ans3     String? @db.VarChar(100)
+  ans4     String? @db.VarChar(100)
+  rtans    String? @db.VarChar(100)
+  mod_id   Int?
+}
+
+model jmkstdtestset {
+  serial        Int     @id @default(autoincrement())
+  std_id        Int
+  crs_id        Int
+  test_category String  @db.VarChar(50)
+  isComplete    Boolean @default(false)
+  timer         Int
+}
+
+model jmkstdtestqa {
+  qserial         Int     @id @default(autoincrement())
+  ques_id         Int
+  std_ans         String? @db.VarChar(100)
+  std_test_set_id Int
+}
+
+model jmkstdvidnote {
+  serial   Int     @id @default(autoincrement())
+  std_id   Int?
+  vid_id   Int?
+  vid_note String? @db.VarChar(10000)
+}
+
+model jmkcontactb {
+  serial    Int     @id @default(autoincrement())
+  bfname    String  @db.VarChar(20)
+  blname    String  @db.VarChar(20)
+  bemail    String  @db.VarChar(30)
+  bcompname String  @db.VarChar(100)
+  bjobrole  String  @db.VarChar(30)
+  bmobile   String  @db.VarChar(20)
+  bgovnpr   String? @db.VarChar(10)
+  bcompsize String? @db.VarChar(20)
+  blrnum    String? @db.VarChar(20)
+  bcountry  String? @db.VarChar(50)
+  bneeds    String? @db.VarChar(200)
+}
+
+model jmkcrstest {
+  serial          Int        @id @default(autoincrement())
+  crs_id          Int
+  crs_test_con_id String     @db.VarChar(100)
+  crs_test_con    String     @db.VarChar(1000)
+  jmkcrsinfo      jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsinfo_jmkcrstest_crs_id_fk")
+
+  @@index([crs_id], map: "jmkcrsinfo_jmkcrstest_crs_id_fk")
+}
+
+model jmkcrscontents {
+  serial       Int       @id @default(autoincrement())
+  crs_id       Int?
+  content      String?   @db.VarChar(2000)
+  content_date DateTime? @db.Date
+}
+
+model jmktrcrsinfo {
+  serial Int  @id @default(autoincrement())
+  tr_id  Int?
+  crs_id Int?
+}
+
+model jmktrloginfo {
+  serial     Int       @id @default(autoincrement())
+  tr_id      Int?
+  login_date DateTime? @db.DateTime(0)
+}
+
+model jmkcrsovw {
+  crs_con_id      Int     @id @default(autoincrement())
+  crs_ovw_content String? @db.VarChar(2000)
+}
+
+model jmkuserinfo {
+  usr_id       Int     @id @default(autoincrement())
+  usr_code     String? @db.VarChar(10)
+  usr_email    String? @db.VarChar(30)
+  usr_password String? @db.VarChar(20)
+  usr_role     String? @default("admin") @db.VarChar(20)
+}
+
+model jmkdevinfo {
+  developer_id                 Int       @id @default(autoincrement())
+  developer_fname              String?   @db.VarChar(20)
+  developer_mname              String?   @db.VarChar(20)
+  developer_lname              String?   @db.VarChar(20)
+  developer_high_qualification String?   @db.VarChar(100)
+  developer_tech1              String?   @db.VarChar(20)
+  developer_tech2              String?   @db.VarChar(20)
+  developer_tech3              String?   @db.VarChar(20)
+  developer_email              String?   @db.VarChar(20)
+  developer_phone              String?   @db.VarChar(20)
+  developer_country            String?   @db.VarChar(30)
+  developer_tech1_exp          String?   @db.VarChar(20)
+  developer_tech2_exp          String?   @db.VarChar(20)
+  developer_tech3_exp          String?   @db.VarChar(20)
+  developer_company1           String?   @db.VarChar(200)
+  developer_company1_start     DateTime? @db.Date
+  developer_company2           String?   @db.VarChar(200)
+  developer_company2_start     DateTime? @db.Date
+  developer_company2_end       DateTime? @db.Date
+  developer_company1_project   String?   @db.VarChar(200)
+  developer_company2_project   String?   @db.VarChar(200)
+  developer_resume_key         String?   @db.VarChar(200)
+  developer_resume             String?   @db.VarChar(200)
+  developer_password           String?   @db.VarChar(16)
+  developer_type               String?   @db.VarChar(50)
+}
+
+model jmkcrsmodule {
+  mod_id   Int     @id @default(autoincrement())
+  mod_code String? @db.VarChar(20)
+  mod_name String? @db.VarChar(100)
+}
+
+model jmkstdtrfeedback {
+  serial       Int      @id @default(autoincrement())
+  std_id       Int
+  tr_id        Int
+  comment      String   @db.VarChar(2000)
+  content_date DateTime @db.Date
+}
