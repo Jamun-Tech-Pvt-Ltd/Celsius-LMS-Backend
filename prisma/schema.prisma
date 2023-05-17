@@ -22,6 +22,7 @@ model jmkcrsinfo {
   crs_nxt_st_date DateTime?    @db.Date
   crs_image       String?      @db.VarChar(1000)
   crs_image_key   String?      @db.VarChar(1000)
+  cid             String?      @db.VarChar(10)
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]
   jmkvidinfo      jmkvidinfo[]
@@ -49,6 +50,7 @@ model jmkstdinfo {
   std_pic           String?        @db.VarChar(200)
   std_pic_key       String?        @db.VarChar(100)
   std_verifyed      Boolean        @default(false)
+  cid               String?        @db.VarChar(10)
   jmkgrvinfo        jmkgrvinfo[]
   jmkcrsinfo        jmkcrsinfo?    @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
   jmkstdreview      jmkstdreview[]
@@ -311,4 +313,27 @@ model jmkstdtrfeedback {
   tr_id        Int
   comment      String   @db.VarChar(2000)
   content_date DateTime @db.Date
+}
+
+model jmkconsulinfo {
+  serial    Int       @id @default(autoincrement())
+  cfname    String?   @db.VarChar(20)
+  cmname    String?   @db.VarChar(20)
+  clname    String?   @db.VarChar(20)
+  cemail    String?   @db.VarChar(30)
+  cpassword String?   @db.VarChar(20)
+  creg_date DateTime? @db.Date
+  cid       String?   @db.VarChar(10)
+  acc_type  String?   @db.VarChar(20)
+}
+
+model jmkconsuluserinfo {
+  serial     Int     @id @default(autoincrement())
+  cufname    String? @db.VarChar(20)
+  cumname    String? @db.VarChar(20)
+  culname    String? @db.VarChar(20)
+  cu_role    String? @db.VarChar(20)
+  cuemail    String? @db.VarChar(30)
+  cupassword String? @db.VarChar(20)
+  cid        String? @db.VarChar(10)
 }
