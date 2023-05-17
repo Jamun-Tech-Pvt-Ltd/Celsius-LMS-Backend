@@ -56,11 +56,11 @@ const typeDefs = gql`
       developer_password: String!
       developer_country: String!
       developer_tech1: String!
-      developer_tech2: String!
-      developer_tech3: String!
+      developer_tech2: String
+      developer_tech3: String
       developer_tech1_exp: String!
-      developer_tech2_exp: String!
-      developer_tech3_exp: String!
+      developer_tech2_exp: String
+      developer_tech3_exp: String
       developer_resume: Upload
       developer_company1: String!
       developer_company1_project: String!
