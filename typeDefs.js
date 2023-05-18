@@ -109,6 +109,25 @@ const typeDefs = gql`
       tr_linkedin: String
       tr_resume: Upload
    }
+   input updateTrainerFromDashboard {
+      tr_id: Int!
+      tr_fname: String!
+      tr_mname: String
+      tr_lname: String!
+      tr_mobile:String
+      tr_email: String
+      tr_city:String
+      tr_country: String
+      tr_main_tech1:String
+      tr_main_tech2: String
+      tr_main_tech3:String
+      tr_dob: String
+      tr_verifyed:Boolean!
+      tr_password:String!
+      tr_resume:String
+      tr_github:String
+      tr_linkedin:String
+   }
 
    input demoRequestInput {
       std_fname: String!
@@ -657,7 +676,7 @@ const typeDefs = gql`
       getstudentCourseByIdForAdmin(serial:Int!):UserCourse
 
       getTrainerDataForAdmin:[AdminTrainer]
-      getTrainerByIdForAdmin(std_id:Int!):AdminTrainer
+      getTrainerByIdForAdmin(tr_id:Int!):AdminTrainer
 
    }
 
@@ -693,6 +712,7 @@ const typeDefs = gql`
       signupTrainer(data:signupTrainerInput!):Token
       signinTrainer(data:signinTrainerInput!):Token
       updateTrainer(data:updateTrainerInput):Trainer!
+      updateTrainerFromDashboard(data:updateTrainerFromDashboard):String!
 
       studentVideoNoteUpdate(data:studentVideoNoteUpdateInput):VideoNote!
       updateStudentAns(data:[updateStudentAnsInput]):String!
