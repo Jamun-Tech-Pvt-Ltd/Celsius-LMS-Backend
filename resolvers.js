@@ -821,6 +821,21 @@ const resolvers = {
             if (!newTrainer) throw new Error("something went wrong!!")
             return newTrainer
         },
+        updateTrainerFromDashboard: async (_, { data }, { userId, role }) => {
+            const access = ['admin']
+            if (!userId) throw new ForbiddenError('invalid token');
+            const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
+            if (!admin) throw new AuthenticationError("invalid admin")
+            if (!access.includes(admin.usr_role)) throw new ForbiddenError('You dont have access to update');
+            const trainer = await prisma.jmktrinfo.update({
+                data: { ...data },
+                where: { tr_id: parseInt(data.tr_id) }
+            })
+            if (!trainer) throw new AuthenticationError("Something went wrong")
+
+            return 'success';
+        },
+
         demoRequest: async (_, { data }) => {
             const demoRequest = await prisma.jmkstddemo.create({
                 data: { ...data }
