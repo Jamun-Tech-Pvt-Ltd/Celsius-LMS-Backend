@@ -1,8 +1,11 @@
 import { gql } from 'apollo-server-express'
+import { consultancyMutation, consultancyQuery, consultancyQueryTypesAndInputs } from './controller/consultancy/index.js';
 
 const typeDefs = gql`
    scalar Date 
    scalar Upload 
+
+   ${consultancyQueryTypesAndInputs}
 
    input signinTrainerInput{
       email: String!
@@ -616,6 +619,7 @@ const typeDefs = gql`
    }
 
    type Query {
+      ${consultancyQuery}
       me:User!
       trainer:Trainer!
       admin:Admin!
@@ -658,6 +662,10 @@ const typeDefs = gql`
    }
 
    type Mutation {
+
+      ${consultancyMutation}
+
+
       signinUser(userSignIn:SigninInput!):Token
       signupUser(userNew:SignupInput!):Token
       updateUser(data:UpdateUserInput):User
