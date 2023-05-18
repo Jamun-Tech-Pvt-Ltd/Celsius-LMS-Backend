@@ -10,6 +10,7 @@ import contackFormHTML from './utils/contackForm.js'
 import demoRequestHTML from './utils/demoRequest.js'
 import forgotPasswordHTML from './utils/forgotPassword.js'
 import newUserSignupNotification from './utils/newUsersignup.js';
+import { consultancyResolvers } from './controller/consultancy/index.js';
 
 
 const ROLES = ['student', "trainer", 'consultancy']
@@ -515,6 +516,7 @@ const resolvers = {
 
     },
     Mutation: {
+        ...consultancyResolvers,
         // admin 
         signinAdmin: async (_, { data }) => {
             const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_email: data.usr_email } })
@@ -698,9 +700,9 @@ const resolvers = {
                 }
             })
             const token = jwt.sign({ userId: newUser.std_id, role: ROLES[0] }, process.env.JWT_SECRET_KEY)
-            await sendMail(newUser.std_email, 'Successfully Register ', registerrHTML)
-            await sendMail('riwaz@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
-            await sendMail('jenish@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
+            // await sendMail(newUser.std_email, 'Successfully Register ', registerrHTML)
+            // await sendMail('riwaz@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
+            // await sendMail('jenish@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
             return { token };
         },
         signinTrainer: async (_, { data }) => {
@@ -832,13 +834,13 @@ const resolvers = {
         contactForm: async (_, { data }) => {
             const contactForm = await prisma.jmkcontact.create({ data })
             if (!contactForm) throw new ApolloError("Something wrong !!")
-            await sendMail(contactForm.cemail, 'Your Contact Form Has Been Received', contackFormHTML)
+            // await sendMail(contactForm.cemail, 'Your Contact Form Has Been Received', contackFormHTML)
             return 'Success'
         },
         businessForm: async (_, { data }) => {
             const businessForm = await prisma.jmkcontactb.create({ data })
             if (!businessForm) throw new ApolloError("Something wrong !!")
-            await sendMail(businessForm.bemail, 'Your Bussiness Form Has Been Received', contackFormHTML)
+            // await sendMail(businessForm.bemail, 'Your Bussiness Form Has Been Received', contackFormHTML)
             return 'Success'
         },
         forgotPPEmailCheck: async (_, { data }) => {
@@ -848,7 +850,7 @@ const resolvers = {
                 expiresIn: "1d"
             })
             const url = `${process.env.CLIENT_URL}forgotpassword/verification?token=${token}`
-            await sendMail(user.std_email, 'Reset your password !', forgotPasswordHTML(url))
+            // await sendMail(user.std_email, 'Reset your password !', forgotPasswordHTML(url))
             return 'Email send !!';
         },
         forgotPassword: async (_, { data }) => {

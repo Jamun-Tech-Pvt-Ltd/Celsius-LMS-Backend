@@ -1,4 +1,6 @@
+import { AuthenticationError } from "apollo-server-express"
 import prisma from "../../database.js"
+import jwt from 'jsonwebtoken'
 
 
 const ROLES = ['student', "trainer", 'consultancy']
@@ -25,39 +27,58 @@ const consultancyQueryTypesAndInputs = `
     }
 
     input signinConsultancyInput{
-        std_fname: String!
-        std_mname: String
-        std_lname: String!
-        std_mobile: String!
-        std_email: String!
-        std_password: String!
-        std_birth_dt: Date
-        std_remark:String
-        crs_id:Int!,
-        crs_ecp_st_d:Date!
+        cemail: String!
+        cpassword: String!
      }
 
      input signupConsultancyInput{
-        std_fname: String!
+        cfname: String!
+        cmname: String
+        clname: String!
+        cemail: String!
+        cpassword: String!
+        creg_date: Date
+        acc_type:String
      }
 
 
      input updateConsultancyInput{
-        std_fname: String!
+        serial: Int!
+        cfname: String!
+        cmname: String
+        clname: String!
+        cemail: String!
+        cpassword: String!
+        creg_date: Date
+        acc_type:String
      }
 
 
      input signinConsultancyUserInput{
-        std_fname: String!
+        cuemail: String!
+        cupassword: String!
      }
 
      input signupConsultancyUserInput{
-        std_fname: String!
+        cufname: String!
+        cumname: String
+        culname: String!
+        cuemail: String!
+        cupassword: String!
+        cid: Int
+        cu_role:String
      }
 
 
      input updateConsultancyUserInput{
-        std_fname: String!
+        serial: Int!
+        cufname: String!
+        cumname: String
+        culname: String!
+        cuemail: String!
+        cupassword: String!
+        cid: Int
+        cu_role:String
      }
 
 `
@@ -78,18 +99,26 @@ const consultancyMutation = `
     updateConsultancyUser(data:updateConsultancyUserInput):String!
 `
 
-const resolvers = {
+const consultancyResolvers = {
     signupConsultancy: async (_, { data }) => {
         const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { cemail: data.cemail } })
         if (consultancy) throw new AuthenticationError("consultancy already exist with that email")
         const newConsultancy = await prisma.jmkconsulinfo.create({
             data: { ...data }
         })
-        if(!newConsultancy) throw new AuthenticationError("Something went wrong !")
+        if (!newConsultancy) throw new AuthenticationError("Something went wrong !")
         const token = jwt.sign({ userId: newConsultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY)
         // await sendMail(trainer.tr_email, 'Successfully Register ', registerrHTML)
         return { token };
     },
+    signinConsultancy: async (_, { data }) => {
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { cemail: data.cemail } })
+        if (!consultancy) throw new AuthenticationError("invalid credentials")
+        const isMatch = data.cpassword == consultancy.cpassword;
+        if (!isMatch) throw new AuthenticationError("invalid credentials")
+        const token = jwt.sign({ userId: consultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY)
+        return { token };
+    },
 }
 
-export { consultancyQueryTypesAndInputs, consultancyQuery, consultancyMutation, resolvers }
+export { consultancyQueryTypesAndInputs, consultancyQuery, consultancyMutation, consultancyResolvers }
