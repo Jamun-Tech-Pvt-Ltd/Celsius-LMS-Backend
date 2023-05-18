@@ -323,7 +323,6 @@ const resolvers = {
                 return students;
             }
         },
-
         getstudentForAdmin: async (_, args, { userId, role }) => {
             if (!userId) throw new ForbiddenError('invalid token');
             const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
@@ -334,8 +333,7 @@ const resolvers = {
                 for (let index = 0; index < student.length; index++) {
                     const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student[index].crs_id } })
                     if (course) {
-                        const mergestudent = student.map(i => ({ ...i, crs_type: course.crs_type, crs_name: course.crs_name }))
-                        students.push(...mergestudent)
+                        students.push({ ...student[index], crs_type: course.crs_type, crs_name: course.crs_name })
                     }
                 }
                 return students;
