@@ -293,8 +293,8 @@ model jmkdevinfo {
   developer_company2_end       DateTime? @db.Date
   developer_company1_project   String?   @db.VarChar(200)
   developer_company2_project   String?   @db.VarChar(200)
-  developer_resume_key         String?   @db.VarChar(200)
   developer_resume             String?   @db.VarChar(200)
+  developer_resume_key         String?   @db.VarChar(200)
   developer_password           String?   @db.VarChar(16)
   developer_type               String?   @db.VarChar(50)
 }
