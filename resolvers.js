@@ -369,7 +369,7 @@ const resolvers = {
             if (admin.usr_role === 'admin') {
                 //let trainers = [];
                 const trainers = await prisma.jmktrinfo.findMany()
-              
+
                 return trainers;
             }
         },
@@ -379,8 +379,8 @@ const resolvers = {
             if (!admin) throw new AuthenticationError("invalid admin credentials")
             if (admin.usr_role === 'admin') {
                 const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: args.tr_id } })
-             
-                 return trainer
+
+                return trainer
             }
             throw new AuthenticationError("invalid access")
 
@@ -535,9 +535,9 @@ const resolvers = {
                 data: { ...data }
             })
             const token = jwt.sign({ userId: newAdmin.usr_id, role: data.usr_role }, process.env.JWT_SECRET_KEY)
-            // await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
-            // await sendMail('riwaz@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
-            // await sendMail('jenish@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
+            await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
+            await sendMail('manjila@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
+            await sendMail('jenish@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
             return { token };
         },
         updateAdmin: async (_, { data }, { userId, role }) => {
@@ -699,8 +699,10 @@ const resolvers = {
             })
             const token = jwt.sign({ userId: newUser.std_id, role: ROLES[0] }, process.env.JWT_SECRET_KEY)
             await sendMail(newUser.std_email, 'Successfully Register ', registerrHTML)
-            await sendMail('riwaz@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
+            await sendMail('manjila@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
             await sendMail('jenish@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
+            await sendMail('info@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
+
             return { token };
         },
         signinTrainer: async (_, { data }) => {
