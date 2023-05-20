@@ -49,7 +49,34 @@ const typeDefs = gql`
       tr_linkedin: String
    }
 
-   input signinDevInut {
+   input signinDevInput {
+      developer_fname: String!
+      developer_mname: String
+      developer_lname: String!
+      developer_high_qualification: String
+      developer_phone: String!
+      developer_email: String!
+      developer_password: String!
+      developer_country: String!
+      developer_tech1: String!
+      developer_tech2: String
+      developer_tech3: String
+      developer_tech1_exp: String!
+      developer_tech2_exp: String
+      developer_tech3_exp: String
+      developer_resume: Upload
+      developer_company1: String!
+      developer_company1_project: String!
+      developer_company1_start: Date!
+      developer_company2: String
+      developer_company2_start: Date
+      developer_company2_end: Date
+      developer_company2_project: String
+      developer_type: String!
+   }
+
+   input updateDeveloperFromDashboard {
+      developer_id: Int!
       developer_fname: String!
       developer_mname: String
       developer_lname: String!
@@ -590,7 +617,32 @@ const typeDefs = gql`
       tr_resume_key:String
       
    }
-
+   type adminDeveloper {
+      developer_id:ID!
+      developer_fname: String!
+      developer_mname: String
+      developer_lname: String!
+      developer_high_qualification: String
+      developer_phone: String!
+      developer_email: String!
+      developer_password: String!
+      developer_country: String!
+      developer_tech1: String!
+      developer_tech2: String
+      developer_tech3: String
+      developer_tech1_exp: String!
+      developer_tech2_exp: String
+      developer_tech3_exp: String
+      developer_resume: String
+      developer_company1: String!
+      developer_company1_project: String!
+      developer_company1_start: Date!
+      developer_company2: String
+      developer_company2_start: Date
+      developer_company2_end: Date
+      developer_company2_project: String
+      developer_type: String!
+   }
    type StudentTestSet {
       serial: Int!
       std_lname: String!
@@ -678,6 +730,10 @@ const typeDefs = gql`
       getTrainerDataForAdmin:[AdminTrainer]
       getTrainerByIdForAdmin(tr_id:Int!):AdminTrainer
 
+      
+      getDeveloperDataForAdmin:[adminDeveloper]
+      getDeveloperByIdForAdmin(developer_id:Int!):adminDeveloper
+
    }
 
    type Mutation {
@@ -712,12 +768,14 @@ const typeDefs = gql`
       signupTrainer(data:signupTrainerInput!):Token
       signinTrainer(data:signinTrainerInput!):Token
       updateTrainer(data:updateTrainerInput):Trainer!
+
       updateTrainerFromDashboard(data:updateTrainerFromDashboard):String!
+      updateDeveloperFromDashboard(data:updateDeveloperFromDashboard ):String!
 
       studentVideoNoteUpdate(data:studentVideoNoteUpdateInput):VideoNote!
       updateStudentAns(data:[updateStudentAnsInput]):String!
 
-      signupDev(data:signinDevInut):String!
+      signupDev(data:signinDevInput):String!
 
       signinAdmin(data:signinAdminInput!):Token
       signupAdmin(data:signupAdminInput!):Token

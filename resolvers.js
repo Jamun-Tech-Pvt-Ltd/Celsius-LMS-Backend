@@ -394,7 +394,29 @@ const resolvers = {
             throw new AuthenticationError("invalid access")
 
         },
+        getDeveloperDataForAdmin: async (_, args, { userId, role }) => {
+            if (!userId) throw new ForbiddenError('invalid token');
+            const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
+            if (!admin) throw new AuthenticationError("invalid admin credentials")
+            if (admin.usr_role === 'admin') {
+                //let trainers = [];
+                const developers = await prisma.jmkdevinfo.findMany()
 
+                return developers;
+            }
+        },
+        getDeveloperByIdForAdmin: async (_, args, { userId, role }) => {
+            if (!userId) throw new ForbiddenError('invalid token');
+            const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
+            if (!admin) throw new AuthenticationError("invalid admin credentials")
+            if (admin.usr_role === 'admin') {
+                const developer = await prisma.jmkdevinfo.findFirst({ where: { developer_id: args.developer_id } })
+
+                return developer
+            }
+            throw new AuthenticationError("invalid access")
+
+        },
         getTrainerDashboard: async (_, args, { userId, role }) => {
             if (!userId) throw new ForbiddenError('user need to login');
             if (role === ROLES[1]) {
@@ -893,7 +915,19 @@ const resolvers = {
 
             return 'success';
         },
-
+        updateDeveloperFromDashboard: async (_, { data }, { userId, role }) => {
+            const access = ['admin']
+            if (!userId) throw new ForbiddenError('invalid token');
+            const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
+            if (!admin) throw new AuthenticationError("invalid admin")
+            if (!access.includes(admin.usr_role)) throw new ForbiddenError('You dont have access to update');
+            const developer = await prisma.jmkdevinfo.update({
+                data: { ...data },
+                where: { developer_id: parseInt(data.developer_id) }
+            })
+            if (!developer) throw new AuthenticationError("Something went wrong")
+            return 'success';
+        },
         demoRequest: async (_, { data }) => {
             const demoRequest = await prisma.jmkstddemo.create({
                 data: { ...data }
