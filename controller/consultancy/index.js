@@ -12,7 +12,6 @@ const consultancyQueryTypesAndInputs = `
         cmname: String
         cemail: String!
         creg_date: Date
-        cid: String!
         acc_type: String!
     }
 
@@ -23,8 +22,33 @@ const consultancyQueryTypesAndInputs = `
         culname: String!
         cu_role: String!
         cuemail: String!
+        cupassword: String!
         cid: String!
     }
+
+    type ConsultancyStudent {
+        std_id: ID!
+        std_fname: String!
+        std_mname: String
+        std_lname: String!
+        std_email: String!
+        std_pic: String
+        crs_complete: Boolean
+        crs_complete_date: Date
+        std_mobile: String!
+        std_join_dt: Date
+        std_birth_dt: Date
+        crs_type: String!
+        crs_name: String!
+        std_password: String!
+        std_high_ql: String
+        crs_id: String!
+        std_status: String
+        std_paidup: String
+        std_due: String
+        std_verifyed: Boolean!
+        join_courses: [UserCourse]
+     }
 
     input signinConsultancyInput{
         cemail: String!
@@ -71,13 +95,12 @@ const consultancyQueryTypesAndInputs = `
 
 
      input updateConsultancyUserInput{
-        serial: Int!
+        serial: Int
         cufname: String!
         cumname: String
         culname: String!
         cuemail: String!
         cupassword: String!
-        cid: Int
         cu_role:String
      }
 
@@ -86,7 +109,10 @@ const consultancyQueryTypesAndInputs = `
 const consultancyQuery = `
     getConsultancy:Consultancy
     getConsultancyUsers:[ConsultancyUser]
-    getConsultancyUser(user_id:Int!):ConsultancyUser
+    getConsultancyUser(serial:Int!):ConsultancyUser
+    getConsultancyStudents:[ConsultancyStudent]
+    getConsultancyStudent(std_id:Int!):ConsultancyStudent
+
 `
 
 const consultancyMutation = `
@@ -96,7 +122,9 @@ const consultancyMutation = `
 
     signinConsultancyUser(data:signinConsultancyUserInput!):Token
     signupConsultancyUser(data:signupConsultancyUserInput!):Token
+    createConsultancyUser(data:updateConsultancyUserInput):String!
     updateConsultancyUser(data:updateConsultancyUserInput):String!
+    deleteConsultancyUser(serial:Int!):String!
 `
 
 const consultancyResolvers = {
@@ -119,6 +147,140 @@ const consultancyResolvers = {
         const token = jwt.sign({ userId: consultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY)
         return { token };
     },
+    createConsultancyUser: async (_, { data }, { userId, role }) => {
+        if (role === ROLES[2]) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (!consultancy) throw new AuthenticationError("invalid credentials")
+            const usr = await prisma.jmkconsuluserinfo.findFirst({
+                where: {
+                    cuemail: data.cuemail,
+                    cid: userId
+                }
+            })
+            if (usr) throw new AuthenticationError("Email is already register !!")
+            const user = await prisma.jmkconsuluserinfo.create({
+                data: {
+                    ...data,
+                    cid: userId
+                },
+            })
+            if (!user) throw new AuthenticationError("invalid !!")
+            return "success"
+        }
+
+        throw new AuthenticationError("invalid access !!")
+    },
+    updateConsultancyUser: async (_, { data }, { userId, role }) => {
+        if (role === ROLES[2]) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (!consultancy) throw new AuthenticationError("invalid credentials")
+            const usr = await prisma.jmkconsuluserinfo.findFirst({
+                where: {
+                    serial: data.serial,
+                    cid: userId
+                }
+            })
+            if (!usr) throw new AuthenticationError("invalid access !!")
+            const updateUser = await prisma.jmkconsuluserinfo.update({
+                data: {
+                    ...data,
+                    cid: userId
+                },
+                where: {
+                    serial: data.serial
+                }
+            })
+            if (!updateUser) throw new AuthenticationError("invalid !!")
+            return "success"
+        }
+
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    deleteConsultancyUser: async (_, { serial }, { userId, role }) => {
+        if (role === ROLES[2]) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (!consultancy) throw new AuthenticationError("invalid credentials")
+            const usr = await prisma.jmkconsuluserinfo.findFirst({ where: { serial: serial, cid: userId } })
+            if (!usr) throw new AuthenticationError("invalid access !!")
+            const user = await prisma.jmkconsuluserinfo.delete({ where: { serial: serial } })
+            if (!user) throw new AuthenticationError("invalid !!")
+            return "success"
+        }
+
+        throw new AuthenticationError("invalid access !!")
+    },
 }
 
-export { consultancyQueryTypesAndInputs, consultancyQuery, consultancyMutation, consultancyResolvers }
+const consultancyResolversQuery = {
+    getConsultancy: async (_, args, { userId, role }) => {
+        if (!userId) throw new AuthenticationError("invalid token")
+        if (role === ROLES[2]) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (!consultancy) throw new AuthenticationError("invalid")
+            return consultancy;
+        }
+        throw new AuthenticationError("invalid acccess")
+    },
+
+    getConsultancyUsers: async (_, args, { userId, role }) => {
+        if (!userId) throw new AuthenticationError("invalid token")
+        if (role === ROLES[2]) {
+            const users = await prisma.jmkconsuluserinfo.findMany({ where: { cid: userId } })
+            if (!users) throw new AuthenticationError("invalid")
+            return users;
+        }
+        throw new AuthenticationError("invalid acccess")
+    },
+
+    getConsultancyUser: async (_, args, { userId, role }) => {
+        if (!userId) throw new AuthenticationError("invalid token")
+        if (role === ROLES[2]) {
+            const user = await prisma.jmkconsuluserinfo.findFirst({ where: { serial: args.serial } })
+            if (!user) throw new AuthenticationError("invalid")
+            return user;
+        }
+        throw new AuthenticationError("invalid acccess")
+    },
+
+    getConsultancyStudents: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            let students = [];
+            const student = await prisma.jmkstdinfo.findMany({ where: { cid: userId } })
+            for (let index = 0; index < student.length; index++) {
+                const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student[index].crs_id } })
+                if (course) {
+                    students.push({ ...student[index], crs_type: course.crs_type, crs_name: course.crs_name })
+                }
+            }
+            return students;
+        }
+    },
+
+    getConsultancyStudent: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: args.std_id, cid: userId } })
+            if (!student) throw new AuthenticationError("invalid access")
+            const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student.crs_id } })
+            const join_courses = []
+            const joinCourses = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id } })
+            for (let index = 0; index < joinCourses.length; index++) {
+                const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: joinCourses[index].crs_id } })
+                join_courses.push({ ...joinCourses[index], crs_name: course.crs_name, crs_rate: course.crs_rate })
+            }
+            if (course) {
+                const mergestudent = { ...student, crs_type: course.crs_type, crs_name: course.crs_name, join_courses }
+                return mergestudent;
+            }
+        }
+        throw new AuthenticationError("invalid access")
+    },
+}
+
+export { consultancyQueryTypesAndInputs, consultancyQuery, consultancyMutation, consultancyResolvers, consultancyResolversQuery }

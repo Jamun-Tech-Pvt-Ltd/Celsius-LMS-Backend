@@ -336,3 +336,31 @@ model jmkconsuluserinfo {
   cupassword String? @db.VarChar(20)
   cid        Int?
 }
+
+model jmkcrsdet {
+  crsdet_id    Int        @id @default(autoincrement())
+  crsmain_id   Int
+  crsdet_title String?    @db.VarChar(60)
+  jmkcrsmain   jmkcrsmain @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade)
+
+  @@index([crsmain_id], map: "jmkcrsdet_crsmain_id_fkey")
+}
+
+model jmkcrsmain {
+  crsmain_id       Int                         @id @default(autoincrement())
+  crsmain_overview String?                     @db.Text
+  crsmain_duration Int?
+  cramain_del_mod  jmkcrsmain_cramain_del_mod?
+  crsmain_img_url  String?                     @db.VarChar(255)
+  crsmain_rate     Int?
+  crsmain_desc     String?                     @db.Text
+  crsmain_title    String?                     @db.VarChar(100)
+  crsmain_type     String?
+  jmkcrsdet        jmkcrsdet[]
+}
+
+enum jmkcrsmain_cramain_del_mod {
+  Remote
+  Physical
+  Online
+}
