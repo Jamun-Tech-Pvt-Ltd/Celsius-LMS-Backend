@@ -1,11 +1,24 @@
 import { gql } from 'apollo-server-express'
-import { consultancyMutation, consultancyQuery, consultancyQueryTypesAndInputs } from './controller/consultancy/index.js';
+import {
+  consultancyMutation,
+  consultancyQuery,
+  consultancyQueryTypesAndInputs,
+} from './controller/consultancy/index.js'
+
+import {
+  courseQuery,
+  courseContentQuery,
+  courseMutation,
+  courseQueryTypesAndInputs,
+  courseContentMutation,
+} from './controller/course/index.js'
 
 const typeDefs = gql`
    scalar Date 
    scalar Upload 
 
    ${consultancyQueryTypesAndInputs}
+   ${courseQueryTypesAndInputs}
 
    input signinTrainerInput{
       email: String!
@@ -639,6 +652,8 @@ const typeDefs = gql`
 
    type Query {
       ${consultancyQuery}
+      ${courseContentQuery}
+      ${courseQuery}
       me:User!
       trainer:Trainer!
       admin:Admin!
@@ -683,6 +698,8 @@ const typeDefs = gql`
    type Mutation {
 
       ${consultancyMutation}
+      ${courseContentMutation}
+      ${courseMutation}
 
 
       signinUser(userSignIn:SigninInput!):Token
@@ -738,6 +755,6 @@ const typeDefs = gql`
       updateStudentCourseFromAdmin(data:updateStudentCourseFromAdminInput):String!
 
    }
-`;
+`
 
 export default typeDefs
