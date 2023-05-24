@@ -1,15 +1,16 @@
-import { AuthenticationError } from "apollo-server-express"
-import prisma from "../../database.js"
+import { AuthenticationError } from 'apollo-server-express'
+import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
 
-
-const ROLES = ['student', "trainer", 'consultancy']
+const ROLES = ['student', 'trainer', 'consultancy']
 
 const consultancyQueryTypesAndInputs = `
     type Consultancy {
         serial: String!
         cfname: String!
         cmname: String
+        clname:String!
+        oname:String!
         cemail: String!
         creg_date: Date
         acc_type: String!
@@ -65,9 +66,9 @@ const consultancyQueryTypesAndInputs = `
         cfname: String!
         cmname: String
         clname: String!
+        oname:String!
         cemail: String!
         cpassword: String!
-        creg_date: Date
         acc_type:String
      }
 

@@ -360,6 +360,13 @@ model jmkcrsmain {
   jmkcrsdet        jmkcrsdet[]
 }
 
+model jmkconsulfaq {
+  serial   Int    @id @default(autoincrement())
+  question String @db.VarChar(200)
+  answer   String @db.VarChar(2000)
+  cid      Int
+}
+
 model jmkdevprojdet {
   serial          Int     @id @default(autoincrement())
   developer_id    Int?
@@ -381,11 +388,4 @@ enum jmkcrsmain_cramain_del_mod {
   Remote
   Physical
   Online
-}
-
-model jmkconsulfaq {
-  serial   Int    @id @default(autoincrement())
-  question String @db.VarChar(200)
-  answer   String @db.VarChar(2000)
-  cid      Int
 }
