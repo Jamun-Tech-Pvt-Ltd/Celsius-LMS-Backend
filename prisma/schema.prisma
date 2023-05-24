@@ -382,3 +382,10 @@ enum jmkcrsmain_cramain_del_mod {
   Physical
   Online
 }
+
+model jmkconsulfaq {
+  serial   Int    @id @default(autoincrement())
+  question String @db.VarChar(200)
+  answer   String @db.VarChar(2000)
+  cid      Int
+}
