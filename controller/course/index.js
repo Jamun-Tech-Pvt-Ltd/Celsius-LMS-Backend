@@ -54,7 +54,26 @@ const courseMutation = `
 `
 
 const courseQueryResolver = {
+  getMainCourses: async () => {
+    const courses = await prisma.jmkcrsmain.findMany()
+    if (!courses) throw new AuthenticationError('No course listed')
+    return courses
+  },
+  getMainCourseById: async (_, { crsmain_id }) => {
+    const course = await prisma.jmkcrsmain.findUnique({
+      where: { crsmain_id },
+    })
+    if (!course) throw new AuthenticationError('No such course')
+    return course
+  },
 
+  getAllCourseContentByCourseId: async (_, { crsmain_id }) => {
+    const content = await prisma.jmkcrsdet.findMany({
+      where: { crsmain_id },
+    })
+    if (!content) throw new AuthenticationError('No content available')
+    return content
+  },
 }
 
 const courseMutationResolver = {
