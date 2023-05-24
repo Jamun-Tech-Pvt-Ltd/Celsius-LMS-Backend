@@ -322,8 +322,9 @@ model jmkconsulinfo {
   clname    String?   @db.VarChar(20)
   cemail    String?   @db.VarChar(30)
   cpassword String?   @db.VarChar(20)
-  creg_date DateTime? @db.Date
-  acc_type  String?   @db.VarChar(20)
+  creg_date DateTime? @default(now())
+  acc_type  String?
+  oname     String?   @db.VarChar(20)
 }
 
 model jmkconsuluserinfo {
