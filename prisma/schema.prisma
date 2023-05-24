@@ -22,6 +22,7 @@ model jmkcrsinfo {
   crs_nxt_st_date DateTime?    @db.Date
   crs_image       String?      @db.VarChar(1000)
   crs_image_key   String?      @db.VarChar(1000)
+  cid             Int?
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]
   jmkvidinfo      jmkvidinfo[]
@@ -49,6 +50,7 @@ model jmkstdinfo {
   std_pic           String?        @db.VarChar(200)
   std_pic_key       String?        @db.VarChar(100)
   std_verifyed      Boolean        @default(false)
+  cid               Int?
   jmkgrvinfo        jmkgrvinfo[]
   jmkcrsinfo        jmkcrsinfo?    @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
   jmkstdreview      jmkstdreview[]
@@ -311,4 +313,79 @@ model jmkstdtrfeedback {
   tr_id        Int
   comment      String   @db.VarChar(2000)
   content_date DateTime @db.Date
+}
+
+model jmkconsulinfo {
+  serial    Int       @id @default(autoincrement())
+  cfname    String?   @db.VarChar(20)
+  cmname    String?   @db.VarChar(20)
+  clname    String?   @db.VarChar(20)
+  cemail    String?   @db.VarChar(30)
+  cpassword String?   @db.VarChar(20)
+  creg_date DateTime? @default(now())
+  acc_type  String?
+  oname     String?   @db.VarChar(20)
+}
+
+model jmkconsuluserinfo {
+  serial     Int     @id @default(autoincrement())
+  cufname    String? @db.VarChar(20)
+  cumname    String? @db.VarChar(20)
+  culname    String? @db.VarChar(20)
+  cu_role    String? @db.VarChar(20)
+  cuemail    String? @db.VarChar(30)
+  cupassword String? @db.VarChar(20)
+  cid        Int?
+}
+
+model jmkcrsdet {
+  crsdet_id    Int        @id @default(autoincrement())
+  crsmain_id   Int
+  crsdet_title String?    @db.VarChar(60)
+  jmkcrsmain   jmkcrsmain @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade)
+
+  @@index([crsmain_id], map: "jmkcrsdet_crsmain_id_fkey")
+}
+
+model jmkcrsmain {
+  crsmain_id       Int                         @id @default(autoincrement())
+  crsmain_overview String?                     @db.Text
+  crsmain_duration Int?
+  cramain_del_mod  jmkcrsmain_cramain_del_mod?
+  crsmain_img_url  String?                     @db.VarChar(255)
+  crsmain_rate     Int?
+  crsmain_desc     String?                     @db.Text
+  crsmain_title    String?                     @db.VarChar(100)
+  crsmain_type     String?
+  jmkcrsdet        jmkcrsdet[]
+}
+
+model jmkconsulfaq {
+  serial   Int    @id @default(autoincrement())
+  question String @db.VarChar(200)
+  answer   String @db.VarChar(2000)
+  cid      Int
+}
+
+model jmkdevprojdet {
+  serial          Int     @id @default(autoincrement())
+  developer_id    Int?
+  proj_title      String? @db.VarChar(100)
+  proj_desc       String? @db.VarChar(2000)
+  proj_techs_used String? @db.VarChar(100)
+  proj_type       String? @db.VarChar(20)
+}
+
+model jmkdevtechdet {
+  serial         Int       @id @default(autoincrement())
+  tech_stack     String?   @db.VarChar(50)
+  tech_stack_exp String?   @db.VarChar(20)
+  tech_last_used DateTime? @db.Date
+  developer_id   Int?
+}
+
+enum jmkcrsmain_cramain_del_mod {
+  Remote
+  Physical
+  Online
 }

@@ -1,8 +1,26 @@
 import { gql } from 'apollo-server-express'
+import {
+   consultancyMutation,
+   consultancyQuery,
+   consultancyQueryTypesAndInputs,
+} from './controller/consultancy/index.js'
+
+import {
+   courseQuery,
+   courseMutation,
+   courseQueryTypesAndInputs,
+} from './controller/course/index.js'
+
+import { developerMutation, developerQuery, developerQueryTypesAndInputs } from "./controller/developer/index.js";
+
 
 const typeDefs = gql`
    scalar Date 
    scalar Upload 
+
+   ${consultancyQueryTypesAndInputs}
+   ${courseQueryTypesAndInputs}
+   ${developerQueryTypesAndInputs}
 
    input signinTrainerInput{
       email: String!
@@ -46,7 +64,7 @@ const typeDefs = gql`
       tr_linkedin: String
    }
 
-   input signinDevInut {
+   input signinDevInput {
       developer_fname: String!
       developer_mname: String
       developer_lname: String!
@@ -56,11 +74,38 @@ const typeDefs = gql`
       developer_password: String!
       developer_country: String!
       developer_tech1: String!
-      developer_tech2: String!
-      developer_tech3: String!
+      developer_tech2: String
+      developer_tech3: String
       developer_tech1_exp: String!
-      developer_tech2_exp: String!
-      developer_tech3_exp: String!
+      developer_tech2_exp: String
+      developer_tech3_exp: String
+      developer_resume: Upload
+      developer_company1: String!
+      developer_company1_project: String!
+      developer_company1_start: Date!
+      developer_company2: String
+      developer_company2_start: Date
+      developer_company2_end: Date
+      developer_company2_project: String
+      developer_type: String!
+   }
+
+   input updateDeveloperFromDashboard {
+      developer_id: Int!
+      developer_fname: String!
+      developer_mname: String
+      developer_lname: String!
+      developer_high_qualification: String
+      developer_phone: String!
+      developer_email: String!
+      developer_password: String!
+      developer_country: String!
+      developer_tech1: String!
+      developer_tech2: String
+      developer_tech3: String
+      developer_tech1_exp: String!
+      developer_tech2_exp: String
+      developer_tech3_exp: String
       developer_resume: Upload
       developer_company1: String!
       developer_company1_project: String!
@@ -105,6 +150,25 @@ const typeDefs = gql`
       tr_github: String
       tr_linkedin: String
       tr_resume: Upload
+   }
+   input updateTrainerFromDashboard {
+      tr_id: Int!
+      tr_fname: String!
+      tr_mname: String
+      tr_lname: String!
+      tr_mobile:String
+      tr_email: String
+      tr_city:String
+      tr_country: String
+      tr_main_tech1:String
+      tr_main_tech2: String
+      tr_main_tech3:String
+      tr_dob: String
+      tr_verifyed:Boolean!
+      tr_password:String!
+      tr_resume:String
+      tr_github:String
+      tr_linkedin:String
    }
 
    input demoRequestInput {
@@ -568,7 +632,32 @@ const typeDefs = gql`
       tr_resume_key:String
       
    }
-
+   type adminDeveloper {
+      developer_id:ID!
+      developer_fname: String!
+      developer_mname: String
+      developer_lname: String!
+      developer_high_qualification: String
+      developer_phone: String!
+      developer_email: String!
+      developer_password: String!
+      developer_country: String!
+      developer_tech1: String!
+      developer_tech2: String
+      developer_tech3: String
+      developer_tech1_exp: String!
+      developer_tech2_exp: String
+      developer_tech3_exp: String
+      developer_resume: String
+      developer_company1: String!
+      developer_company1_project: String!
+      developer_company1_start: Date!
+      developer_company2: String
+      developer_company2_start: Date
+      developer_company2_end: Date
+      developer_company2_project: String
+      developer_type: String!
+   }
    type StudentTestSet {
       serial: Int!
       std_lname: String!
@@ -616,6 +705,9 @@ const typeDefs = gql`
    }
 
    type Query {
+      ${consultancyQuery}
+      ${developerQuery}
+      ${courseQuery}
       me:User!
       trainer:Trainer!
       admin:Admin!
@@ -653,11 +745,20 @@ const typeDefs = gql`
       getstudentCourseByIdForAdmin(serial:Int!):UserCourse
 
       getTrainerDataForAdmin:[AdminTrainer]
-      getTrainerByIdForAdmin(std_id:Int!):AdminTrainer
+      getTrainerByIdForAdmin(tr_id:Int!):AdminTrainer
+
+      
+      getDeveloperDataForAdmin:[adminDeveloper]
+      getDeveloperByIdForAdmin(developer_id:Int!):adminDeveloper
 
    }
 
    type Mutation {
+
+      ${consultancyMutation}
+      ${developerMutation}
+      ${courseMutation}
+
       signinUser(userSignIn:SigninInput!):Token
       signupUser(userNew:SignupInput!):Token
       updateUser(data:UpdateUserInput):User
@@ -686,10 +787,13 @@ const typeDefs = gql`
       signinTrainer(data:signinTrainerInput!):Token
       updateTrainer(data:updateTrainerInput):Trainer!
 
+      updateTrainerFromDashboard(data:updateTrainerFromDashboard):String!
+      updateDeveloperFromDashboard(data:updateDeveloperFromDashboard ):String!
+
       studentVideoNoteUpdate(data:studentVideoNoteUpdateInput):VideoNote!
       updateStudentAns(data:[updateStudentAnsInput]):String!
 
-      signupDev(data:signinDevInut):String!
+      signupDev(data:signinDevInput):String!
 
       signinAdmin(data:signinAdminInput!):Token
       signupAdmin(data:signupAdminInput!):Token
@@ -710,6 +814,6 @@ const typeDefs = gql`
       updateStudentCourseFromAdmin(data:updateStudentCourseFromAdminInput):String!
 
    }
-`;
+`
 
 export default typeDefs
