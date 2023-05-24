@@ -18,7 +18,9 @@ const courseQueryTypesAndInputs = `
         crsdet_title: String!
         crsmain_id:Int!
     }
-
+    type CourseType {
+      crs_type:String
+    }
     input addCourseInput {
         crsmain_title:String!
         crsmain_desc:String!
@@ -38,9 +40,9 @@ input CourseContentInput {
 const courseQuery = `
   getMainCourses: [Course]
   getMainCourseById(crsmain_id: Int!): Course
-
   getAllCourseContentByCourseId(crsmain_id:Int!):[CourseContent]
-
+  getAllCourseType:[CourseType]
+  getCourseTitleByType(crsmain_type:String!):[Course]
 `
 
 const courseMutation = `
@@ -66,13 +68,36 @@ const courseQueryResolver = {
     if (!course) throw new AuthenticationError('No such course')
     return course
   },
-
   getAllCourseContentByCourseId: async (_, { crsmain_id }) => {
     const content = await prisma.jmkcrsdet.findMany({
       where: { crsmain_id },
     })
     if (!content) throw new AuthenticationError('No content available')
     return content
+  },
+  getAllCourseType: async () => {
+    const result = await prisma.jmkcrsmain.findMany({
+      select: { crsmain_type: true },
+    })
+    const ctype = []
+    result.map((c_type) => {
+      if (!ctype.includes(c_type.crsmain_type)) {
+        ctype.push(c_type.crsmain_type)
+      }
+    })
+
+    const services = ctype.map((c) => {
+      return { crs_type: c }
+    })
+    if (!services) throw new AuthenticationError('No content avaliable')
+    return services
+  },
+  getCourseTitleByType: async (_, { crsmain_type }) => {
+    const result = await prisma.jmkcrsmain.findMany({
+      where: { crsmain_type },
+    })
+    if (!result) throw new AuthenticationError('No content avaliable')
+    return result
   },
 }
 
