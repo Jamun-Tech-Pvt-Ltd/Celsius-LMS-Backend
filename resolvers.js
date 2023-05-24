@@ -11,6 +11,7 @@ import demoRequestHTML from './utils/demoRequest.js'
 import forgotPasswordHTML from './utils/forgotPassword.js'
 import newUserSignupNotification from './utils/newUsersignup.js';
 import { consultancyResolvers, consultancyResolversQuery } from './controller/consultancy/index.js';
+import { developerMutationResolver, developerQueryResolvers } from './controller/developer/index.js';
 
 
 const ROLES = ['student', "trainer", 'consultancy']
@@ -20,6 +21,8 @@ const resolvers = {
 
     Query: {
         ...consultancyResolversQuery,
+        ...developerQueryResolvers,
+
         me: async (_, args, { userId, role }) => {
             if (!userId) throw new ForbiddenError('user need to login');
             if (role === ROLES[0]) {
@@ -555,6 +558,7 @@ const resolvers = {
     },
     Mutation: {
         ...consultancyResolvers,
+        ...developerMutationResolver,
         // admin 
         signinAdmin: async (_, { data }) => {
             const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_email: data.usr_email } })

@@ -360,6 +360,23 @@ model jmkcrsmain {
   jmkcrsdet        jmkcrsdet[]
 }
 
+model jmkdevprojdet {
+  serial          Int     @id @default(autoincrement())
+  developer_id    Int?
+  proj_title      String? @db.VarChar(100)
+  proj_desc       String? @db.VarChar(2000)
+  proj_techs_used String? @db.VarChar(100)
+  proj_type       String? @db.VarChar(20)
+}
+
+model jmkdevtechdet {
+  serial         Int       @id @default(autoincrement())
+  tech_stack     String?   @db.VarChar(50)
+  tech_stack_exp String?   @db.VarChar(20)
+  tech_last_used DateTime? @db.Date
+  developer_id   Int?
+}
+
 enum jmkcrsmain_cramain_del_mod {
   Remote
   Physical
