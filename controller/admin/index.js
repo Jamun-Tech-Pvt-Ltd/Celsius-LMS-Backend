@@ -134,7 +134,7 @@ const adminQueryTypesAndInputs = `
       crsmain_duration:Int
       crsmain_img_url:String
       crsmain_rate:Int
-      crsmain_description:String
+      crsmain_desc:String
       crsmain_title:String
       crsmain_type:String
      }
@@ -202,7 +202,7 @@ const adminQuery = `
     getDeveloperByIdForAdmin(developer_id:Int!):adminDeveloper
 
     getStaticCoursesDataForAdmin:[staticCourse]
-
+    getStaticCourseByIdForAdmin(crsmain_id:Int!):staticCourse
 
 `
 
@@ -458,6 +458,19 @@ const adminResolversQuery = {
          return staticCourses;
       }
    },
+   getStaticCourseByIdForAdmin: async (_, args, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
+      if (!admin) throw new AuthenticationError("invalid admin credentials")
+      if (admin.usr_role === 'admin') {
+         const staticCourse = await prisma.jmkcrsmain.findFirst({ where: { crsmain_id: args.crsmain_id } })
+
+         return staticCourse
+      }
+      throw new AuthenticationError("invalid access")
+
+   },
+
 }
 
 export { adminQueryTypesAndInputs, adminQuery, adminMutation, adminResolvers, adminResolversQuery }
