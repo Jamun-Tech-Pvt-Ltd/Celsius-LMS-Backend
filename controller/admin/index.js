@@ -128,6 +128,17 @@ const adminQueryTypesAndInputs = `
         developer_type: String!
      }
 
+     type staticCourse{
+      crsmain_id:ID!
+      crsmain_overview:String
+      crsmain_duration:Int
+      crsmain_img_url:String
+      crsmain_rate:Int
+      crsmain_description:String
+      crsmain_title:String
+      crsmain_type:String
+     }
+
      input updateDeveloperFromDashboard {
         developer_id: Int!
         developer_fname: String!
@@ -190,7 +201,12 @@ const adminQuery = `
     getDeveloperDataForAdmin:[adminDeveloper]
     getDeveloperByIdForAdmin(developer_id:Int!):adminDeveloper
 
+    getStaticCoursesDataForAdmin:[staticCourse]
+
+
 `
+
+
 
 const adminMutation = `
 
@@ -430,6 +446,17 @@ const adminResolversQuery = {
       }
       throw new AuthenticationError("invalid access")
 
+   },
+   getStaticCoursesDataForAdmin: async (_, args, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
+      if (!admin) throw new AuthenticationError("invalid admin credentials")
+      if (admin.usr_role === 'admin') {
+         //let trainers = [];
+         const staticCourses = await prisma.jmkcrsmain.findMany()
+
+         return staticCourses;
+      }
    },
 }
 
