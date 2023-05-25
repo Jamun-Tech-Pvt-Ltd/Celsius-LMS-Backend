@@ -1,8 +1,10 @@
-import { AuthenticationError } from 'apollo-server-express'
+import { AuthenticationError, ForbiddenError } from 'apollo-server-express'
 import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
+import { sendMail } from '../../utils/mailHandler.js'
+import registerrHTML from '../../utils/signup.js'
+import { ROLES } from '../../utils/helper.js'
 
-const ROLES = ['student', 'trainer', 'consultancy']
 
 const consultancyQueryTypesAndInputs = `
     type Consultancy {
@@ -75,11 +77,11 @@ const consultancyQueryTypesAndInputs = `
 
      input updateConsultancyInput{
         serial: Int!
-        cfname: String!
+        cfname: String
         cmname: String
-        clname: String!
-        cemail: String!
-        cpassword: String!
+        clname: String
+        cemail: String
+        cpassword: String
         creg_date: Date
         acc_type:String
      }
@@ -147,6 +149,7 @@ const consultancyMutation = `
 `
 
 const consultancyResolvers = {
+    
     signupConsultancy: async (_, { data }) => {
         const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { cemail: data.cemail } })
         if (consultancy) throw new AuthenticationError("consultancy already exist with that email")
@@ -155,9 +158,10 @@ const consultancyResolvers = {
         })
         if (!newConsultancy) throw new AuthenticationError("Something went wrong !")
         const token = jwt.sign({ userId: newConsultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY)
-        // await sendMail(trainer.tr_email, 'Successfully Register ', registerrHTML)
+        await sendMail(trainer.tr_email, 'Successfully Register ', registerrHTML)
         return { token };
     },
+
     signinConsultancy: async (_, { data }) => {
         const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { cemail: data.cemail } })
         if (!consultancy) throw new AuthenticationError("invalid credentials")
@@ -166,6 +170,22 @@ const consultancyResolvers = {
         const token = jwt.sign({ userId: consultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY)
         return { token };
     },
+
+    updateConsultancy: async (_, { data }, { userId, role }) => {
+        if (!userId) throw new AuthenticationError("Invalid Token!!")
+        if (role === ROLES[2]) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (!consultancy) throw new AuthenticationError("Invalid Credentials")
+            const consultancyUpate = await prisma.jmkconsulinfo.update({
+                data: { ...data, },
+                where: { serial: data.serial }
+            })
+            if (!consultancyUpate) throw new AuthenticationError("Invalid !!")
+            return "success"
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
     createConsultancyUser: async (_, { data }, { userId, role }) => {
         if (role === ROLES[2]) {
             const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })

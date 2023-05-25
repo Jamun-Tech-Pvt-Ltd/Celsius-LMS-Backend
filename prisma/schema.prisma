@@ -384,8 +384,40 @@ model jmkdevtechdet {
   developer_id   Int?
 }
 
+model jmkmktgdev {
+  user_id      Int?
+  serial       Int                     @id @default(autoincrement())
+  developer_id Int?
+  mktg_date    DateTime?               @db.Date
+  mktg_status  jmkmktgdev_mktg_status?
+  dev_status   Boolean?                @default(false)
+}
+
+model jmkmktgstd {
+  user_id     Int?
+  serial      Int                     @id @default(autoincrement())
+  std_id      Int?
+  mktg_date   DateTime?               @db.Date
+  mktg_status jmkmktgstd_mktg_status?
+  std_status  Boolean?                @default(false)
+}
+
 enum jmkcrsmain_cramain_del_mod {
   Remote
   Physical
   Online
+}
+
+enum jmkmktgdev_mktg_status {
+  Pending
+  Processing
+  Interview
+  Completed
+}
+
+enum jmkmktgstd_mktg_status {
+  Pending
+  Processing
+  Interview
+  Completed
 }
