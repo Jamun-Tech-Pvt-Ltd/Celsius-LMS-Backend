@@ -59,6 +59,15 @@ const consultancyQueryTypesAndInputs = `
         answer: String!
      }
 
+     type ConsultancyAssignStudents {
+        user_id:Int!
+        serial:Int!
+        std_id:Int!
+        mktg_date:Date
+        mktg_status:String
+        std_status:Boolean!
+     }
+
     input signinConsultancyInput{
         cemail: String!
         cpassword: String!
@@ -119,6 +128,13 @@ const consultancyQueryTypesAndInputs = `
         answer: String!
      }
 
+     input assignStudentsToMarketersInput {
+        user_id:Int!
+        std_id:Int!
+        mktg_date:Date
+        mktg_status:String
+        std_status:Boolean
+     }
 `
 
 const consultancyQuery = `
@@ -129,6 +145,7 @@ const consultancyQuery = `
     getConsultancyStudent(std_id:Int!):ConsultancyStudent
     getConsultancyFaqs:[ConsultancyFaq]
     getConsultancyFaq(serial:Int!):ConsultancyFaq
+    getConsultancyAssignStudents(std_id:Int!):[ConsultancyAssignStudents]
 
 `
 
@@ -146,10 +163,13 @@ const consultancyMutation = `
     createConsultancyFaq(data:consultancyFaqInput):String!
     updateConsultancyFaq(data:consultancyFaqInput):String!
     deleteConsultancyFaq(serial:Int!):String!
+
+    assignStudentsToMarketers(data:assignStudentsToMarketersInput):String!
+    removeStudentsFromMarketers(serial:Int!):String!
 `
 
 const consultancyResolvers = {
-    
+
     signupConsultancy: async (_, { data }) => {
         const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { cemail: data.cemail } })
         if (consultancy) throw new AuthenticationError("consultancy already exist with that email")
@@ -307,6 +327,30 @@ const consultancyResolvers = {
 
         throw new AuthenticationError("invalid access !!")
     },
+
+    assignStudentsToMarketers: async (_, { data }, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const check = await prisma.jmkmktgstd.findFirst({ where: { std_id: data.std_id, user_id: data.user_id } })
+            if (check) throw new AuthenticationError("Already assign !!")
+            const assignStd = await prisma.jmkmktgstd.create({ data: { ...data } })
+            if (!assignStd) throw new AuthenticationError("invalid !!")
+            return 'success';
+        }
+    },
+
+    removeStudentsFromMarketers: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const assignStd = await prisma.jmkmktgstd.delete({ where: { serial: args.serial } })
+            if (!assignStd) throw new AuthenticationError("invalid !!")
+            return 'success';
+        }
+    },
 }
 
 const consultancyResolversQuery = {
@@ -396,6 +440,16 @@ const consultancyResolversQuery = {
         if (role === ROLES[2]) {
             const faqs = await prisma.jmkconsulfaq.findFirst({ where: { cid: userId, serial: args.serial } })
             return faqs;
+        }
+    },
+
+    getConsultancyAssignStudents: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const assignStd = await prisma.jmkmktgstd.findMany({ where: { std_id: args.std_id } })
+            return assignStd;
         }
     },
 }
