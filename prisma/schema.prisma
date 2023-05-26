@@ -357,6 +357,7 @@ model jmkcrsmain {
   crsmain_desc     String?                     @db.Text
   crsmain_title    String?                     @db.VarChar(100)
   crsmain_type     String?
+  crsmain_img_key  String?                     @db.VarChar(1000)
   jmkcrsdet        jmkcrsdet[]
 }
 
