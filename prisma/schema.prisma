@@ -299,7 +299,6 @@ model jmkdevinfo {
   developer_resume             String?   @db.VarChar(200)
   developer_password           String?   @db.VarChar(16)
   developer_type               String?   @db.VarChar(50)
-  cid                          Int?
 }
 
 model jmkcrsmodule {
