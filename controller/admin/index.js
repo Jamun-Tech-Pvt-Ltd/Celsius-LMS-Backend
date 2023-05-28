@@ -138,6 +138,12 @@ const adminQueryTypesAndInputs = `
       crsmain_title:String
       crsmain_type:String
      }
+
+     type staticCourseDetails{
+      crsdet_id:Int!
+      crsdet_title:String
+      crsmain_id:Int!
+     }
      
 
      input createStaticCourseInput{
@@ -161,9 +167,19 @@ const adminQueryTypesAndInputs = `
       crsmain_type:String
      }
 
-     input deleteStaticCourseInput {
-      crsmain_id: Int!
-   }
+      input deleteStaticCourseInput {
+       crsmain_id: Int!
+      }
+
+      input addStaticCourseDetailsInput{
+         crsdet_title:String!
+         crsmain_id:Int!
+      }
+      input updateStaticCourseDetailsInput{
+         crsdet_id:Int!
+         crsdet_title:String
+         crsmain_id:Int!
+      }
 
      input updateDeveloperFromDashboard {
         developer_id: Int!
@@ -229,6 +245,7 @@ const adminQuery = `
 
     getStaticCoursesDataForAdmin:[staticCourse]
     getStaticCourseByIdForAdmin(crsmain_id:Int!):staticCourse
+    getStaticCourseDetailsByIdForAdmin(crsmain_id:Int!):[staticCourseDetails]
 
 `
 
@@ -249,6 +266,8 @@ const adminMutation = `
     createStaticCourse(data:createStaticCourseInput):String!
     updateStaticCourse(data:updateStaticCourseInput):String!
     deleteStaticCourse(data:deleteStaticCourseInput):String
+    addStaticCourseDetails(data:[addStaticCourseDetailsInput]):String!
+    updateStaticCourseDetails(data:[updateStaticCourseDetailsInput]):String!
 
 `
 
@@ -427,7 +446,59 @@ const adminResolvers = {
       const deleteStaticCourse = await prisma.jmkcrsmain.delete({
          where: { crsmain_id: data.crsmain_id },
       })
+
+      const staticCourseDetails = await prisma.jmkcrsdet.findMany({
+         where: { crsmain_id: data.crsmain_id },
+      })
+
+      staticCourseDetails.forEach(async (element) => {
+
+         const deleteStaticCourseDetails = await prisma.jmkcrsdet.delete({
+            where: { crsmain_id: element.crsmain_id },
+         })
+         if (!deleteStaticCourseDetails) throw new ApolloError('something went wrong !')
+      });
       if (!deleteStaticCourse) throw new ApolloError('something went wrong !')
+      return 'success'
+
+   },
+   addStaticCourseDetails: async (_, { data }, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token')
+      const admin = await prisma.jmkuserinfo.findFirst({
+         where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin')
+
+      data.forEach(async (element) => {
+         const newStaticCourseDetails = await prisma.jmkcrsdet.create({
+            data: { ...element }
+         })
+         if (!newStaticCourseDetails) throw new ApolloError('something went wrong !')
+      });
+
+      return 'success'
+
+   },
+   updateStaticCourseDetails: async (_, { data }, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token')
+      const admin = await prisma.jmkuserinfo.findFirst({
+         where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin')
+
+      data.forEach(async (element) => {
+
+         const updateStaticCourseDetails = await prisma.jmkcrsdet.update({
+            data: { ...element },
+            where: {
+               crsdet_id: parseInt(element.crsdet_id),
+            },
+         })
+
+         if (!updateStaticCourseDetails) throw new ApolloError('something went wrong !')
+
+      });
+
       return 'success'
 
    },
@@ -556,7 +627,7 @@ const adminResolversQuery = {
       throw new AuthenticationError("invalid access")
 
    },
-   
+
    getStaticCoursesDataForAdmin: async (_, args, { userId, role }) => {
       if (!userId) throw new ForbiddenError('invalid token');
       const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
@@ -580,7 +651,24 @@ const adminResolversQuery = {
       throw new AuthenticationError("invalid access")
 
    },
+<<<<<<< HEAD
 
+=======
+   getStaticCourseDetailsByIdForAdmin: async (_, args, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
+      if (!admin) throw new AuthenticationError("invalid admin credentials")
+      if (admin.usr_role === 'admin') {
+         const staticCourse = await prisma.jmkcrsmain.findFirst({ where: { crsmain_id: args.crsmain_id } })
+
+         const staticCourseDetails=await prisma.jmkcrsdet.findMany({where:{crsmain_id:staticCourse.crsmain_id}})
+         return staticCourseDetails
+      }
+      throw new AuthenticationError("invalid access")
+
+   },
+
+>>>>>>> 0e13dc57909aa0c97324782b2c6d173f45ef4833
 
 }
 
