@@ -77,10 +77,35 @@ const consultancyQueryTypesAndInputs = `
         dev_status:Boolean!
      }
 
+     type AssignStudents {
+        serial:Int!
+        user_id:Int!
+        std_name:String!
+        std_email:String!
+        std_verifyed:Boolean!
+        std_id:Int!
+        mktg_date:Date
+        mktg_status:String
+        std_status:Boolean!
+     }
+
+     type AssignDeveloper {
+        user_id:Int!
+        serial:Int!
+        dev_name:String!
+        dev_email:String!
+        developer_type:String!
+        developer_id:Int!
+        mktg_date:Date
+        mktg_status:String
+        dev_status:Boolean!
+     }
+
     input signinConsultancyInput{
         cemail: String!
         cpassword: String!
      }
+     
 
      input signupConsultancyInput{
         cfname: String!
@@ -144,6 +169,16 @@ const consultancyQueryTypesAndInputs = `
         mktg_status:String
         std_status:Boolean
      }
+
+
+     input assignDeveloperToMarketersInput {
+        user_id:Int!
+        developer_id:Int!
+        mktg_date:Date
+        mktg_status:String
+        dev_status:Boolean
+     }
+
 `
 
 const consultancyQuery = `
@@ -156,9 +191,11 @@ const consultancyQuery = `
     getConsultancyFaq(serial:Int!):ConsultancyFaq
     getConsultancyAssignStudents(std_id:Int!):[ConsultancyAssignStudents]
 
-
     getConsultancyDevelopers:[adminDeveloper]
     getConsultancyAssignDevelopers(developer_id:Int!):[ConsultancyAssignDeveloper]
+
+    getConsultancyAssignStudentsByUserId(user_id:Int!):[AssignStudents]
+    getConsultancyAssignDevelopersByUserId(user_id:Int!):[AssignDeveloper]
 
 `
 
@@ -180,6 +217,8 @@ const consultancyMutation = `
     assignStudentsToMarketers(data:assignStudentsToMarketersInput):String!
     removeStudentsFromMarketers(serial:Int!):String!
 
+    assignDeveloperToMarketers(data:assignDeveloperToMarketersInput):String!
+    removeDeveloperFromMarketers(serial:Int!):String!
 `
 
 const consultancyResolvers = {
@@ -365,6 +404,30 @@ const consultancyResolvers = {
             return 'success';
         }
     },
+
+    assignDeveloperToMarketers: async (_, { data }, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const check = await prisma.jmkmktgdev.findFirst({ where: { developer_id: data.developer_id, user_id: data.user_id } })
+            if (check) throw new AuthenticationError("Already assign !!")
+            const assignDev = await prisma.jmkmktgdev.create({ data: { ...data } })
+            if (!assignDev) throw new AuthenticationError("invalid !!")
+            return 'success';
+        }
+    },
+
+    removeDeveloperFromMarketers: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const assignDev = await prisma.jmkmktgdev.delete({ where: { serial: args.serial } })
+            if (!assignDev) throw new AuthenticationError("invalid !!")
+            return 'success';
+        }
+    },
 }
 
 const consultancyResolversQuery = {
@@ -482,10 +545,55 @@ const consultancyResolversQuery = {
         const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
         if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
         if (role === ROLES[2]) {
-            const assignDev = await prisma.jmkdevinfo.findMany({ where: { developer_id: args.developer_id } })
+            const assignDev = await prisma.jmkmktgdev.findMany({ where: { developer_id: args.developerId } })
             return assignDev;
         }
+        throw new AuthenticationError("invalid credentials !")
     },
+
+    getConsultancyAssignStudentsByUserId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const students = [];
+            const assignStd = await prisma.jmkmktgstd.findMany({ where: { user_id: args.user_id } })
+            for (let index = 0; index < assignStd.length; index++) {
+                const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: assignStd[index].std_id } })
+                students.push({
+                    ...assignStd[index],
+                    std_name: std.std_fname + ' ' + std.std_mname + ' ' + std.std_fname,
+                    std_email: std.std_email,
+                    std_verifyed: std.std_verifyed
+                })
+            }
+            return students;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
+
+    getConsultancyAssignDevelopersByUserId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const developers = [];
+            const assignDev = await prisma.jmkmktgdev.findMany({ where: { user_id: args.user_id } })
+            for (let index = 0; index < assignDev.length; index++) {
+                const dev = await prisma.jmkdevinfo.findFirst({ where: { developer_id: assignDev[index].developer_id } })
+                developers.push({
+                    ...assignDev[index],
+                    dev_name: dev.developer_fname + ' ' + dev.developer_mname + ' ' + dev.developer_lname,
+                    dev_email: dev.developer_email,
+                    developer_type: dev.developer_type
+                })
+            }
+            return developers;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
+
+
 }
 
 export { consultancyQueryTypesAndInputs, consultancyQuery, consultancyMutation, consultancyResolvers, consultancyResolversQuery }

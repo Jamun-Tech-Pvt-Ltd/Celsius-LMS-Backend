@@ -183,29 +183,29 @@ const adminQueryTypesAndInputs = `
 
      input updateDeveloperFromDashboard {
         developer_id: Int!
-        developer_fname: String!
+        developer_fname: String
         developer_mname: String
-        developer_lname: String!
+        developer_lname: String
         developer_high_qualification: String
-        developer_phone: String!
-        developer_email: String!
-        developer_password: String!
-        developer_country: String!
-        developer_tech1: String!
+        developer_phone: String
+        developer_email: String
+        developer_password: String
+        developer_country: String
+        developer_tech1: String
         developer_tech2: String
         developer_tech3: String
-        developer_tech1_exp: String!
+        developer_tech1_exp: String
         developer_tech2_exp: String
         developer_tech3_exp: String
         developer_resume: Upload
-        developer_company1: String!
-        developer_company1_project: String!
-        developer_company1_start: Date!
+        developer_company1: String
+        developer_company1_project: String
+        developer_company1_start: Date
         developer_company2: String
         developer_company2_start: Date
         developer_company2_end: Date
         developer_company2_project: String
-        developer_type: String!
+        developer_type: String
      }
   
      input updateTrainerFromDashboard {
@@ -502,6 +502,34 @@ const adminResolvers = {
       return 'success'
 
    },
+
+   updateDeveloperFromDashboard: async (_, { data }, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token')
+      if (role === 'admin') {
+         const admin = await prisma.jmkuserinfo.findFirst({
+            where: { usr_id: userId, usr_role: role },
+         })
+         if (!admin) throw new AuthenticationError('invalid admin')
+
+         const uppdateDev = await prisma.jmkdevinfo.update({ data: { ...data }, where: { developer_id: data.developer_id } })
+         if (!uppdateDev) throw new AuthenticationError('invalid update !')
+
+         return 'success'
+      }
+      if (role === ROLES[2]) {
+         const consultancy = await prisma.jmkconsulinfo.findFirst({
+            where: { serial: userId },
+         })
+         if (!consultancy) throw new AuthenticationError('invalid consultancy !')
+
+         const uppdateDev = await prisma.jmkdevinfo.update({ data: { ...data, cid: userId }, where: { developer_id: data.developer_id } })
+         if (!uppdateDev) throw new AuthenticationError('invalid update !')
+
+         return 'success'
+      }
+      throw new AuthenticationError('invalid aceess !')
+
+   },
 }
 
 const adminResolversQuery = {
@@ -658,7 +686,7 @@ const adminResolversQuery = {
       if (admin.usr_role === 'admin') {
          const staticCourse = await prisma.jmkcrsmain.findFirst({ where: { crsmain_id: args.crsmain_id } })
 
-         const staticCourseDetails=await prisma.jmkcrsdet.findMany({where:{crsmain_id:staticCourse.crsmain_id}})
+         const staticCourseDetails = await prisma.jmkcrsdet.findMany({ where: { crsmain_id: staticCourse.crsmain_id } })
          return staticCourseDetails
       }
       throw new AuthenticationError("invalid access")
