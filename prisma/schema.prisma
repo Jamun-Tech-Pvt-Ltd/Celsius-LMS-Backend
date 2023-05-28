@@ -404,6 +404,22 @@ model jmkmktgstd {
   std_status  Boolean?                @default(false)
 }
 
+model jmkconsulreqmnts {
+  consulreqmnts_id Int     @id @default(autoincrement())
+  cid              Int?
+  reqd_tech_stack  String? @db.VarChar(100)
+  reqd_no          Int?
+  reqd_exp         Int?
+  reqd_edu         String? @db.VarChar(100)
+  reqd_addtional   String? @db.VarChar(200)
+}
+
+model jmktechstk {
+  techstk_id   Int     @id @default(autoincrement())
+  techstk_name String? @db.VarChar(100)
+  techstk_desc String? @db.VarChar(200)
+}
+
 enum jmkcrsmain_cramain_del_mod {
   Remote
   Physical

@@ -145,7 +145,6 @@ const adminQueryTypesAndInputs = `
       crsmain_id:Int!
      }
      
-
      input createStaticCourseInput{
       crsmain_overview:String
       crsmain_duration:Int
@@ -176,7 +175,7 @@ const adminQueryTypesAndInputs = `
          crsmain_id:Int!
       }
       input updateStaticCourseDetailsInput{
-         crsdet_id:Int!
+         crsdet_id:Int
          crsdet_title:String
          crsmain_id:Int!
       }
@@ -263,7 +262,7 @@ const adminMutation = `
     updateTrainerFromDashboard(data:updateTrainerFromDashboard):String!
     updateDeveloperFromDashboard(data:updateDeveloperFromDashboard ):String!
 
-    createStaticCourse(data:createStaticCourseInput):String!
+    createStaticCourse(data:createStaticCourseInput):Int!
     updateStaticCourse(data:updateStaticCourseInput):String!
     deleteStaticCourse(data:deleteStaticCourseInput):String
     addStaticCourseDetails(data:[addStaticCourseDetailsInput]):String!
@@ -396,8 +395,9 @@ const adminResolvers = {
             crsmain_img_key: file?.data?.key ?? '',
          },
       })
+      
       if (!newStaticCourse) throw new ApolloError('something went wrong !')
-      return 'success'
+      return newStaticCourse.crsmain_id
 
    },
    updateStaticCourse: async (_, { data }, { userId, role }) => {
@@ -487,15 +487,26 @@ const adminResolvers = {
       if (!admin) throw new AuthenticationError('invalid admin')
 
       data.forEach(async (element) => {
+         if (!element.crsdet_title) return 
+         if (element.crsdet_id) {
 
-         const updateStaticCourseDetails = await prisma.jmkcrsdet.update({
-            data: { ...element },
-            where: {
-               crsdet_id: parseInt(element.crsdet_id),
-            },
-         })
-
-         if (!updateStaticCourseDetails) throw new ApolloError('something went wrong !')
+            const updateStaticCourseDetails = await prisma.jmkcrsdet.update({
+               data: { ...element },
+               where: {
+                  crsdet_id: parseInt(element.crsdet_id),
+               },
+            })
+         }
+         else{
+         
+            const createStaticCourseDetails = await prisma.jmkcrsdet.create({
+               data: {  
+                  crsdet_title: element.crsdet_title,
+                 crsmain_id: element.crsmain_id
+             }
+             
+            })
+         }
 
       });
 
