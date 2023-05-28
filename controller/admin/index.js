@@ -651,9 +651,6 @@ const adminResolversQuery = {
       throw new AuthenticationError("invalid access")
 
    },
-<<<<<<< HEAD
-
-=======
    getStaticCourseDetailsByIdForAdmin: async (_, args, { userId, role }) => {
       if (!userId) throw new ForbiddenError('invalid token');
       const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
@@ -668,7 +665,6 @@ const adminResolversQuery = {
 
    },
 
->>>>>>> 0e13dc57909aa0c97324782b2c6d173f45ef4833
 
 }
 
