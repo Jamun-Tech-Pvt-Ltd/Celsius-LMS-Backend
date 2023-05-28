@@ -68,6 +68,15 @@ const consultancyQueryTypesAndInputs = `
         std_status:Boolean!
      }
 
+     type ConsultancyAssignDeveloper {
+        user_id:Int!
+        serial:Int!
+        developer_id:Int!
+        mktg_date:Date
+        mktg_status:String
+        dev_status:Boolean!
+     }
+
     input signinConsultancyInput{
         cemail: String!
         cpassword: String!
@@ -147,6 +156,10 @@ const consultancyQuery = `
     getConsultancyFaq(serial:Int!):ConsultancyFaq
     getConsultancyAssignStudents(std_id:Int!):[ConsultancyAssignStudents]
 
+
+    getConsultancyDevelopers:[adminDeveloper]
+    getConsultancyAssignDevelopers(developer_id:Int!):[ConsultancyAssignDeveloper]
+
 `
 
 const consultancyMutation = `
@@ -166,6 +179,7 @@ const consultancyMutation = `
 
     assignStudentsToMarketers(data:assignStudentsToMarketersInput):String!
     removeStudentsFromMarketers(serial:Int!):String!
+
 `
 
 const consultancyResolvers = {
@@ -450,6 +464,26 @@ const consultancyResolversQuery = {
         if (role === ROLES[2]) {
             const assignStd = await prisma.jmkmktgstd.findMany({ where: { std_id: args.std_id } })
             return assignStd;
+        }
+    },
+
+    getConsultancyDevelopers: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const developers = await prisma.jmkdevinfo.findMany({ where: { cid: userId } })
+            return developers;
+        }
+    },
+
+    getConsultancyAssignDevelopers: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const assignDev = await prisma.jmkdevinfo.findMany({ where: { developer_id: args.developer_id } })
+            return assignDev;
         }
     },
 }
