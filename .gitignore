@@ -6,13 +6,7 @@ node_modules
 .pnp.js
 
 # testing
-/client/coverage
-
-# next.js
-/client/.next/
-/client/out/
-# production
-/client/build
+/coverage
 
 # misc
 .DS_Store
