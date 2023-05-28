@@ -231,7 +231,7 @@ const consultancyResolvers = {
         })
         if (!newConsultancy) throw new AuthenticationError("Something went wrong !")
         const token = jwt.sign({ userId: newConsultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY)
-        await sendMail(trainer.tr_email, 'Successfully Register ', registerrHTML)
+        await sendMail(newConsultancy.cemail, 'Successfully Register ', registerrHTML)
         return { token };
     },
 

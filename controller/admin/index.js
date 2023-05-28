@@ -306,9 +306,9 @@ const adminResolvers = {
          { userId: newAdmin.usr_id, role: data.usr_role },
          process.env.JWT_SECRET_KEY
       )
-      // await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
-      // await sendMail('riwaz@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
-      // await sendMail('jenish@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
+      await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
+      await sendMail('riwaz@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
+      await sendMail('jenish@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
       return { token }
    },
 
