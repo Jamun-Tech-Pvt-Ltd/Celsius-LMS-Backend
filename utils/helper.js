@@ -9,6 +9,9 @@
     }, {});
   }
 
+  const ROLES = ['student', 'trainer', 'consultancy']
+
   export {
-    groupBy
+    groupBy,
+    ROLES
   }
