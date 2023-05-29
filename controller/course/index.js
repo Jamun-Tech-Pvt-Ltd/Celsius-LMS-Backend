@@ -17,6 +17,7 @@ const courseQueryTypesAndInputs = `
         crsdet_id: Int!
         crsdet_title: String!
         crsmain_id:Int!
+        crsdet_sub_title:String
     }
     type CourseType {
       crs_type:String
@@ -34,6 +35,7 @@ const courseQueryTypesAndInputs = `
 input CourseContentInput {
     crsdet_title: String!
     crsmain_id:Int!
+    crsdet_sub_title:String
 } 
 `
 

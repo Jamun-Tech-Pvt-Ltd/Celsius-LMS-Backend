@@ -299,6 +299,7 @@ model jmkdevinfo {
   developer_resume             String?   @db.VarChar(200)
   developer_password           String?   @db.VarChar(16)
   developer_type               String?   @db.VarChar(50)
+  cid                          Int?
 }
 
 model jmkcrsmodule {
@@ -339,10 +340,11 @@ model jmkconsuluserinfo {
 }
 
 model jmkcrsdet {
-  crsdet_id    Int        @id @default(autoincrement())
-  crsmain_id   Int
-  crsdet_title String?    @db.VarChar(60)
-  jmkcrsmain   jmkcrsmain @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade)
+  crsdet_id        Int        @id @default(autoincrement())
+  crsmain_id       Int
+  crsdet_title     String?    @db.VarChar(60)
+  crsdet_sub_title String?    @db.VarChar(200)
+  jmkcrsmain       jmkcrsmain @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade)
 
   @@index([crsmain_id], map: "jmkcrsdet_crsmain_id_fkey")
 }
@@ -357,6 +359,7 @@ model jmkcrsmain {
   crsmain_desc     String?                     @db.Text
   crsmain_title    String?                     @db.VarChar(100)
   crsmain_type     String?
+  crsmain_img_key  String?                     @db.VarChar(1000)
   jmkcrsdet        jmkcrsdet[]
 }
 
@@ -384,8 +387,56 @@ model jmkdevtechdet {
   developer_id   Int?
 }
 
+model jmkmktgdev {
+  user_id      Int?
+  serial       Int                     @id @default(autoincrement())
+  developer_id Int?
+  mktg_date    DateTime?               @db.Date
+  mktg_status  jmkmktgdev_mktg_status?
+  dev_status   Boolean?                @default(false)
+}
+
+model jmkmktgstd {
+  user_id     Int?
+  serial      Int                     @id @default(autoincrement())
+  std_id      Int?
+  mktg_date   DateTime?               @db.Date
+  mktg_status jmkmktgstd_mktg_status?
+  std_status  Boolean?                @default(false)
+}
+
+model jmkconsulreqmnts {
+  consulreqmnts_id Int     @id @default(autoincrement())
+  cid              Int?
+  reqd_tech_stack  String? @db.VarChar(100)
+  reqd_no          Int?
+  reqd_exp         Int?
+  reqd_edu         String? @db.VarChar(100)
+  reqd_addtional   String? @db.VarChar(200)
+}
+
+model jmktechstk {
+  techstk_id   Int     @id @default(autoincrement())
+  techstk_name String? @db.VarChar(100)
+  techstk_desc String? @db.VarChar(200)
+}
+
 enum jmkcrsmain_cramain_del_mod {
   Remote
   Physical
   Online
+}
+
+enum jmkmktgdev_mktg_status {
+  Pending
+  Processing
+  Interview
+  Completed
+}
+
+enum jmkmktgstd_mktg_status {
+  Pending
+  Processing
+  Interview
+  Completed
 }
