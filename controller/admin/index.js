@@ -257,6 +257,7 @@ const adminMutation = `
     deleteStaticCourse(data:deleteStaticCourseInput):String
     addStaticCourseDetails(data:[addStaticCourseDetailsInput]):String!
     updateStaticCourseDetails(data:[updateStaticCourseDetailsInput]):String!
+    deleteStaticCourseDetailTitleById(crsDetId:Int!):String!
 
 `
 
@@ -505,6 +506,27 @@ const adminResolvers = {
       return 'success'
 
    },
+
+   deleteStaticCourseDetailTitleById: async (_, { crsDetId }, { userId, role }) => {
+   
+      if (!userId) throw new ForbiddenError('invalid token')
+      const admin = await prisma.jmkuserinfo.findFirst({
+         where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin')
+
+      if(crsDetId){
+         
+         const deleteDet = await prisma.jmkcrsdet.delete({ where: { crsdet_id: crsDetId } })
+
+         if (!deleteDet) throw new AuthenticationError("invalid !!")
+      }
+     
+      return "success"
+   
+
+      throw new AuthenticationError("invalid access !!")
+  },
 
    updateDeveloperFromDashboard: async (_, { data }, { userId, role }) => {
       if (!userId) throw new ForbiddenError('invalid token')
