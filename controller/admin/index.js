@@ -395,18 +395,19 @@ const adminResolvers = {
       })
       if (!selectedStaticCourse) throw new ApolloError('invalid course')
 
-      await deleteImgToAWS(selectedStaticCourse?.crsmain_img_key)
-
       let file
-      if (data.crsmain_img_url) {
+      if (data.crsmain_img_url!==null) {
+         
+         await deleteImgToAWS(selectedStaticCourse?.crsmain_img_key)
+
          file = await uploadImgToAWS(data.crsmain_img_url, 'webimages/')
          if (!file.data) throw new ApolloError('Something went wrong !')
       }
       const course = await prisma.jmkcrsmain.update({
          data: {
             ...data,
-            crsmain_img_url: file?.data?.Location ?? null,
-            crsmain_img_key: file?.data?.key ?? '',
+            crsmain_img_url:(data.crsmain_img_url!==null)? (file?.data?.Location): (selectedStaticCourse.crsmain_img_url),
+            crsmain_img_key:(data.crsmain_img_url!==null)? (file?.data?.key): (selectedStaticCourse.crsmain_img_key),
          },
          where: {
             crsmain_id: parseInt(data.crsmain_id),
