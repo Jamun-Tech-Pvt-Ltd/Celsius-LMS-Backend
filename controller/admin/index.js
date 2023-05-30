@@ -137,12 +137,14 @@ const adminQueryTypesAndInputs = `
       crsmain_desc:String
       crsmain_title:String
       crsmain_type:String
+      cramain_del_mod:String
      }
 
      type staticCourseDetails{
       crsdet_id:Int!
       crsdet_title:String
       crsmain_id:Int!
+      crsdet_sub_title:String
      }
      
      input createStaticCourseInput{
@@ -153,6 +155,7 @@ const adminQueryTypesAndInputs = `
       crsmain_desc:String
       crsmain_title:String
       crsmain_type:String
+      cramain_del_mod:String
      }
      input updateStaticCourseInput{
       crsmain_id:Int!
@@ -164,6 +167,7 @@ const adminQueryTypesAndInputs = `
       crsmain_desc:String
       crsmain_title:String
       crsmain_type:String
+      cramain_del_mod:String
      }
 
       input deleteStaticCourseInput {
@@ -172,11 +176,13 @@ const adminQueryTypesAndInputs = `
 
       input addStaticCourseDetailsInput{
          crsdet_title:String!
+         crsdet_sub_title:String
          crsmain_id:Int!
       }
       input updateStaticCourseDetailsInput{
          crsdet_id:Int
          crsdet_title:String
+         crsdet_sub_title:String
          crsmain_id:Int!
       }
 
@@ -487,6 +493,7 @@ const adminResolvers = {
             const createStaticCourseDetails = await prisma.jmkcrsdet.create({
                data: {  
                   crsdet_title: element.crsdet_title,
+                  crsdet_sub_title: element.crsdet_sub_title,
                  crsmain_id: element.crsmain_id
              }
              

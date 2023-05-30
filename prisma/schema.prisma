@@ -300,6 +300,7 @@ model jmkdevinfo {
   developer_password           String?   @db.VarChar(16)
   developer_type               String?   @db.VarChar(50)
   cid                          Int?
+  developer_prof_summary       String?   @db.VarChar(1000)
 }
 
 model jmkcrsmodule {
@@ -380,11 +381,13 @@ model jmkdevprojdet {
 }
 
 model jmkdevtechdet {
-  serial         Int       @id @default(autoincrement())
-  tech_stack     String?   @db.VarChar(50)
-  tech_stack_exp String?   @db.VarChar(20)
-  tech_last_used DateTime? @db.Date
-  developer_id   Int?
+  serial             Int       @id @default(autoincrement())
+  tech_stack         String?   @db.VarChar(50)
+  tech_stack_exp     String?   @db.VarChar(20)
+  tech_last_used     DateTime? @db.Date
+  developer_id       Int?
+  tech_stack_summary String?   @db.VarChar(200)
+  techstk_id         Int?
 }
 
 model jmkmktgdev {
@@ -413,12 +416,23 @@ model jmkconsulreqmnts {
   reqd_exp         Int?
   reqd_edu         String? @db.VarChar(100)
   reqd_addtional   String? @db.VarChar(200)
+  techstk_id       Int?
 }
 
 model jmktechstk {
   techstk_id   Int     @id @default(autoincrement())
   techstk_name String? @db.VarChar(100)
   techstk_desc String? @db.VarChar(200)
+}
+
+model jmkdevexp {
+  exp_id         Int       @id @default(autoincrement())
+  developer_id   Int?
+  exp_start_date DateTime? @db.Date
+  exp_end_date   DateTime? @db.Date
+  company_name   String?   @db.VarChar(100)
+  exp_desc       String?   @db.VarChar(1000)
+  exp_role_pos   String?   @db.VarChar(100)
 }
 
 enum jmkcrsmain_cramain_del_mod {
