@@ -9,7 +9,7 @@
     }, {});
   }
 
-  const ROLES = ['student', 'trainer', 'consultancy']
+  const ROLES = ['student', 'trainer', 'consultancy','developer']
 
   export {
     groupBy,

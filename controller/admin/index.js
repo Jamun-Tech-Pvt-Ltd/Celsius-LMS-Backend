@@ -137,12 +137,14 @@ const adminQueryTypesAndInputs = `
       crsmain_desc:String
       crsmain_title:String
       crsmain_type:String
+      cramain_del_mod:String
      }
 
      type staticCourseDetails{
       crsdet_id:Int!
       crsdet_title:String
       crsmain_id:Int!
+      crsdet_sub_title:String
      }
      
      input createStaticCourseInput{
@@ -153,6 +155,7 @@ const adminQueryTypesAndInputs = `
       crsmain_desc:String
       crsmain_title:String
       crsmain_type:String
+      cramain_del_mod:String
      }
      input updateStaticCourseInput{
       crsmain_id:Int!
@@ -164,6 +167,7 @@ const adminQueryTypesAndInputs = `
       crsmain_desc:String
       crsmain_title:String
       crsmain_type:String
+      cramain_del_mod:String
      }
 
       input deleteStaticCourseInput {
@@ -172,11 +176,13 @@ const adminQueryTypesAndInputs = `
 
       input addStaticCourseDetailsInput{
          crsdet_title:String!
+         crsdet_sub_title:String
          crsmain_id:Int!
       }
       input updateStaticCourseDetailsInput{
          crsdet_id:Int
          crsdet_title:String
+         crsdet_sub_title:String
          crsmain_id:Int!
       }
 
@@ -185,25 +191,9 @@ const adminQueryTypesAndInputs = `
         developer_fname: String
         developer_mname: String
         developer_lname: String
-        developer_high_qualification: String
         developer_phone: String
         developer_email: String
         developer_password: String
-        developer_country: String
-        developer_tech1: String
-        developer_tech2: String
-        developer_tech3: String
-        developer_tech1_exp: String
-        developer_tech2_exp: String
-        developer_tech3_exp: String
-        developer_resume: Upload
-        developer_company1: String
-        developer_company1_project: String
-        developer_company1_start: Date
-        developer_company2: String
-        developer_company2_start: Date
-        developer_company2_end: Date
-        developer_company2_project: String
         developer_type: String
      }
   
@@ -267,6 +257,7 @@ const adminMutation = `
     deleteStaticCourse(data:deleteStaticCourseInput):String
     addStaticCourseDetails(data:[addStaticCourseDetailsInput]):String!
     updateStaticCourseDetails(data:[updateStaticCourseDetailsInput]):String!
+    deleteStaticCourseDetailTitleById(crsDetId:Int!):String!
 
 `
 
@@ -411,18 +402,19 @@ const adminResolvers = {
       })
       if (!selectedStaticCourse) throw new ApolloError('invalid course')
 
-      await deleteImgToAWS(selectedStaticCourse?.crsmain_img_key)
-
       let file
-      if (data.crsmain_img_url) {
+      if (data.crsmain_img_url!==null) {
+         
+         await deleteImgToAWS(selectedStaticCourse?.crsmain_img_key)
+
          file = await uploadImgToAWS(data.crsmain_img_url, 'webimages/')
          if (!file.data) throw new ApolloError('Something went wrong !')
       }
       const course = await prisma.jmkcrsmain.update({
          data: {
             ...data,
-            crsmain_img_url: file?.data?.Location ?? null,
-            crsmain_img_key: file?.data?.key ?? '',
+            crsmain_img_url:(data.crsmain_img_url!==null)? (file?.data?.Location): (selectedStaticCourse.crsmain_img_url),
+            crsmain_img_key:(data.crsmain_img_url!==null)? (file?.data?.key): (selectedStaticCourse.crsmain_img_key),
          },
          where: {
             crsmain_id: parseInt(data.crsmain_id),
@@ -502,6 +494,7 @@ const adminResolvers = {
             const createStaticCourseDetails = await prisma.jmkcrsdet.create({
                data: {  
                   crsdet_title: element.crsdet_title,
+                  crsdet_sub_title: element.crsdet_sub_title,
                  crsmain_id: element.crsmain_id
              }
              
@@ -513,6 +506,27 @@ const adminResolvers = {
       return 'success'
 
    },
+
+   deleteStaticCourseDetailTitleById: async (_, { crsDetId }, { userId, role }) => {
+   
+      if (!userId) throw new ForbiddenError('invalid token')
+      const admin = await prisma.jmkuserinfo.findFirst({
+         where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin')
+
+      if(crsDetId){
+         
+         const deleteDet = await prisma.jmkcrsdet.delete({ where: { crsdet_id: crsDetId } })
+
+         if (!deleteDet) throw new AuthenticationError("invalid !!")
+      }
+     
+      return "success"
+   
+
+      throw new AuthenticationError("invalid access !!")
+  },
 
    updateDeveloperFromDashboard: async (_, { data }, { userId, role }) => {
       if (!userId) throw new ForbiddenError('invalid token')
