@@ -1,7 +1,6 @@
 import prisma from "../../database.js";
 import jwt from 'jsonwebtoken';
 import { ApolloError, AuthenticationError, ForbiddenError } from 'apollo-server-express';
-import { ROLES } from "../../utils/helper.js";
 
 const ROLE = "Developer"
 
@@ -37,7 +36,7 @@ const developerQueryTypesAndInputs = `
         serial: Int!
         tech_stack: String
         tech_stack_exp: String
-        tech_last_used: Date
+        tech_last_used: String
         developer_id: Int   
     }
 
@@ -48,6 +47,32 @@ const developerQueryTypesAndInputs = `
         proj_desc: String
         proj_type: String
         proj_techs_used:String
+    }
+
+    type techStack{
+        techstk_id:Int!
+        techstk_name:String
+        techstk_desc: String
+
+    }
+
+    type JobRecommendation{
+        consulreqmnts_id: Int!
+        cid: Int
+        reqd_tech_stack:String
+        reqd_no:Int
+        reqd_exp:Int
+        reqd_edu: String
+        reqd_additional:String
+    }
+    type developerExperience{
+        exp_id: Int!
+        developer_id: Int
+        exp_start_date: Date
+        exp_end_date: Date
+        company_name: String
+        exp_desc: String
+        exp_role_pos: String
     }
 
     input signinDeveloperUserInput{
@@ -67,7 +92,7 @@ const developerQueryTypesAndInputs = `
     input ExperienceDetails{
         tech_stack: String
         tech_stack_exp: String
-        tech_last_used: Date
+        tech_last_used: String
         developer_id: Int
     }
     input UpdateExperienceDetails{
@@ -81,6 +106,12 @@ const developerQueryTypesAndInputs = `
         serial: Int!
     }
 
+    input ProjectDetails{
+        proj_title: String
+        proj_desc: String
+        proj_type: String
+        proj_techs_used:String
+    }
     input deleteProjInput{
         serial:Int!
     }
@@ -98,28 +129,42 @@ const developerQueryTypesAndInputs = `
 const developerQuery = `
     getDeveloper:[Developer]
     getDeveloperUser: DeveloperUser
+
     getDashboard: Dashboard
+
     getExperienceList: [Experience]
     getExperienceById(serial: Int!): Experience!
+    
     getProjectById(serial: Int!): Project!
     getDeveloperProjectList: [Project]
+    
+    getConsultancyRecommendation:[JobRecommendation]
+    getJobRecommendationById(consulreqmnts_id: Int!):JobRecommendation
 
-    getExperiencesByDeveloperId(dev_id:Int!):[Experience]
-    getProjectsDeveloperId(dev_id:Int!):[Project]
+    getTechStackList: [techStack]
+
+    getDeveloperExperienceList:[developerExperience]
+    getDeveloperExperienceById(exp_id: Int!):developerExperience
 `;
+
+
 
 const developerMutation = `
     signinDeveloper(data:signinDeveloperUserInput!):Token
     updateDeveloper(data:DeveloperDetails!):String
+
     
-    createExperience(data:ExperienceDetails!):Experience
+    createExperience(data:ExperienceDetails!):String
     updateExperience(data:UpdateExperienceDetails!): String
     deleteExperience(data:deleteExpInput!): String
 
     updateProject(data:UpdateProjectDetails!): String
     deleteProject(data:deleteProjInput!):String
+    createProject(data:ProjectDetails!):String
 
 `;
+
+
 
 
 const developerQueryResolvers = {
@@ -190,7 +235,6 @@ const developerQueryResolvers = {
             const timestamp = experience.tech_last_used.getTime();
             experience.tech_last_used = new Date(timestamp).toLocaleDateString();
         }
-
         return experience;
     },
     getProjectById: async (_, args, { userId, role }) => {
@@ -215,35 +259,64 @@ const developerQueryResolvers = {
         });
         return projectList;
     },
+    getConsultancyRecommendation: async (_, args, { userId }) => {
+        if (!userId) return new AuthenticationError("Login to continue");
+        const techStackList = await prisma.jmkdevtechdet.findMany({
+            where: {
+                developer_id: userId,
+            },
+            select: {
+                tech_stack: true,
+            },
+            distinct: ['tech_stack'],
+        });
+        const projTechsUsedList = techStackList.map((p) => p.tech_stack);
+        const matchingRequirements = await prisma.jmkconsulreqmnts.findMany({
+            where: {
+                reqd_tech_stack: {
+                    in: projTechsUsedList,
+                },
+            },
+        });
 
-    getExperiencesByDeveloperId: async (_, args, { userId, role }) => {
-        if (!userId) throw new ForbiddenError('user need to login');
-        if (role === ROLES[2] || role === ROLES[3]) {
-            const experiences = await prisma.jmkdevtechdet.findMany({
-                where: {
-                    developer_id: args.devId
-                }
-            });
-            if (!experiences) throw new AuthenticationError("Data not Found !")
-            return experiences;
-        }
-        throw new AuthenticationError("Invalid Acccess !")
+        return matchingRequirements;
     },
-
-    getProjectsDeveloperId: async (_, args, { userId, role }) => {
-        if (!userId) throw new ForbiddenError('user need to login');
-        if (role === ROLES[2] || role === ROLES[3]) {
-            const projects = await prisma.jmkdevprojdet.findMany({
-                where: {
-                    developer_id: args.devId
-                }
-            });
-            if (!projects) throw new AuthenticationError("Data not Found !")
-            return projects;
-        }
-        throw new AuthenticationError("Invalid Acccess !")
+    getJobRecommendationById: async (_, args, { userId }) => {
+        if (!userId) return new AuthenticationError("Login to continue");
+        const jobRecommendation = await prisma.jmkconsulreqmnts.findFirst({
+            where: {
+                consulreqmnts_id: args.consulreqmnts_id
+            }
+        });
+        if (!jobRecommendation) return new ApolloError("Job not found");
+        return jobRecommendation;
     },
+    getTechStackList: async (_) => {
+        const techStackList = await prisma.jmktechstk.findMany();
+        return techStackList;
+    },
+    getDeveloperExperienceList: async (_, args, { userId }) => {
+        if (!userId) return new AuthenticationError("Login to continue");
+        const developerExperienceList = await prisma.jmkdevexp.findMany({
+            where: {
+                developer_id: userId
+            }
+        });
+        developerExperienceList.forEach((experience) => {
+            if (experience.exp_start_date) {
+                const timestamp = experience.exp_start_date.getTime();
+                experience.exp_start_date = new Date(timestamp).toLocaleDateString();
+            }
+            if (experience.exp_end_date) {
+                const timestamp = experience.exp_end_date.getTime();
+                experience.exp_end_date = new Date(timestamp).toLocaleDateString();
+            }
+        });
+        return developerExperienceList;
+    },
+    getDeveloperExperienceById: async (_, args, { userId }) => {
 
+    },
 };
 const developerMutationResolver = {
     signinDeveloper: async (_, { data }) => {
@@ -259,57 +332,45 @@ const developerMutationResolver = {
         return { token };
     },
     updateDeveloper: async (_, { data }, { userId }) => {
-        try {
-            console.log(userId);
-            const updatedDeveloper = await prisma.jmkdevinfo.update({
-                where: { developer_id: userId },
-                data: { ...data },
-            });
+        const updatedDeveloper = await prisma.jmkdevinfo.update({
+            where: { developer_id: userId },
+            data: { ...data },
+        });
 
-            if (!updatedDeveloper) throw new ForbiddenError('Developer not found');
-            return 'success';
-        } catch (error) {
-            console.log(error);
-            return new ForbiddenError("Error Occured");
-        }
+        if (!updatedDeveloper) throw new ForbiddenError('Developer not found');
+        return 'success';
+
     },
-    createExperience: async (_, { data }) => {
-        try {
-            const techLastUsed = data.tech_last_used ? new Date(data.tech_last_used) : null;
-            const newExperience = await prisma.jmkdevtechdet.create({
-                data: {
-                    tech_stack: data.tech_stack,
-                    tech_stack_exp: data.tech_stack_exp,
-                    tech_last_used: techLastUsed,
-                    developer_id: data.developer_id,
-                },
-            });
-            return newExperience;
-        } catch (error) {
-            console.log(error);
-            throw new ForbiddenError('Error occured!!!');
-        }
-    }
-    ,
-    updateExperience: async (_, { data }, { userId }) => {
-        try {
-            const { serial, ..._updatedData } = data;
-            const updatedExperience = await prisma.jmkdevtechdet.update({
-                where: {
-                    serial: serial,
-                    developer_id: _updatedData.developer_id
-                },
-                data: {
-                    ..._updatedData,
+    createExperience: async (_, { data }, { userId }) => {
+        if (!userId) return new AuthenticationError("Login to continue");
+        const techLastUsed = data.tech_last_used ? new Date(data.tech_last_used) : null;
+        const newExperience = await prisma.jmkdevtechdet.create({
+            data: {
+                tech_stack: data.tech_stack,
+                tech_stack_exp: data.tech_stack_exp,
+                tech_last_used: techLastUsed,
+                developer_id: userId,
+            },
+        });
+        if (!newExperience) return new ApolloError('Something went wrong');
+        return 'success';
 
-                }
-            });
-            if (!updatedExperience) return new ApolloError("Cannot find the experience");
-            return 'success';
-        } catch (error) {
-            console.log(error);
-            throw new ApolloError("Could not update the data");
-        }
+    },
+    updateExperience: async (_, { data }, { userId }) => {
+        const { serial, ..._updatedData } = data;
+        const updatedExperience = await prisma.jmkdevtechdet.update({
+            where: {
+                serial: serial,
+                developer_id: _updatedData.developer_id
+            },
+            data: {
+                ..._updatedData,
+
+            }
+        });
+        if (!updatedExperience) return new ApolloError("Cannot find the experience");
+        return 'success';
+
     },
     deleteExperience: async (_, { data }, { userId, role }) => {
         // if (!userId) throw new ForbiddenError('invalid token')
@@ -331,21 +392,21 @@ const developerMutationResolver = {
     deleteProject: async (_, { data }, { userId }) => {
         const project = await prisma.jmkdevprojdet.findFirst({
             where: {
-              serial: data.serial, 
+                serial: data.serial,
             },
-          });
-        
-          if (!project) throw new ApolloError("Invalid ID");
-        
-          const prj = await prisma.jmkdevprojdet.delete({
+        });
+
+        if (!project) throw new ApolloError("Invalid ID");
+
+        const prj = await prisma.jmkdevprojdet.delete({
             where: {
-              serial: data.serial,
+                serial: data.serial,
             },
-          });
-        
-          if (!prj) throw new ApolloError('Something went wrong');
-        
-          return 'success';
+        });
+
+        if (!prj) throw new ApolloError('Something went wrong');
+
+        return 'success';
     },
     updateProject: async (_, { data }, { userId }) => {
         const { serial, ..._updatedData } = data;
@@ -366,7 +427,25 @@ const developerMutationResolver = {
         if (!updatedProject) return new ApolloError("Cannot find the project");
         return 'success';
 
-    }
+    },
+    createProject: async (_, { data }, { userId }) => {
+        if (!userId) return new AuthenticationError("Login to continue");
+
+        const newProject = await prisma.jmkdevprojdet.create({
+            data: {
+                developer_id: userId ?? data.developer_id,
+                proj_title: data.proj_title,
+                proj_desc: data.proj_desc,
+                proj_techs_used: data.proj_techs_used,
+                proj_type: data.proj_type,
+            },
+        });
+        if (!newProject) return new ApolloError('Something went wrong!');
+        return 'success';
+
+    },
+
+
 
 
 }
