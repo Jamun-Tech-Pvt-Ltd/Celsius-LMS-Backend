@@ -197,6 +197,9 @@ const consultancyQuery = `
     getConsultancyAssignStudentsByUserId(user_id:Int!):[AssignStudents]
     getConsultancyAssignDevelopersByUserId(user_id:Int!):[AssignDeveloper]
 
+    getConsultancyAssignStudentsByUserAndStudentId(user_id:Int! std_id:Int!):ConsultancyAssignStudents!
+    getConsultancyAssignStudentsByUserAndDeveloperId(user_id:Int! dev_id:Int!):ConsultancyAssignDeveloper
+
 `
 
 const consultancyMutation = `
@@ -219,6 +222,9 @@ const consultancyMutation = `
 
     assignDeveloperToMarketers(data:assignDeveloperToMarketersInput):String!
     removeDeveloperFromMarketers(serial:Int!):String!
+
+    updateAssignStudentDetails(data:assignStudentsToMarketersInput):String!
+    updateAssignDeveloperDetails(data:assignDeveloperToMarketersInput):String!
 `
 
 const consultancyResolvers = {
@@ -428,6 +434,38 @@ const consultancyResolvers = {
             return 'success';
         }
     },
+
+    updateAssignStudentDetails: async (_, { data }, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const assignStd = await prisma.jmkmktgstd.findFirst({ where: { user_id: data.user_id, std_id: data.std_id } })
+            if (!assignStd) throw new AuthenticationError("no such data availbale !!")
+            const updateStd = await prisma.jmkmktgstd.update({
+                data: { ...data },
+                where: { serial: assignStd.serial }
+            })
+            if (!updateStd) throw new AuthenticationError("invalid query")
+            return 'success';
+        }
+    },
+
+    updateAssignDeveloperDetails: async (_, { data }, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const assignDev = await prisma.jmkmktgdev.findFirst({ where: { user_id: data.user_id, developer_id: data.developer_id } })
+            if (!assignDev) throw new AuthenticationError("no such data availbale !!")
+            const updateDev = await prisma.jmkmktgdev.update({
+                data: { ...data },
+                where: { serial: assignDev.serial }
+            })
+            if (!updateDev) throw new AuthenticationError("invalid query")
+            return 'success';
+        }
+    },
 }
 
 const consultancyResolversQuery = {
@@ -593,6 +631,29 @@ const consultancyResolversQuery = {
         throw new AuthenticationError("invalid credentials !")
     },
 
+    getConsultancyAssignStudentsByUserAndStudentId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const assignStd = await prisma.jmkmktgstd.findFirst({ where: { user_id: args.user_id, std_id: args.std_id } })
+            if (!assignStd) throw new AuthenticationError("Data Not Found !")
+            return assignStd;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
+
+    getConsultancyAssignStudentsByUserAndDeveloperId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            const assignDev = await prisma.jmkmktgdev.findFirst({ where: { user_id: args.user_id, developer_id: args.dev_id } })
+            if (!assignDev) throw new AuthenticationError("Data not found !!")
+            return assignDev;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
 
 }
 
