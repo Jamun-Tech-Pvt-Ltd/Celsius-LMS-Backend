@@ -22,6 +22,7 @@ const courseQueryTypesAndInputs = `
     type CourseType {
       crs_type:String
     }
+   
     input addCourseInput {
         crsmain_title:String!
         crsmain_desc:String!
@@ -45,6 +46,7 @@ const courseQuery = `
   getAllCourseContentByCourseId(crsmain_id:Int!):[CourseContent]
   getAllCourseType:[CourseType]
   getCourseTitleByType(crsmain_type:String!):[Course]
+  
 `
 
 const courseMutation = `
