@@ -1,6 +1,7 @@
 import prisma from "../../database.js";
 import jwt from 'jsonwebtoken';
 import { ApolloError, AuthenticationError, ForbiddenError } from 'apollo-server-express';
+import { ROLES } from "../../utils/helper.js";
 
 const ROLE = "Developer"
 
@@ -36,7 +37,7 @@ const developerQueryTypesAndInputs = `
         serial: Int!
         tech_stack: String
         tech_stack_exp: String
-        tech_last_used: String
+        tech_last_used: Date
         developer_id: Int   
     }
 
@@ -66,7 +67,7 @@ const developerQueryTypesAndInputs = `
     input ExperienceDetails{
         tech_stack: String
         tech_stack_exp: String
-        tech_last_used: String
+        tech_last_used: Date
         developer_id: Int
     }
     input UpdateExperienceDetails{
@@ -102,6 +103,9 @@ const developerQuery = `
     getExperienceById(serial: Int!): Experience!
     getProjectById(serial: Int!): Project!
     getDeveloperProjectList: [Project]
+
+    getExperiencesByDeveloperId(dev_id:Int!):[Experience]
+    getProjectsDeveloperId(dev_id:Int!):[Project]
 `;
 
 const developerMutation = `
@@ -210,7 +214,36 @@ const developerQueryResolvers = {
             }
         });
         return projectList;
-    }
+    },
+
+    getExperiencesByDeveloperId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('user need to login');
+        if (role === ROLES[2] || role === ROLES[3]) {
+            const experiences = await prisma.jmkdevtechdet.findMany({
+                where: {
+                    developer_id: args.devId
+                }
+            });
+            if (!experiences) throw new AuthenticationError("Data not Found !")
+            return experiences;
+        }
+        throw new AuthenticationError("Invalid Acccess !")
+    },
+
+    getProjectsDeveloperId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('user need to login');
+        if (role === ROLES[2] || role === ROLES[3]) {
+            const projects = await prisma.jmkdevprojdet.findMany({
+                where: {
+                    developer_id: args.devId
+                }
+            });
+            if (!projects) throw new AuthenticationError("Data not Found !")
+            return projects;
+        }
+        throw new AuthenticationError("Invalid Acccess !")
+    },
+
 };
 const developerMutationResolver = {
     signinDeveloper: async (_, { data }) => {
