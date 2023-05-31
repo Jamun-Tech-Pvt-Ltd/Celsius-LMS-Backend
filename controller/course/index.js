@@ -1,5 +1,6 @@
 import { AuthenticationError } from 'apollo-server-express'
 import prisma from '../../database.js'
+import { response } from 'express'
 
 const courseQueryTypesAndInputs = `
     type Course{
@@ -12,6 +13,20 @@ const courseQueryTypesAndInputs = `
         crsmain_img_url: String!     
         crsmain_type:String! 
     }
+    type UpcommingCourse{
+      start_date:Date
+      crsmain_id:Int!
+      crsmain_title:String!
+      crsmain_desc:String!
+      crsmain_overview:String!
+      crsmain_duration: Int!
+      crsmain_rate: Int!
+      crsmain_img_url: String!     
+      crsmain_type:String! 
+    }
+
+
+
 
     type CourseContent{
         crsdet_id: Int!
@@ -46,6 +61,8 @@ const courseQuery = `
   getAllCourseContentByCourseId(crsmain_id:Int!):[CourseContent]
   getAllCourseType:[CourseType]
   getCourseTitleByType(crsmain_type:String!):[Course]
+  getAllUpcommingCourse:[UpcommingCourse]
+
   
 `
 
@@ -102,6 +119,21 @@ const courseQueryResolver = {
     })
     if (!result) throw new AuthenticationError('No content avaliable')
     return result
+  },
+  getAllUpcommingCourse: async () => {
+    const results = await prisma.jmkcrsupcom.findMany({
+      select: { start_date: true, crsmain_id: true },
+    })
+    const upcomingCourses = []
+    for (let i = 0; i < results.length; i++) {
+      let response = await prisma.jmkcrsmain.findUnique({
+        where: { crsmain_id: results[i].crsmain_id },
+      })
+      response.start_date = results[i].start_date
+      upcomingCourses.push(response)
+    }
+    if (!upcomingCourses) throw new AuthenticationError('No contetn available')
+    return upcomingCourses
   },
 }
 

@@ -362,7 +362,6 @@ model jmkcrsmain {
   crsmain_type     String?
   crsmain_img_key  String?                     @db.VarChar(1000)
   jmkcrsdet        jmkcrsdet[]
-  
 }
 
 model jmkconsulfaq {
@@ -428,10 +427,8 @@ model jmktechstk {
 
 model jmkcrsupcom {
   serial     Int       @id @default(autoincrement())
-  crsmain_id Int
+  crsmain_id Int?
   start_date DateTime? @db.Date
-
-  
 }
 
 model jmkdevexp {
