@@ -204,15 +204,12 @@ const adminQueryTypesAndInputs = `
         tr_lname: String!
         tr_mobile:String
         tr_email: String
-        tr_city:String
-        tr_country: String
         tr_main_tech1:String
         tr_main_tech2: String
         tr_main_tech3:String
         tr_dob: String
         tr_verifyed:Boolean!
         tr_password:String!
-        tr_resume:String
         tr_github:String
         tr_linkedin:String
      }
@@ -352,18 +349,20 @@ const adminResolvers = {
    },
 
    updateTrainerFromDashboard: async (_, { data }, { userId, role }) => {
-      const access = ['admin']
+
       if (!userId) throw new ForbiddenError('invalid token')
+
       const admin = await prisma.jmkuserinfo.findFirst({
          where: { usr_id: userId, usr_role: role },
       })
+
       if (!admin) throw new AuthenticationError('invalid admin')
-      if (!access.includes(admin.usr_role))
-         throw new ForbiddenError('You dont have access to update')
+      
       const trainer = await prisma.jmktrinfo.update({
          data: { ...data },
          where: { tr_id: parseInt(data.tr_id) },
       })
+
       if (!trainer) throw new AuthenticationError('Something went wrong')
 
       return 'success'
