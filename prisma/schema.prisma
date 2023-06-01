@@ -425,6 +425,12 @@ model jmktechstk {
   techstk_desc String? @db.VarChar(200)
 }
 
+model jmkcrsupcom {
+  serial     Int       @id @default(autoincrement())
+  crsmain_id Int?
+  start_date DateTime? @db.Date
+}
+
 model jmkdevexp {
   exp_id         Int       @id @default(autoincrement())
   developer_id   Int?
