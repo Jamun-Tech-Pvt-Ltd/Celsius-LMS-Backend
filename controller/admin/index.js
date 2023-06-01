@@ -147,6 +147,12 @@ const adminQueryTypesAndInputs = `
       crsdet_sub_title:String
      }
      
+     type totalCount{
+       name:String
+       count:Int
+     }
+
+
      input createStaticCourseInput{
       crsmain_overview:String
       crsmain_duration:Int
@@ -232,6 +238,7 @@ const adminQuery = `
     getStaticCoursesDataForAdmin:[staticCourse]
     getStaticCourseByIdForAdmin(crsmain_id:Int!):staticCourse
     getStaticCourseDetailsByIdForAdmin(crsmain_id:Int!):[staticCourseDetails]
+    getDataCountForAllTableInAdmin:[totalCount]
 
 `
 
@@ -357,7 +364,7 @@ const adminResolvers = {
       })
 
       if (!admin) throw new AuthenticationError('invalid admin')
-      
+
       const trainer = await prisma.jmktrinfo.update({
          data: { ...data },
          where: { tr_id: parseInt(data.tr_id) },
@@ -714,6 +721,48 @@ const adminResolversQuery = {
          return staticCourseDetails
       }
       throw new AuthenticationError("invalid access")
+
+   },
+   getDataCountForAllTableInAdmin: async (_, args, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
+      if (!admin) throw new AuthenticationError("invalid admin credentials")
+
+         const runningCourses = await prisma.jmkcrsinfo.count()
+         const dynamicCourses = await prisma.jmkcrsmain.count()
+         const students = await prisma.jmkstdinfo.count()
+         const trainers = await prisma.jmktrinfo.count()
+         const developers = await prisma.jmkdevinfo.count()
+
+         
+         if(runningCourses && dynamicCourses && students && trainers && developers){
+
+            const tableCount=[
+               {
+                  name:'Running Courses',
+                  count:runningCourses
+               },
+               {
+                  name:'Dynamic Courses',
+                  count:dynamicCourses
+               },
+               {
+                  name:'Students',
+                  count:students
+               },
+               {
+                  name:'Trainers',
+                  count:trainers
+               },
+               {
+                  name:'Developers',
+                  count:developers
+               },
+             
+            ]
+            return tableCount
+         }
+         else  throw new AuthenticationError("Something went wrong")
 
    },
 
