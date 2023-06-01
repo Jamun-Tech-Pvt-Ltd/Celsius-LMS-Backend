@@ -441,6 +441,15 @@ model jmkdevexp {
   exp_role_pos   String?   @db.VarChar(100)
 }
 
+model jmkevents {
+  events_id       Int       @id @default(autoincrement())
+  event_date      DateTime? @db.Date
+  event_desc      String?   @db.VarChar(2000)
+  event_organizer String?   @db.VarChar(100)
+  event_time      String?   @db.VarChar(10)
+  event_loc       String?   @db.VarChar(100)
+}
+
 enum jmkcrsmain_cramain_del_mod {
   Remote
   Physical
