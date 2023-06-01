@@ -2,6 +2,7 @@ import prisma from "../../database.js";
 import jwt from 'jsonwebtoken';
 import { ApolloError, AuthenticationError, ForbiddenError } from 'apollo-server-express';
 import { ROLES } from "../../utils/helper.js";
+import { uploadImgToAWS } from "../../utils/imageHandler.js";
 
 const developerQueryTypesAndInputs = `
     type Developer {
