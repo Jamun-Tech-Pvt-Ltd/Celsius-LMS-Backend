@@ -1,8 +1,7 @@
 import prisma from "../../database.js";
 import jwt from 'jsonwebtoken';
 import { ApolloError, AuthenticationError, ForbiddenError } from 'apollo-server-express';
-
-const ROLE = "Developer"
+import { ROLES } from "../../utils/helper.js";
 
 const developerQueryTypesAndInputs = `
     type Developer {
@@ -79,6 +78,33 @@ const developerQueryTypesAndInputs = `
         developer_email: String
         developer_password: String
     }
+
+    input signupDevInput {
+        developer_fname: String!
+        developer_mname: String
+        developer_lname: String!
+        developer_high_qualification: String
+        developer_phone: String!
+        developer_email: String!
+        developer_password: String!
+        developer_country: String!
+        developer_tech1: String
+        developer_tech2: String
+        developer_tech3: String
+        developer_tech1_exp: String
+        developer_tech2_exp: String
+        developer_tech3_exp: String
+        developer_resume: Upload
+        developer_company1: String
+        developer_company1_project: String
+        developer_company1_start: Date!
+        developer_company2: String
+        developer_company2_start: Date
+        developer_company2_end: Date
+        developer_company2_project: String
+        developer_type: String!
+     }
+
     input DeveloperDetails{
         developer_fname: String
         developer_mname: String
@@ -151,6 +177,7 @@ const developerQuery = `
 
 const developerMutation = `
     signinDeveloper(data:signinDeveloperUserInput!):Token
+    signupDeveloper(data:signupDevInput!):String
     updateDeveloper(data:DeveloperDetails!):String
 
     
@@ -328,9 +355,32 @@ const developerMutationResolver = {
         if (!developer) throw AuthenticationError('Invalid Credential');
         const isMatch = data.developer_password == developer.developer_password
         if (!isMatch) throw new AuthenticationError("invalid credentials")
-        const token = jwt.sign({ userId: developer.developer_id, role: ROLE }, process.env.JWT_SECRET_KEY)
+        const token = jwt.sign({ userId: developer.developer_id, role: ROLES[3] }, process.env.JWT_SECRET_KEY)
         return { token };
     },
+
+    signupDeveloper: async (_, { data }) => {
+        const dev = await prisma.jmkdevinfo.findFirst({
+            where: { developer_email: data.developer_email },
+        })
+        if (dev)
+            throw new AuthenticationError('developer already exist with that email')
+        let file
+        if (data.developer_resume) {
+            file = await uploadImgToAWS(data.developer_resume, 'developer_resume/')
+            if (!file.data) throw new ApolloError('Someting went wrong !')
+        }
+        const newDev = await prisma.jmkdevinfo.create({
+            data: {
+                ...data,
+                developer_resume: file?.data?.Location ?? '',
+                developer_resume_key: file?.data?.key ?? '',
+            },
+        })
+        if (!newDev) throw new AuthenticationError('Invalid input')
+        return 'success'
+    },
+
     updateDeveloper: async (_, { data }, { userId }) => {
         const updatedDeveloper = await prisma.jmkdevinfo.update({
             where: { developer_id: userId },
