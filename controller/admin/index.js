@@ -157,7 +157,7 @@ const adminQueryTypesAndInputs = `
       usr_code:String
       usr_email:String
       usr_password:String
-      urs_role:String
+      usr_role:String
       usr_fname:String
       usr_mname:String
       usr_lname:String
@@ -249,12 +249,11 @@ const adminQueryTypesAndInputs = `
       usr_id:Int!
       usr_email:String
       usr_password:String
-      urs_role:String
+      usr_role:String
       usr_fname:String
       usr_mname:String
       usr_lname:String
-      usr_img_url:String
-      usr_img_key:String
+      usr_img_url:Upload
      }
 
 `
@@ -677,7 +676,7 @@ const adminResolvers = {
          
          await deleteImgToAWS(selectedUser?.usr_img_key)
 
-         file = await uploadImgToAWS(data.usr_img_url, 'user/')
+         file = await uploadImgToAWS(data.usr_img_url, 'admin_users_profilePic/')
          if (!file.data) throw new ApolloError('Something went wrong !')
       }
       const user = await prisma.jmkuserinfo.update({
@@ -929,8 +928,7 @@ const adminResolversQuery = {
       if (!userId) throw new ForbiddenError('invalid token');
       const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
       if (!admin) throw new AuthenticationError("invalid admin credentials")
-
-         const user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: args.user_id } });
+         const user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: args.usr_id } });
          return user
    },
 
