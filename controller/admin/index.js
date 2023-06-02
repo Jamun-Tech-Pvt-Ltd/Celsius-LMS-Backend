@@ -147,6 +147,12 @@ const adminQueryTypesAndInputs = `
       crsdet_sub_title:String
      }
      
+     type totalCount{
+       name:String
+       count:Int
+     }
+
+
      input createStaticCourseInput{
       crsmain_overview:String
       crsmain_duration:Int
@@ -204,15 +210,12 @@ const adminQueryTypesAndInputs = `
         tr_lname: String!
         tr_mobile:String
         tr_email: String
-        tr_city:String
-        tr_country: String
         tr_main_tech1:String
         tr_main_tech2: String
         tr_main_tech3:String
         tr_dob: String
         tr_verifyed:Boolean!
         tr_password:String!
-        tr_resume:String
         tr_github:String
         tr_linkedin:String
      }
@@ -235,6 +238,7 @@ const adminQuery = `
     getStaticCoursesDataForAdmin:[staticCourse]
     getStaticCourseByIdForAdmin(crsmain_id:Int!):staticCourse
     getStaticCourseDetailsByIdForAdmin(crsmain_id:Int!):[staticCourseDetails]
+    getDataCountForAllTableInAdmin:[totalCount]
 
 `
 
@@ -352,18 +356,20 @@ const adminResolvers = {
    },
 
    updateTrainerFromDashboard: async (_, { data }, { userId, role }) => {
-      const access = ['admin']
+
       if (!userId) throw new ForbiddenError('invalid token')
+
       const admin = await prisma.jmkuserinfo.findFirst({
          where: { usr_id: userId, usr_role: role },
       })
+
       if (!admin) throw new AuthenticationError('invalid admin')
-      if (!access.includes(admin.usr_role))
-         throw new ForbiddenError('You dont have access to update')
+
       const trainer = await prisma.jmktrinfo.update({
          data: { ...data },
          where: { tr_id: parseInt(data.tr_id) },
       })
+
       if (!trainer) throw new AuthenticationError('Something went wrong')
 
       return 'success'
@@ -715,6 +721,48 @@ const adminResolversQuery = {
          return staticCourseDetails
       }
       throw new AuthenticationError("invalid access")
+
+   },
+   getDataCountForAllTableInAdmin: async (_, args, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
+      if (!admin) throw new AuthenticationError("invalid admin credentials")
+
+         const runningCourses = await prisma.jmkcrsinfo.count()
+         const dynamicCourses = await prisma.jmkcrsmain.count()
+         const students = await prisma.jmkstdinfo.count()
+         const trainers = await prisma.jmktrinfo.count()
+         const developers = await prisma.jmkdevinfo.count()
+
+         
+         if(runningCourses && dynamicCourses && students && trainers && developers){
+
+            const tableCount=[
+               {
+                  name:'Running Courses',
+                  count:runningCourses
+               },
+               {
+                  name:'Dynamic Courses',
+                  count:dynamicCourses
+               },
+               {
+                  name:'Students',
+                  count:students
+               },
+               {
+                  name:'Trainers',
+                  count:trainers
+               },
+               {
+                  name:'Developers',
+                  count:developers
+               },
+             
+            ]
+            return tableCount
+         }
+         else  throw new AuthenticationError("Something went wrong")
 
    },
 
