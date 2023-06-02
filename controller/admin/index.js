@@ -201,6 +201,7 @@ const adminQueryTypesAndInputs = `
         developer_email: String
         developer_password: String
         developer_type: String
+        developer_country: String
      }
   
      input updateTrainerFromDashboard {
@@ -301,9 +302,9 @@ const adminResolvers = {
          { userId: newAdmin.usr_id, role: data.usr_role },
          process.env.JWT_SECRET_KEY
       )
-      // await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
-      // await sendMail('riwaz@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
-      // await sendMail('jenish@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
+      await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
+      await sendMail('riwaz@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
+      await sendMail('jenish@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
       return { token }
    },
 
@@ -322,37 +323,64 @@ const adminResolvers = {
    },
 
    updateStudentFromAdmin: async (_, { data }, { userId, role }) => {
-      const access = ['admin']
       if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-      if (!access.includes(admin.usr_role))
-         throw new ForbiddenError('You dont have access to create course')
-      const student = await prisma.jmkstdinfo.update({
-         data: { ...data },
-         where: { std_id: data.std_id },
-      })
-      if (!student) throw new AuthenticationError('Error')
-      return 'success'
+      if (role === 'admin') {
+         const admin = await prisma.jmkuserinfo.findFirst({
+            where: { usr_id: userId, usr_role: role },
+         })
+         if (!admin) throw new AuthenticationError('invalid admin')
+         const student = await prisma.jmkstdinfo.update({
+            data: { ...data },
+            where: { std_id: data.std_id },
+         })
+         if (!student) throw new AuthenticationError('Error')
+         return 'success'
+      }
+
+      if (role === ROLES[2]) {
+         const consultancy = await prisma.jmkconsulinfo.findFirst({
+            where: { serial: userId },
+         })
+         if (!consultancy) throw new AuthenticationError('invalid consultancy')
+         const student = await prisma.jmkstdinfo.update({
+            data: { ...data, cid: userId },
+            where: { std_id: data.std_id },
+         })
+         if (!student) throw new AuthenticationError('Error')
+         return 'success'
+      }
+      throw new AuthenticationError('invalid Access')
    },
 
    updateStudentCourseFromAdmin: async (_, { data }, { userId, role }) => {
-      const access = ['admin']
       if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-      if (!access.includes(admin.usr_role))
-         throw new ForbiddenError('You dont have access to create course')
-      const student = await prisma.jmkstdcrsinfo.update({
-         data: { ...data },
-         where: { serial: data.serial },
-      })
-      if (!student) throw new AuthenticationError('Error')
-      return 'success'
+      if (role === 'admin') {
+         const admin = await prisma.jmkuserinfo.findFirst({
+            where: { usr_id: userId, usr_role: role },
+         })
+         if (!admin) throw new AuthenticationError('invalid admin')
+         if (!access.includes(admin.usr_role))
+            throw new ForbiddenError('You dont have access to create course')
+         const student = await prisma.jmkstdcrsinfo.update({
+            data: { ...data },
+            where: { serial: data.serial },
+         })
+         if (!student) throw new AuthenticationError('Error')
+         return 'success'
+      }
+      if (role === ROLES[2]) {
+         const consultancy = await prisma.jmkconsulinfo.findFirst({
+            where: { serial: userId },
+         })
+         if (!consultancy) throw new AuthenticationError('invalid admin')
+         const student = await prisma.jmkstdcrsinfo.update({
+            data: { ...data },
+            where: { serial: data.serial },
+         })
+         if (!student) throw new AuthenticationError('Error')
+         return 'success'
+      }
+      throw new AuthenticationError('Invalid access')
    },
 
    updateTrainerFromDashboard: async (_, { data }, { userId, role }) => {
@@ -392,7 +420,7 @@ const adminResolvers = {
             crsmain_img_key: file?.data?.key ?? '',
          },
       })
-      
+
       if (!newStaticCourse) throw new ApolloError('something went wrong !')
       return newStaticCourse.crsmain_id
 
@@ -409,8 +437,8 @@ const adminResolvers = {
       if (!selectedStaticCourse) throw new ApolloError('invalid course')
 
       let file
-      if (data.crsmain_img_url!==null) {
-         
+      if (data.crsmain_img_url !== null) {
+
          await deleteImgToAWS(selectedStaticCourse?.crsmain_img_key)
 
          file = await uploadImgToAWS(data.crsmain_img_url, 'webimages/')
@@ -419,8 +447,8 @@ const adminResolvers = {
       const course = await prisma.jmkcrsmain.update({
          data: {
             ...data,
-            crsmain_img_url:(data.crsmain_img_url!==null)? (file?.data?.Location): (selectedStaticCourse.crsmain_img_url),
-            crsmain_img_key:(data.crsmain_img_url!==null)? (file?.data?.key): (selectedStaticCourse.crsmain_img_key),
+            crsmain_img_url: (data.crsmain_img_url !== null) ? (file?.data?.Location) : (selectedStaticCourse.crsmain_img_url),
+            crsmain_img_key: (data.crsmain_img_url !== null) ? (file?.data?.key) : (selectedStaticCourse.crsmain_img_key),
          },
          where: {
             crsmain_id: parseInt(data.crsmain_id),
@@ -485,7 +513,7 @@ const adminResolvers = {
       if (!admin) throw new AuthenticationError('invalid admin')
 
       data.forEach(async (element) => {
-         if (!element.crsdet_title) return 
+         if (!element.crsdet_title) return
          if (element.crsdet_id) {
 
             const updateStaticCourseDetails = await prisma.jmkcrsdet.update({
@@ -495,15 +523,15 @@ const adminResolvers = {
                },
             })
          }
-         else{
-         
+         else {
+
             const createStaticCourseDetails = await prisma.jmkcrsdet.create({
-               data: {  
+               data: {
                   crsdet_title: element.crsdet_title,
                   crsdet_sub_title: element.crsdet_sub_title,
-                 crsmain_id: element.crsmain_id
-             }
-             
+                  crsmain_id: element.crsmain_id
+               }
+
             })
          }
 
@@ -514,25 +542,25 @@ const adminResolvers = {
    },
 
    deleteStaticCourseDetailTitleById: async (_, { crsDetId }, { userId, role }) => {
-   
+
       if (!userId) throw new ForbiddenError('invalid token')
       const admin = await prisma.jmkuserinfo.findFirst({
          where: { usr_id: userId, usr_role: role },
       })
       if (!admin) throw new AuthenticationError('invalid admin')
 
-      if(crsDetId){
-         
+      if (crsDetId) {
+
          const deleteDet = await prisma.jmkcrsdet.delete({ where: { crsdet_id: crsDetId } })
 
          if (!deleteDet) throw new AuthenticationError("invalid !!")
       }
-     
+
       return "success"
-   
+
 
       throw new AuthenticationError("invalid access !!")
-  },
+   },
 
    updateDeveloperFromDashboard: async (_, { data }, { userId, role }) => {
       if (!userId) throw new ForbiddenError('invalid token')
@@ -547,6 +575,7 @@ const adminResolvers = {
 
          return 'success'
       }
+
       if (role === ROLES[2]) {
          const consultancy = await prisma.jmkconsulinfo.findFirst({
             where: { serial: userId },
@@ -728,41 +757,41 @@ const adminResolversQuery = {
       const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_role: userId, usr_role: role } })
       if (!admin) throw new AuthenticationError("invalid admin credentials")
 
-         const runningCourses = await prisma.jmkcrsinfo.count()
-         const dynamicCourses = await prisma.jmkcrsmain.count()
-         const students = await prisma.jmkstdinfo.count()
-         const trainers = await prisma.jmktrinfo.count()
-         const developers = await prisma.jmkdevinfo.count()
+      const runningCourses = await prisma.jmkcrsinfo.count()
+      const dynamicCourses = await prisma.jmkcrsmain.count()
+      const students = await prisma.jmkstdinfo.count()
+      const trainers = await prisma.jmktrinfo.count()
+      const developers = await prisma.jmkdevinfo.count()
 
-         
-         if(runningCourses && dynamicCourses && students && trainers && developers){
 
-            const tableCount=[
-               {
-                  name:'Running Courses',
-                  count:runningCourses
-               },
-               {
-                  name:'Dynamic Courses',
-                  count:dynamicCourses
-               },
-               {
-                  name:'Students',
-                  count:students
-               },
-               {
-                  name:'Trainers',
-                  count:trainers
-               },
-               {
-                  name:'Developers',
-                  count:developers
-               },
-             
-            ]
-            return tableCount
-         }
-         else  throw new AuthenticationError("Something went wrong")
+      if (runningCourses && dynamicCourses && students && trainers && developers) {
+
+         const tableCount = [
+            {
+               name: 'Running Courses',
+               count: runningCourses
+            },
+            {
+               name: 'Dynamic Courses',
+               count: dynamicCourses
+            },
+            {
+               name: 'Students',
+               count: students
+            },
+            {
+               name: 'Trainers',
+               count: trainers
+            },
+            {
+               name: 'Developers',
+               count: developers
+            },
+
+         ]
+         return tableCount
+      }
+      else throw new AuthenticationError("Something went wrong")
 
    },
 
