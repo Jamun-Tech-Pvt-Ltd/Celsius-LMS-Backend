@@ -304,7 +304,7 @@ const adminMutation = `
 
     createNewUser(data:createNewUserInput):String!
     updateSelectedUser(data:updateUserInput):String!
-    deleteUserById(usr_id:Int!):String!
+    deleteUserById(usrId:Int!):String!
 
 `
 
@@ -693,22 +693,25 @@ const adminResolvers = {
       return 'success'
 
    },
-   deleteUserById: async (_, { data }, { userId, role }) => {
+   deleteUserById: async (_, { usrId }, { userId, role }) => {
       if (!userId) throw new ForbiddenError('invalid token')
 
       const admin = await prisma.jmkuserinfo.findFirst({
          where: { usr_id: userId, usr_role: role },
       })
       if (!admin) throw new AuthenticationError('invalid admin')
+
       const user = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: data.usr_id },
-      })
-      await deleteImgToAWS(user?.usr_img_key)
-      const selectedUser = await prisma.jmkuserinfo.delete({
-         where: { usr_id: data.usr_id },
+         where: { usr_id: usrId },
       })
 
-    
+      if(user.usr_role==="admin") throw new Error('Cannot delete admin')
+
+      await deleteImgToAWS(user?.usr_img_key)
+      const selectedUser = await prisma.jmkuserinfo.delete({
+         where: { usr_id: usrId },
+      })
+
       if (!selectedUser) throw new ApolloError('something went wrong !')
       return 'success'
 
