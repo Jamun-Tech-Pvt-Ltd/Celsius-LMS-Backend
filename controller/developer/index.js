@@ -35,7 +35,7 @@ const developerQueryTypesAndInputs = `
         serial: Int!
         tech_stack: String
         tech_stack_exp: String
-        tech_last_used: String
+        tech_last_used: Date
         developer_id: Int 
         techstk_id: techStack  
     }
@@ -197,6 +197,10 @@ const developerQuery = `
 
     getDeveloperExperienceList:[developerExperience]
     getDeveloperExperienceById(exp_id: Int!):developerExperience
+
+    getExperiencesByDeveloperId(dev_id:Int!):[developerExperience]
+    getProjectsByDeveloperId(dev_id:Int!):[Project]
+    getSkillsByDeveloperId(dev_id:Int!):[Experience]
 `;
 
 
