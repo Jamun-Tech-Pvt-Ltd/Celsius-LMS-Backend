@@ -393,6 +393,47 @@ const developerQueryResolvers = {
 
         return experience;
     },
+    getSkillsByDeveloperId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('user need to login');
+        if (role === ROLES[2] || role === ROLES[3]) {
+            const skills = await prisma.jmkdevtechdet.findMany({
+                where: {
+                    developer_id: args.devId
+                }
+            });
+            if (!skills) throw new AuthenticationError("Data not Found !")
+            return skills;
+        }
+        throw new AuthenticationError("Invalid Acccess !")
+    },
+
+    getProjectsByDeveloperId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('user need to login');
+        if (role === ROLES[2] || role === ROLES[3]) {
+            const projects = await prisma.jmkdevprojdet.findMany({
+                where: {
+                    developer_id: args.devId
+                }
+            });
+            if (!projects) throw new AuthenticationError("Data not Found !")
+            return projects;
+        }
+        throw new AuthenticationError("Invalid Acccess !")
+    },
+
+    getExperiencesByDeveloperId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('user need to login');
+        if (role === ROLES[2] || role === ROLES[3]) {
+            const experiences = await prisma.jmkdevexp.findMany({
+                where: {
+                    developer_id: args.devId
+                }
+            });
+            if (!experiences) throw new AuthenticationError("Data not Found !")
+            return experiences;
+        }
+        throw new AuthenticationError("Invalid Acccess !")
+    },
 };
 const developerMutationResolver = {
     signinDeveloper: async (_, { data }) => {
