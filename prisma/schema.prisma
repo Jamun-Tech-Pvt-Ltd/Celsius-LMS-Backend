@@ -310,9 +310,10 @@ model jmkdevinfo {
 }
 
 model jmkcrsmodule {
-  mod_id   Int     @id @default(autoincrement())
-  mod_code String? @db.VarChar(20)
-  mod_name String? @db.VarChar(100)
+  mod_id     Int     @id @default(autoincrement())
+  mod_code   String? @db.VarChar(20)
+  mod_name   String? @db.VarChar(100)
+  techstk_id Int?
 }
 
 model jmkstdtrfeedback {
@@ -431,12 +432,6 @@ model jmktechstk {
   techstk_desc String? @db.VarChar(200)
 }
 
-model jmkcrsupcom {
-  serial     Int       @id @default(autoincrement())
-  crsmain_id Int?
-  start_date DateTime? @db.Date
-}
-
 model jmkdevexp {
   exp_id         Int       @id @default(autoincrement())
   developer_id   Int?
@@ -445,6 +440,34 @@ model jmkdevexp {
   company_name   String?   @db.VarChar(100)
   exp_desc       String?   @db.VarChar(1000)
   exp_role_pos   String?   @db.VarChar(100)
+}
+
+model jmkcrsupcom {
+  serial     Int       @id @default(autoincrement())
+  crsmain_id Int?
+  start_date DateTime? @db.Date
+}
+
+model jmkdevtestdet {
+  testdet_id  Int     @id @default(autoincrement())
+  testmstr_id Int?
+  question    String? @db.VarChar(200)
+  ans1        String? @db.VarChar(200)
+  ans2        String? @db.VarChar(200)
+  ans3        String? @db.VarChar(200)
+  ans4        String? @db.VarChar(200)
+  rtans       String? @db.VarChar(200)
+  dev_ans     String? @db.VarChar(200)
+}
+
+model jmkdevtestmstr {
+  testmstr_id  Int       @id @default(autoincrement())
+  developer_id Int?
+  techstk_id   Int?
+  test_status  String?   @db.VarChar(10)
+  marks_obt    Int?
+  test_dt      DateTime? @default(dbgenerated("(curdate())")) @db.Date
+  next_attempt DateTime? @default(dbgenerated("(curdate() + 30)")) @db.Date
 }
 
 model jmkevents {
