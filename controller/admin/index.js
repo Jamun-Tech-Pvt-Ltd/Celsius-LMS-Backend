@@ -177,6 +177,19 @@ const adminQueryTypesAndInputs = `
       usr_img_key:String
      }
 
+     type eventsInfo{
+        events_id:Int!
+        event_date:Date
+        event_desc:String
+        event_organizer:String
+        event_time:Int
+        event_loc:String
+        event_title:String
+        event_img_url:String
+        event_img_key:String
+        event_hour:Int
+        event_type:String
+     }
 
 
      input createStaticCourseInput{
@@ -268,6 +281,36 @@ const adminQueryTypesAndInputs = `
       usr_img_url:Upload
      }
 
+     input createNewEventInput {
+
+      event_date:Date
+      event_desc:String
+      event_organizer:String
+      event_time:Int
+      event_loc:String
+      event_title:String
+      event_img_url:Upload
+      event_hour:Int
+      event_type:String
+
+     }
+
+     input updateEventInput {
+  
+      events_id:Int!
+      event_date:Date
+      event_desc:String
+      event_organizer:String
+      event_time:Int
+      event_loc:String
+      event_title:String
+      event_img_url:Upload
+      event_hour:Int
+      event_type:String
+
+
+     }
+
 `
 
 const adminQuery = `
@@ -290,6 +333,9 @@ const adminQuery = `
 
     getAllUserInfo:[userInfo]
     getUserInfoById(usr_id:Int!):userInfo
+
+    getAllEvents:[eventsInfo]
+    getEventsInfoById(events_id:Int!):eventsInfo
 
 `
 
@@ -317,6 +363,10 @@ const adminMutation = `
     createNewUser(data:createNewUserInput):String!
     updateSelectedUser(data:updateUserInput):String!
     deleteUserById(usrId:Int!):String!
+
+    createNewEvent(data:createNewEventInput):String!
+    updateSelectedEvent(data:updateEventInput):String!
+    deleteEventById(eventId:Int!):String!
 
 `
 
@@ -728,6 +778,88 @@ const adminResolvers = {
       return 'success'
 
    },
+
+   createNewEvent: async (_, { data }, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token')
+      const admin = await prisma.jmkuserinfo.findFirst({
+         where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin')
+
+      let file
+      if (data.event_img_url) {
+         file = await uploadImgToAWS(data.event_img_url, 'upcomingEvents/')
+         if (!file.data) throw new ApolloError('Something went wrong !')
+      }
+      const newEvent = await prisma.jmkevents.create({
+         data: {
+            ...data,
+            event_img_url: file?.data?.Location ?? null,
+            event_img_key: file?.data?.key ?? '',
+         },
+      })
+      
+      if (!newEvent) throw new ApolloError('something went wrong !')
+
+      return 'success'
+
+   },
+   updateSelectedEvent: async (_, { data }, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token')
+      const admin = await prisma.jmkuserinfo.findFirst({
+         where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin')
+
+      const selectedEvent = await prisma.jmkevents.findFirst({
+         where: { events_id: parseInt(data.events_id) },
+      })
+
+      if (!selectedEvent) throw new ApolloError('invalid event')
+
+      let file
+      if (data.event_img_url!==null) {
+         
+         await deleteImgToAWS(selectedEvent?.event_img_key)
+
+         file = await uploadImgToAWS(data.event_event_url, 'upcomingEvents/')
+         if (!file.data) throw new ApolloError('Something went wrong !')
+      }
+      const event = await prisma.jmkevents.update({
+         data: {
+            ...data,
+            event_img_url:(data.event_img_url!==null)? (file?.data?.Location): (selectedEvent.event_img_url),
+            event_img_key:(data.event_img_url!==null)? (file?.data?.key): (selectedEvent.event_img_key),
+         },
+         where: {
+            events_id: parseInt(data.events_id),
+         },
+      })
+      if (!event) throw new ApolloError('something went wrong !')
+      return 'success'
+
+   },
+   deleteEventById: async (_, { eventId }, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token')
+
+      const admin = await prisma.jmkuserinfo.findFirst({
+         where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin')
+
+      const event = await prisma.jmkevents.findFirst({
+         where: { events_id: eventId },
+      })
+
+      await deleteImgToAWS(event?.usr_img_key)
+      const selectedEvent = await prisma.jmkevents.delete({
+         where: { events_id: eventId },
+      })
+
+      if (!selectedEvent) throw new ApolloError('something went wrong !')
+      return 'success'
+
+   },
 }
 
 const adminResolversQuery = {
@@ -1062,6 +1194,20 @@ const adminResolversQuery = {
       if (!admin) throw new AuthenticationError("invalid admin credentials")
          const user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: args.usr_id } });
          return user
+   },
+   getAllEvents: async (_, args, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
+      if (!admin) throw new AuthenticationError("invalid admin credentials")
+         const allEvents = await prisma.jmkevents.findMany();
+         return allEvents
+   },
+   getEventsInfoById: async (_, args, { userId, role }) => {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
+      if (!admin) throw new AuthenticationError("invalid admin credentials")
+         const event = await prisma.jmkevents.findFirst({ where: { events_id: args.events_id } });
+         return event
    },
 
 }
