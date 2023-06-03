@@ -1148,6 +1148,8 @@ const adminResolversQuery = {
       const students = await prisma.jmkstdinfo.count()
       const trainers = await prisma.jmktrinfo.count()
       const developers = await prisma.jmkdevinfo.count()
+      const users = await prisma.jmkuserinfo.count()
+      const upcomingEvents = await prisma.jmkevents.count()
 
 
       if (runningCourses && dynamicCourses && students && trainers && developers) {
@@ -1172,6 +1174,14 @@ const adminResolversQuery = {
             {
                name: 'Developers',
                count: developers
+            },
+            {
+               name: 'Users',
+               count: users
+            },
+            {
+               name: 'Upcoming Events',
+               count: upcomingEvents
             },
 
          ]
