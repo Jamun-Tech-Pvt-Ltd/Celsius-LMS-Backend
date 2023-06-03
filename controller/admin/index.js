@@ -101,31 +101,43 @@ const adminQueryTypesAndInputs = `
         tr_resume_key:String
         
      }
+
+     type devTechDet{
+
+      tech_stack:String
+      tech_stack_exp:String
+      tech_last_used:String
+      tech_stack_summary:String
+      
+     }
+
+     type devProjDet{
+         proj_title:String
+         proj_desc:String
+         proj_tech_used:String
+     }
+     type devExpDet{
+        company_name:String
+        exp_desc:String
+        exp_role_pos:String
+        exp_start_date:Date
+        exp_end_date:Date
+     }
+
      type adminDeveloper {
         developer_id:ID!
+        developer_type: String!
         developer_fname: String!
         developer_mname: String
         developer_lname: String!
-        developer_high_qualification: String
         developer_phone: String!
+        developer_country: String!
         developer_email: String!
         developer_password: String!
-        developer_country: String!
-        developer_tech1: String!
-        developer_tech2: String
-        developer_tech3: String
-        developer_tech1_exp: String!
-        developer_tech2_exp: String
-        developer_tech3_exp: String
-        developer_resume: String
-        developer_company1: String!
-        developer_company1_project: String!
-        developer_company1_start: Date!
-        developer_company2: String
-        developer_company2_start: Date
-        developer_company2_end: Date
-        developer_company2_project: String
-        developer_type: String!
+        dev_tech_det:[devTechDet]
+        dev_proj_det:[devProjDet]
+        dev_exp_det:[devExpDet]
+       
      }
 
      type staticCourse{
@@ -796,9 +808,67 @@ const adminResolversQuery = {
       if (!admin) throw new AuthenticationError("invalid admin credentials")
       if (admin.usr_role === 'admin') {
          //let trainers = [];
-         const developers = await prisma.jmkdevinfo.findMany()
 
-         return developers;
+         const developers = await prisma.jmkdevinfo.findMany();
+
+         const allDevelopersData = await Promise.all(developers.map(async (element) => {
+           const {
+             developer_id,
+             developer_type,
+             developer_fname,
+             developer_mname,
+             developer_lname,
+             developer_phone,
+             developer_country,
+             developer_email,
+             developer_password
+           } = element;
+         
+           const newDevData = {
+             developer_id,
+             developer_type,
+             developer_fname,
+             developer_mname,
+             developer_lname,
+             developer_phone,
+             developer_country,
+             developer_email,
+             developer_password
+           };
+         
+           // tech details
+           const dev_tech_details = await prisma.jmkdevtechdet.findMany({ where: { developer_id: developer_id } });
+           const dev_tech_det = dev_tech_details.map(element => {
+             const { tech_stack, tech_stack_exp, tech_last_used, tech_stack_summary } = element;
+             return { tech_stack, tech_stack_exp, tech_last_used, tech_stack_summary };
+           });
+         
+           // tech exp
+           const dev_tech_experience = await prisma.jmkdevexp.findMany({ where: { developer_id: developer_id } });
+           const dev_tech_exp = dev_tech_experience.map(element => {
+             const { company_name, exp_desc, exp_role_pos, exp_start_date, exp_end_date } = element;
+             return { company_name, exp_desc, exp_role_pos, exp_start_date, exp_end_date };
+           });
+         
+           // proj details
+           const dev_proj_details = await prisma.jmkdevprojdet.findMany({ where: { developer_id: developer_id } });
+           const dev_proj_det = dev_proj_details.map(element => {
+             const { proj_title, proj_desc, proj_tech_used } = element;
+             return { proj_title, proj_desc, proj_tech_used };
+           });
+         
+           const mergedData = {
+             ...newDevData,
+             dev_tech_det: dev_tech_det,
+             dev_exp_det: dev_tech_exp,
+             dev_proj_det: dev_proj_det
+           };
+         
+           return mergedData;
+         }));
+         
+         return allDevelopersData;
+         
       }
    },
 
@@ -807,8 +877,67 @@ const adminResolversQuery = {
       if (role === 'admin') {
          const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
          if (!admin) throw new AuthenticationError("invalid admin credentials")
+
+
          const developer = await prisma.jmkdevinfo.findFirst({ where: { developer_id: args.developer_id } })
-         return developer
+
+            const {
+              developer_id,
+              developer_type,
+              developer_fname,
+              developer_mname,
+              developer_lname,
+              developer_phone,
+              developer_country,
+              developer_email,
+              developer_password
+            } = developer;
+          
+            const newDevData = {
+              developer_id,
+              developer_type,
+              developer_fname,
+              developer_mname,
+              developer_lname,
+              developer_phone,
+              developer_country,
+              developer_email,
+              developer_password
+            };
+          
+            // tech details
+            const dev_tech_details = await prisma.jmkdevtechdet.findMany({ where: { developer_id: developer_id } });
+            const dev_tech_det = dev_tech_details.map(element => {
+              const { tech_stack, tech_stack_exp, tech_last_used, tech_stack_summary } = element;
+              return { tech_stack, tech_stack_exp, tech_last_used, tech_stack_summary };
+            });
+          
+            // tech exp
+            const dev_tech_experience = await prisma.jmkdevexp.findMany({ where: { developer_id: developer_id } });
+            const dev_tech_exp = dev_tech_experience.map(element => {
+              const { company_name, exp_desc, exp_role_pos, exp_start_date, exp_end_date } = element;
+              return { company_name, exp_desc, exp_role_pos, exp_start_date, exp_end_date };
+            });
+          
+            // proj details
+            const dev_proj_details = await prisma.jmkdevprojdet.findMany({ where: { developer_id: developer_id } });
+            const dev_proj_det = dev_proj_details.map(element => {
+              const { proj_title, proj_desc, proj_tech_used } = element;
+              return { proj_title, proj_desc, proj_tech_used };
+            });
+          
+            const developerWholeData = {
+              ...newDevData,
+              dev_tech_det: dev_tech_det,
+              dev_exp_det: dev_tech_exp,
+              dev_proj_det: dev_proj_det
+            };
+          
+         
+          
+          return developerWholeData;
+
+
       }
 
       if (role === ROLES[2]) {

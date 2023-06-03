@@ -477,6 +477,11 @@ model jmkevents {
   event_organizer String?   @db.VarChar(100)
   event_time      String?   @db.VarChar(10)
   event_loc       String?   @db.VarChar(100)
+  event_title     String?   @db.VarChar(100)
+  event_img_url   String?   @db.VarChar(100)
+  event_img_key   String?   @db.VarChar(100)
+  event_hour      Int?
+  event_type      String?   @db.VarChar(50)
 }
 
 enum jmkcrsmain_cramain_del_mod {
