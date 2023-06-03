@@ -162,6 +162,7 @@ const adminQueryTypesAndInputs = `
      type totalCount{
        name:String
        count:Int
+       link:String
      }
 
      type userInfo{
@@ -1157,31 +1158,38 @@ const adminResolversQuery = {
          const tableCount = [
             {
                name: 'Running Courses',
-               count: runningCourses
+               count: runningCourses,
+               link:'/courses'
             },
             {
                name: 'Dynamic Courses',
-               count: dynamicCourses
+               count: dynamicCourses,
+               link:'/staticCourses'
             },
             {
                name: 'Students',
-               count: students
+               count: students,
+               link:'/students'
             },
             {
                name: 'Trainers',
-               count: trainers
+               count: trainers,
+               link:'/trainer'
             },
             {
                name: 'Developers',
-               count: developers
+               count: developers,
+               link:'/developer'
             },
             {
                name: 'Users',
-               count: users
+               count: users,
+               link:'/users'
             },
             {
                name: 'Upcoming Events',
-               count: upcomingEvents
+               count: upcomingEvents,
+               link:'/upcomingEvents'
             },
 
          ]
