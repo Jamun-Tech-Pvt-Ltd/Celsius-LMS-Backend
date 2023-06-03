@@ -182,7 +182,7 @@ const adminQueryTypesAndInputs = `
         event_date:Date
         event_desc:String
         event_organizer:String
-        event_time:Int
+        event_time:String
         event_loc:String
         event_title:String
         event_img_url:String
@@ -282,17 +282,15 @@ const adminQueryTypesAndInputs = `
      }
 
      input createNewEventInput {
-
+      event_title:String
       event_date:Date
       event_desc:String
       event_organizer:String
-      event_time:Int
       event_loc:String
-      event_title:String
-      event_img_url:Upload
       event_hour:Int
       event_type:String
-
+      event_time:String
+      event_img_url:Upload
      }
 
      input updateEventInput {
@@ -301,7 +299,7 @@ const adminQueryTypesAndInputs = `
       event_date:Date
       event_desc:String
       event_organizer:String
-      event_time:Int
+      event_time:String
       event_loc:String
       event_title:String
       event_img_url:Upload
@@ -791,6 +789,7 @@ const adminResolvers = {
          file = await uploadImgToAWS(data.event_img_url, 'upcomingEvents/')
          if (!file.data) throw new ApolloError('Something went wrong !')
       }
+
       const newEvent = await prisma.jmkevents.create({
          data: {
             ...data,
@@ -822,7 +821,7 @@ const adminResolvers = {
          
          await deleteImgToAWS(selectedEvent?.event_img_key)
 
-         file = await uploadImgToAWS(data.event_event_url, 'upcomingEvents/')
+         file = await uploadImgToAWS(data?.event_img_url, 'upcomingEvents/')
          if (!file.data) throw new ApolloError('Something went wrong !')
       }
       const event = await prisma.jmkevents.update({
@@ -851,7 +850,7 @@ const adminResolvers = {
          where: { events_id: eventId },
       })
 
-      await deleteImgToAWS(event?.usr_img_key)
+      await deleteImgToAWS(event?.event_img_key)
       const selectedEvent = await prisma.jmkevents.delete({
          where: { events_id: eventId },
       })
@@ -1206,7 +1205,8 @@ const adminResolversQuery = {
       if (!userId) throw new ForbiddenError('invalid token');
       const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
       if (!admin) throw new AuthenticationError("invalid admin credentials")
-         const event = await prisma.jmkevents.findFirst({ where: { events_id: args.events_id } });
+      
+         const event = await prisma.jmkevents.findFirst({ where: { events_id: parseInt(args.events_id)} });
          return event
    },
 
