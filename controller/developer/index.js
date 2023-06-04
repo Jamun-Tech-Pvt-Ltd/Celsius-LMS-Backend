@@ -36,8 +36,9 @@ const developerQueryTypesAndInputs = `
         serial: Int!
         tech_stack: String
         tech_stack_exp: String
-        tech_last_used: String
-        developer_id: Int   
+        tech_last_used: Date
+        developer_id: Int 
+        techstk_id: techStack  
     }
 
     type Project{
@@ -53,8 +54,8 @@ const developerQueryTypesAndInputs = `
         techstk_id:Int!
         techstk_name:String
         techstk_desc: String
-
     }
+
 
     type JobRecommendation{
         consulreqmnts_id: Int!
@@ -119,6 +120,7 @@ const developerQueryTypesAndInputs = `
     input ExperienceDetails{
         tech_stack: String
         tech_stack_exp: String
+        techstk_id: Int
         tech_last_used: String
         developer_id: Int
     }
@@ -128,6 +130,7 @@ const developerQueryTypesAndInputs = `
         tech_stack_exp: String
         tech_last_used: Date
         developer_id: Int
+        techstk_id: Int
     }
     input deleteExpInput{
         serial: Int!
@@ -149,6 +152,29 @@ const developerQueryTypesAndInputs = `
         proj_desc: String
         proj_type: String
         proj_techs_used:String
+    }
+
+    input UpdateWorkExperience{
+        exp_id: Int!
+        exp_start_date: Date
+        exp_end_date: Date
+        company_name: String
+        exp_desc: String
+        exp_role_pos: String
+    }
+    input AddWorkExperience{
+        developer_id: Int
+        exp_start_date: Date
+        exp_end_date: Date
+        company_name: String
+        exp_desc: String
+        exp_role_pos: String
+    }
+    input DeleteWorkExperience{
+        exp_id: Int
+    }
+    input updateResumeDetails{
+        developer_resume:String
     }
     
 `;
@@ -172,6 +198,10 @@ const developerQuery = `
 
     getDeveloperExperienceList:[developerExperience]
     getDeveloperExperienceById(exp_id: Int!):developerExperience
+
+    getExperiencesByDeveloperId(dev_id:Int!):[developerExperience]
+    getProjectsByDeveloperId(dev_id:Int!):[Project]
+    getSkillsByDeveloperId(dev_id:Int!):[Experience]
 `;
 
 
@@ -189,6 +219,10 @@ const developerMutation = `
     updateProject(data:UpdateProjectDetails!): String
     deleteProject(data:deleteProjInput!):String
     createProject(data:ProjectDetails!):String
+
+    updateWorkExperience(data:UpdateWorkExperience!):String
+    AddWorkExperience(data:AddWorkExperience!):String
+    deleteWorkExperience(data:DeleteWorkExperience!):String
 
 `;
 
@@ -240,17 +274,22 @@ const developerQueryResolvers = {
                 developer_id: userId
             }
         });
+        const techStack = await prisma.jmktechstk.findMany();
+
         experienceList.forEach((experience) => {
             if (experience.tech_last_used) {
                 const timestamp = experience.tech_last_used.getTime();
                 experience.tech_last_used = new Date(timestamp).toLocaleDateString();
+            }
+            if (experience.techstk_id) {
+                experience.techstk_id = techStack[experience.techstk_id];
             }
         });
         return experienceList;
 
     },
     getExperienceById: async (_, args, { userId, role }) => {
-        // if (!userId) throw new ForbiddenError('invalid token');
+        if (!userId) throw new ForbiddenError('invalid token');
         if (!args.serial) throw new ForbiddenError('serial is required !');
         const experience = await prisma.jmkdevtechdet.findFirst({
             where: {
@@ -258,11 +297,17 @@ const developerQueryResolvers = {
             }
         });
         if (!experience) return new ApolloError('Experience does not exist!');
+        const techStack = await prisma.jmktechstk.findFirst({
+            where: {
+                techstk_id: experience.techstk_id
+            }
+        });
 
         if (experience.tech_last_used) {
             const timestamp = experience.tech_last_used.getTime();
             experience.tech_last_used = new Date(timestamp).toLocaleDateString();
         }
+        experience.techstk_id = techStack
         return experience;
     },
     getProjectById: async (_, args, { userId, role }) => {
@@ -343,7 +388,56 @@ const developerQueryResolvers = {
         return developerExperienceList;
     },
     getDeveloperExperienceById: async (_, args, { userId }) => {
+        // if (!userId) return new AuthenticationError("Login to continue");
+        const experience = await prisma.jmkdevexp.findFirst({
+            where: {
+                exp_id: args.exp_id,
 
+            }
+        });
+
+        return experience;
+    },
+    getSkillsByDeveloperId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('user need to login');
+        if (role === ROLES[2] || role === ROLES[3]) {
+            const skills = await prisma.jmkdevtechdet.findMany({
+                where: {
+                    developer_id: args.devId
+                }
+            });
+            if (!skills) throw new AuthenticationError("Data not Found !")
+            return skills;
+        }
+        throw new AuthenticationError("Invalid Acccess !")
+    },
+
+    getProjectsByDeveloperId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('user need to login');
+        if (role === ROLES[2] || role === ROLES[3]) {
+            const projects = await prisma.jmkdevprojdet.findMany({
+                where: {
+                    developer_id: args.devId
+                }
+            });
+            if (!projects) throw new AuthenticationError("Data not Found !")
+            return projects;
+        }
+        throw new AuthenticationError("Invalid Acccess !")
+    },
+
+    getExperiencesByDeveloperId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('user need to login');
+        if (role === ROLES[2] || role === ROLES[3]) {
+            const experiences = await prisma.jmkdevexp.findMany({
+                where: {
+                    developer_id: args.devId
+                }
+            });
+            if (!experiences) throw new AuthenticationError("Data not Found !")
+            return experiences;
+        }
+        throw new AuthenticationError("Invalid Acccess !")
     },
 };
 const developerMutationResolver = {
@@ -395,9 +489,13 @@ const developerMutationResolver = {
     createExperience: async (_, { data }, { userId }) => {
         if (!userId) return new AuthenticationError("Login to continue");
         const techLastUsed = data.tech_last_used ? new Date(data.tech_last_used) : null;
+
+        // const exisitingTechStack = await prisma.jmkdevtechdet.findFirstOrThrow({ where: { techstk_id: data.tech_stk_id } });
+        // if (exisitingTechStack) return new ApolloError('Tech stack already exists');
+
         const newExperience = await prisma.jmkdevtechdet.create({
             data: {
-                tech_stack: data.tech_stack,
+                techstk_id: data.techstk_id,
                 tech_stack_exp: data.tech_stack_exp,
                 tech_last_used: techLastUsed,
                 developer_id: userId,
@@ -495,7 +593,59 @@ const developerMutationResolver = {
         return 'success';
 
     },
+    updateWorkExperience: async (_, { data }, { userId }) => {
+        // if (!userId) return new AuthenticationError("Login to continue");
 
+        const { exp_id, ..._updatedData } = data;
+
+        const newWorkExperience = await prisma.jmkdevexp.update({
+            where: {
+                exp_id: exp_id,
+            },
+            data: {
+                ..._updatedData
+            }
+        });
+        if (!newWorkExperience) return new ApolloError('Something went wrong!');
+        return 'success';
+    },
+    AddWorkExperience: async (_, { data }, { userId }) => {
+        // if (!userId) return new AuthenticationError("Login to continue");
+        const startDateObj = new Date(data.exp_start_date);
+        const endDateObj = new Date(data.exp_end_date);
+        if (startDateObj >= endDateObj) {
+            throw new ApolloError('Start date must be before end date');
+        }
+        const newWorkExperience = await prisma.jmkdevexp.create({
+            data: {
+                company_name: data.company_name,
+                exp_desc: data.exp_desc,
+                exp_start_date: data.exp_start_date,
+                exp_end_date: data.exp_end_date,
+                exp_role_pos: data.exp_role_pos,
+                developer_id: userId ?? data.developer_id,
+            },
+        });
+        if (!newWorkExperience) throw new ApolloError('Something went wrong');
+        return 'success';
+    },
+    deleteWorkExperience: async (_, { data }, { userId }) => {
+        // if (!userId) return new AuthenticationError("Login to continue");
+        const workExperience = await prisma.jmkdevexp.findFirst({
+            where: {
+                exp_id: data.exp_id
+            }
+        });
+        if (!workExperience) throw new ApolloError("Invalid ID");
+        if (userId !== workExperience.developer_id) return new ApolloError('Invalid ID')
+        const exp = await prisma.jmkdevexp.delete({
+            where: {
+                exp_id: data.exp_id
+            }
+        });
+        if (!exp) throw new ApolloError('Something went wrong!');
+        return 'success';
+    },
 
 
 
