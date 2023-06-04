@@ -115,13 +115,14 @@ model jmkgrvinfo {
 }
 
 model jmkcontact {
-  serial   Int     @id @default(autoincrement())
-  cmobile  String? @db.VarChar(15)
-  cemail   String? @db.VarChar(30)
-  csubject String? @db.VarChar(50)
-  cmessage String? @db.VarChar(200)
-  cfname   String? @db.VarChar(200)
-  clname   String? @db.VarChar(200)
+  serial   Int       @id @default(autoincrement())
+  cmobile  String?   @db.VarChar(15)
+  cemail   String?   @db.VarChar(30)
+  csubject String?   @db.VarChar(50)
+  cmessage String?   @db.VarChar(200)
+  cfname   String?   @db.VarChar(200)
+  clname   String?   @db.VarChar(200)
+  cdate    DateTime? @default(dbgenerated("(curdate())")) @db.Date
 }
 
 model jmkreview {
@@ -217,18 +218,19 @@ model jmkstdvidnote {
 }
 
 model jmkcontactb {
-  serial    Int     @id @default(autoincrement())
-  bfname    String  @db.VarChar(20)
-  blname    String  @db.VarChar(20)
-  bemail    String  @db.VarChar(30)
-  bcompname String  @db.VarChar(100)
-  bjobrole  String  @db.VarChar(30)
-  bmobile   String  @db.VarChar(20)
-  bgovnpr   String? @db.VarChar(10)
-  bcompsize String? @db.VarChar(20)
-  blrnum    String? @db.VarChar(20)
-  bcountry  String? @db.VarChar(50)
-  bneeds    String? @db.VarChar(200)
+  serial    Int       @id @default(autoincrement())
+  bfname    String    @db.VarChar(20)
+  blname    String    @db.VarChar(20)
+  bemail    String    @db.VarChar(30)
+  bcompname String    @db.VarChar(100)
+  bjobrole  String    @db.VarChar(30)
+  bmobile   String    @db.VarChar(20)
+  bgovnpr   String?   @db.VarChar(10)
+  bcompsize String?   @db.VarChar(20)
+  blrnum    String?   @db.VarChar(20)
+  bcountry  String?   @db.VarChar(50)
+  bneeds    String?   @db.VarChar(200)
+  bdate     DateTime? @default(dbgenerated("(curdate())")) @db.Date
 }
 
 model jmkcrstest {
@@ -287,7 +289,7 @@ model jmkdevinfo {
   developer_tech1              String?   @db.VarChar(20)
   developer_tech2              String?   @db.VarChar(20)
   developer_tech3              String?   @db.VarChar(20)
-  developer_email              String?   @db.VarChar(20)
+  developer_email              String?   @db.VarChar(40)
   developer_phone              String?   @db.VarChar(20)
   developer_country            String?   @db.VarChar(30)
   developer_tech1_exp          String?   @db.VarChar(20)
@@ -482,6 +484,21 @@ model jmkevents {
   event_img_key   String?   @db.VarChar(100)
   event_hour      Int?
   event_type      String?   @db.VarChar(50)
+}
+
+model jmkcrsinfodet {
+  crsinfodet_id    Int     @id @default(autoincrement())
+  crs_id           Int?
+  crsinfodet_title String? @db.VarChar(10)
+  cid              Int?
+}
+
+model jmkfeemstr {
+  fee_id     Int     @id @default(autoincrement())
+  crs_id     Int?
+  fee_desc   String? @db.VarChar(200)
+  fee_type   String? @db.VarChar(20)
+  fee_amount Int?
 }
 
 enum jmkcrsmain_cramain_del_mod {
