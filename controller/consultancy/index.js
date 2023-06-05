@@ -16,6 +16,7 @@ const consultancyQueryTypesAndInputs = `
         cemail: String!
         creg_date: Date
         acc_type: String!
+        cpassword: String!
     }
 
     type ConsultancyUser {
@@ -67,6 +68,12 @@ const consultancyQueryTypesAndInputs = `
         mktg_status:String
         std_status:Boolean!
      }
+
+     type totalCount{
+        name:String
+        count:Int
+        link:String
+      }
 
      type ConsultancyAssignDeveloper {
         user_id:Int!
@@ -127,6 +134,7 @@ const consultancyQueryTypesAndInputs = `
         cpassword: String
         creg_date: Date
         acc_type:String
+        oname:String
      }
 
 
@@ -200,12 +208,15 @@ const consultancyQuery = `
     getConsultancyAssignStudentsByUserAndStudentId(user_id:Int! std_id:Int!):ConsultancyAssignStudents!
     getConsultancyAssignStudentsByUserAndDeveloperId(user_id:Int! dev_id:Int!):ConsultancyAssignDeveloper
 
+    getDataCountForAllTableInConsultancy:[totalCount]
+
+
 `
 
 const consultancyMutation = `
     signinConsultancy(data:signinConsultancyInput!):Token
     signupConsultancy(data:signupConsultancyInput!):Token
-    updateConsultancy(data:updateConsultancyInput):String!
+    updateConsultancy(data:updateConsultancyInput):Consultancy!
 
     signinConsultancyUser(data:signinConsultancyUserInput!):Token
     signupConsultancyUser(data:signupConsultancyUserInput!):Token
@@ -260,7 +271,7 @@ const consultancyResolvers = {
                 where: { serial: data.serial }
             })
             if (!consultancyUpate) throw new AuthenticationError("Invalid !!")
-            return "success"
+            return consultancyUpate
         }
         throw new AuthenticationError("invalid access !!")
     },
@@ -469,6 +480,47 @@ const consultancyResolvers = {
 }
 
 const consultancyResolversQuery = {
+
+    getDataCountForAllTableInConsultancy: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+
+        const courses = await prisma.jmkcrsinfo.count({ where: { cid: userId } })
+        const students = await prisma.jmkstdinfo.count({ where: { cid: userId } })
+        const developers = await prisma.jmkdevinfo.count({ where: { cid: userId } })
+        const users = await prisma.jmkconsuluserinfo.count({ where: { cid: userId } })
+        const faqs = await prisma.jmkconsulfaq.count({ where: { cid: userId } })
+
+        const tableCount = [
+            {
+                name: 'Courses',
+                count: courses,
+                link: '/courses'
+            },
+            {
+                name: 'Students',
+                count: students,
+                link: '/students'
+            },
+            {
+                name: 'Developers',
+                count: developers,
+                link: '/developers'
+            },
+            {
+                name: 'Users',
+                count: users,
+                link: '/users'
+            },
+            {
+                name: 'Faqs',
+                count: faqs,
+                link: '/faqs'
+            },
+        ]
+        return tableCount
+    },
     getConsultancy: async (_, args, { userId, role }) => {
         if (!userId) throw new AuthenticationError("invalid token")
         if (role === ROLES[2]) {
