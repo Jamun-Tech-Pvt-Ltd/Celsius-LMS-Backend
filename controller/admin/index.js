@@ -197,7 +197,7 @@ const adminQueryTypesAndInputs = `
          reg_name:String
          reg_date:Date
          event_id:Int!
-         req_email:String
+         reg_email:String
          reg_phone:String
      }
 
