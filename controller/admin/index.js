@@ -192,6 +192,15 @@ const adminQueryTypesAndInputs = `
         event_type:String
      }
 
+     type eventRegisteredInfo{
+         reg_id:Int!
+         reg_name:String
+         reg_date:Date
+         event_id:Int!
+         req_email:String
+         reg_phone:String
+     }
+
 
      input createStaticCourseInput{
       crsmain_overview:String
@@ -310,6 +319,14 @@ const adminQueryTypesAndInputs = `
 
      }
 
+     input createNewEventUser{
+      reg_name:String
+      reg_date:Date
+      event_id:Int!
+      req_email:String
+      reg_phone:String
+     }
+
 `
 
 const adminQuery = `
@@ -335,6 +352,8 @@ const adminQuery = `
 
     getAllEvents:[eventsInfo]
     getEventsInfoById(events_id:Int!):eventsInfo
+
+    getAllEventRegisteredUser:[eventRegisteredInfo]
 
 `
 
@@ -366,6 +385,8 @@ const adminMutation = `
     createNewEvent(data:createNewEventInput):String!
     updateSelectedEvent(data:updateEventInput):String!
     deleteEventById(eventId:Int!):String!
+
+    registerNewEventUser(data:createNewEventUser):String!
 
 `
 
@@ -860,6 +881,18 @@ const adminResolvers = {
       return 'success'
 
    },
+   
+   registerNewEventUser: async (_, { data }, { userId, role }) => {
+      
+      const newEventUser = await prisma.jmkeventreg.create({
+         data: {...data },
+      })
+      
+      if (!newEventUser) throw new ApolloError('something went wrong !')
+
+      return 'success'
+
+   },
 }
 
 const adminResolversQuery = {
@@ -1213,9 +1246,9 @@ const adminResolversQuery = {
          return user
    },
    getAllEvents: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
+      // if (!userId) throw new ForbiddenError('invalid token');
+      // const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
+      // if (!admin) throw new AuthenticationError("invalid admin credentials")
          const allEvents = await prisma.jmkevents.findMany();
          return allEvents
    },
@@ -1226,6 +1259,14 @@ const adminResolversQuery = {
       
          const event = await prisma.jmkevents.findFirst({ where: { events_id: parseInt(args.events_id)} });
          return event
+   },
+
+   getAllEventRegisteredUser: async (_, args, { userId, role }) => {
+      // if (!userId) throw new ForbiddenError('invalid token');
+      // const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
+      // if (!admin) throw new AuthenticationError("invalid admin credentials")
+         const allRegisteredUsers = await prisma.jmkeventreg.findMany();
+         return allRegisteredUsers
    },
 
 }
