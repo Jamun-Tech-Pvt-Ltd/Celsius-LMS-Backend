@@ -538,7 +538,7 @@ const consultancyResolvers = {
         throw new AuthenticationError("invalid access !!")
     },
 
-    deleteSchoolFees: async (_,  arg , { userId, role }) => {
+    deleteSchoolFees: async (_, arg, { userId, role }) => {
         if (userId) {
             const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
             if (role === ROLES[2] && consultancy.acc_type !== "Consultancy");
@@ -566,7 +566,7 @@ const consultancyResolversQuery = {
 
         const tableCount = [
             {
-                name: 'Courses',
+                name: consultancy.acc_type === 'Consultancy' ? 'Courses' : "Class",
                 count: courses,
                 link: '/courses'
             },
@@ -576,7 +576,7 @@ const consultancyResolversQuery = {
                 link: '/students'
             },
             {
-                name: 'Developers',
+                name: consultancy.acc_type === 'Consultancy' ? 'Developers' : 'Teachers',
                 count: developers,
                 link: '/developers'
             },
@@ -591,6 +591,11 @@ const consultancyResolversQuery = {
                 link: '/faqs'
             },
         ]
+        console.log(consultancy);
+        if (consultancy.acc_type !== 'Consultancy') {
+            const newTableCount = tableCount.filter(item => item.name !== 'Faqs')
+            return newTableCount
+        }
         return tableCount
     },
     getConsultancy: async (_, args, { userId, role }) => {
