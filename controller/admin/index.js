@@ -321,9 +321,8 @@ const adminQueryTypesAndInputs = `
 
      input createNewEventUser{
       reg_name:String
-      reg_date:Date
       event_id:Int!
-      req_email:String
+      reg_email:String
       reg_phone:String
      }
 
@@ -386,7 +385,7 @@ const adminMutation = `
     updateSelectedEvent(data:updateEventInput):String!
     deleteEventById(eventId:Int!):String!
 
-    registerNewEventUser(data:createNewEventUser):String!
+    registerNewEventUser(data:createNewEventUser!):String
 
 `
 
@@ -884,13 +883,16 @@ const adminResolvers = {
    
    registerNewEventUser: async (_, { data }, { userId, role }) => {
       
-      const newEventUser = await prisma.jmkeventreg.create({
-         data: {...data },
-      })
-      
-      if (!newEventUser) throw new ApolloError('something went wrong !')
 
-      return 'success'
+         const newEventUser = await prisma.jmkeventreg.create({
+            data: {...data },
+         })
+         if (!newEventUser) throw new ApolloError('something went wrong !')
+
+         return 'success'
+      
+      
+    
 
    },
 }
