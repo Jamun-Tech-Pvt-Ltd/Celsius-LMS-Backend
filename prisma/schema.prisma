@@ -499,6 +499,35 @@ model jmkfeemstr {
   fee_desc   String? @db.VarChar(200)
   fee_type   String? @db.VarChar(20)
   fee_amount Int?
+  cid        Int?
+}
+
+model jmkeventreg {
+  reg_id    Int       @id @default(autoincrement())
+  reg_name  String?   @db.VarChar(200)
+  reg_date  DateTime? @default(dbgenerated("(curdate())")) @db.Date
+  event_id  Int?
+  reg_email String?   @db.VarChar(50)
+  reg_phone String?   @db.VarChar(15)
+}
+
+model jmkstdbilldet {
+  serial     Int  @id @default(autoincrement())
+  bill_id    Int?
+  fee_id     Int?
+  fee_amount Int?
+  fee_dis    Int?
+  net_fee    Int?
+}
+
+model jmkstdbillmstr {
+  bill_id     Int       @id @default(autoincrement())
+  bill_amt    Int?
+  dis_amt     Int?
+  net_amt     Int?
+  amount_paid Int?
+  bill_dt     DateTime? @default(dbgenerated("(curdate())")) @db.Date
+  std_id      Int?
 }
 
 enum jmkcrsmain_cramain_del_mod {
