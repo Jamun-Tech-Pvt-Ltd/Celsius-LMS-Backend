@@ -87,6 +87,12 @@ const developerQueryTypesAndInputs = `
         next_attempt:Date
     }
 
+    type loginInCredentials{
+        token: String
+        developer_fname: String
+        developer_lname:String
+    }
+
     type Resume{
         resume:Upload
     }
@@ -223,7 +229,7 @@ const developerQuery = `
 
 
 const developerMutation = `
-    signinDeveloper(data:signinDeveloperUserInput!):Token
+    signinDeveloper(data:signinDeveloperUserInput!):loginInCredentials
     signupDeveloper(data:signupDevInput!):String
     updateDeveloper(data:DeveloperDetails!):String
 
@@ -254,7 +260,7 @@ const developerQueryResolvers = {
         return developer;
     },
     getDeveloper: async (_, args, { userId }) => {
-        if (!userId) throw new ForbiddenError('user need to login');
+        // if (!userId) throw new ForbiddenError('user need to login');
         const developerList = await prisma.jmkdevinfo.findMany();
         return developerList;
     },
@@ -459,16 +465,21 @@ const developerQueryResolvers = {
 };
 const developerMutationResolver = {
     signinDeveloper: async (_, { data }) => {
-        const developer = await prisma.jmkdevinfo.findFirstOrThrow({
+        const developer = await prisma.jmkdevinfo.findFirst({
             where: {
                 developer_email: data.developer_email
             }
         });
-        if (!developer) throw AuthenticationError('Invalid Credential');
+        console.log(developer);
+        if (!developer) throw AuthenticationError('Invalid email');
         const isMatch = data.developer_password == developer.developer_password
-        if (!isMatch) throw new AuthenticationError("invalid credentials")
+        if (!isMatch) throw new AuthenticationError("Invalid Password")
         const token = jwt.sign({ userId: developer.developer_id, role: ROLES[3] }, process.env.JWT_SECRET_KEY)
-        return { token };
+        return {
+            token,
+            developer_fname: developer.developer_fname,
+            developer_lname: developer.developer_lname
+        };
     },
 
     signupDeveloper: async (_, { data }) => {
