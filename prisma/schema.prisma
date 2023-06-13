@@ -526,6 +526,7 @@ model jmkstdbillmstr {
   dis_amt     Int?
   net_amt     Int?
   amount_paid Int?
+  due_amt     Int?
   bill_dt     DateTime? @default(dbgenerated("(curdate())")) @db.Date
   std_id      Int?
 }
