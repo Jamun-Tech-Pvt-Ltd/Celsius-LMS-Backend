@@ -203,8 +203,8 @@ model jmkstdtestset {
   test_category String  @db.VarChar(50)
   isComplete    Boolean @default(false)
   timer         Int
-  testlbl       Int? @default(1)
-  totalrt       Int?  @default(0)
+  testlbl       Int?    @default(1)
+  totalrt       Int?    @default(0)
 }
 
 model jmkstdtestqa {
@@ -530,6 +530,7 @@ model jmkstdbillmstr {
   dis_amt     Int?
   net_amt     Int?
   amount_paid Int?
+  due_amt     Int?
   bill_dt     DateTime? @default(dbgenerated("(curdate())")) @db.Date
   std_id      Int?
 }
