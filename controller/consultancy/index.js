@@ -204,6 +204,15 @@ const consultancyQueryTypesAndInputs = `
         fee_amount: Int
      }
 
+     input admitStudentInput {
+        bill_amt:Int!
+        dis_amt:Int!
+        net_amt:Int!
+        amount_paid:Int!
+        due_amt:Int!
+        std_id:Int!
+     }
+
 `
 
 const consultancyQuery = `
@@ -266,6 +275,8 @@ const consultancyMutation = `
     createSchoolFees(data:schoolStudentFeeInput):String!
     updateSchoolFees(data:schoolStudentFeeInput):String!
     deleteSchoolFees(fee_id:Int!):String!
+
+    admitStudent(data:admitStudentInput):String!
 `
 
 const consultancyResolvers = {
@@ -551,6 +562,22 @@ const consultancyResolvers = {
             return "success"
         }
 
+        throw new AuthenticationError("invalid access !!")
+    },
+
+
+    admitStudent: async (_, { data }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy");
+            if (!consultancy) throw new AuthenticationError("invalid credentials");
+            const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: data.std_id } })
+            const admit = await prisma.jmkstdbillmstr.findFirst({ where: { std_id: std.std_id } })
+            if (admit) throw new AuthenticationError("already admit this student !!")
+            const bill = await prisma.jmkstdbillmstr.create({ data: { ...data }, })
+            if (!bill) throw new AuthenticationError("invalid !!")
+            return "success"
+        }
         throw new AuthenticationError("invalid access !!")
     },
 }
