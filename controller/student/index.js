@@ -599,7 +599,32 @@ const studentResolvers = {
         },
       })
     }
-    //
+    //creating new testlbl if isComplete = true for previous
+    const testLevel = await prisma.jmkstdtestset.findFirst({
+      where: {
+        std_id: userId,
+        crs_id: user.crs_id,
+      },
+      orderBy: {
+        testlbl: 'desc',
+      },
+    })
+    if (testLevel.isComplete === true) {
+      if (testLevel.testlbl < 4) {
+        await prisma.jmkstdtestset.create({
+          data: {
+            std_id: user.std_id,
+            crs_id: user.crs_id,
+            test_category: testLevel.testlbl >= 2 ? 'Advance' : 'Fundamental',
+            isComplete: false,
+            timer: testLevel.testlbl >= 2 ? 30 : 20,
+            testlbl: testLevel.testlbl + 1,
+          },
+        })
+      }
+    }
+
+    //updating the score
     const studentAnswers = await prisma.jmkstdtestqa.findMany({
       select: { ques_id: true, std_ans: true, std_test_set_id: true },
     })
@@ -882,25 +907,47 @@ const studentResolversQuery = {
         where: { std_id: userId },
       })
       if (!user) throw new AuthenticationError('invalid user credentials')
-      for (let i = 0; i < 4; i++) {
-        const testLevel = await prisma.jmkstdtestset.findFirst({
-          where: {
-            testlbl: i + 1,
+      const testlevel = await prisma.jmkstdtestset.findMany({
+        where: {
+          std_id: user.std_id,
+          crs_id: user.crs_id,
+          test_category: 'Fundamental',
+          isComplete: false,
+          timer: 20,
+          testlbl: 1,
+        },
+      })
+      if (!testlevel) {
+        await prisma.jmkstdtestset.create({
+          data: {
+            std_id: user.std_id,
+            crs_id: user.crs_id,
+            test_category: 'Fundamental',
+            isComplete: false,
+            timer: 20,
+            testlbl: 1,
           },
         })
-        if (!testLevel) {
-          await prisma.jmkstdtestset.create({
-            data: {
-              std_id: user.std_id,
-              crs_id: user.crs_id,
-              test_category: i > 1 ? 'Advance' : 'Fundamental',
-              isComplete: false,
-              timer: i > 1 ? 30 : 20,
-              testlbl: i + 1,
-            },
-          })
-        }
       }
+      // for (let i = 0; i < 4; i++) {
+      //   const testLevel = await prisma.jmkstdtestset.findFirst({
+      //     where: {
+      //       testlbl: i + 1,
+      //     },
+      //   })
+      //   if (!testLevel) {
+      //     await prisma.jmkstdtestset.create({
+      //       data: {
+      //         std_id: user.std_id,
+      //         crs_id: user.crs_id,
+      //         test_category: i > 1 ? 'Advance' : 'Fundamental',
+      //         isComplete: false,
+      //         timer: i > 1 ? 30 : 20,
+      //         testlbl: i + 1,
+      //       },
+      //     })
+      //   }
+      // }
 
       return 'Test Loaded'
     }
