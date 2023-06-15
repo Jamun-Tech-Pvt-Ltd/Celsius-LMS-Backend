@@ -15,6 +15,7 @@ const developerQueryTypesAndInputs = `
         developer_country: String
         developer_type: String
         developer_password: String
+        developer_prof_summary: String
     }
 
     type DeveloperUser{
@@ -27,6 +28,9 @@ const developerQueryTypesAndInputs = `
         developer_country: String
         developer_password: String
         developer_type: String
+        developer_prof_summary: String
+        developer_resume: String
+        developer_resume_key: String
     }
     type Dashboard{
         experience: Int!
@@ -48,6 +52,7 @@ const developerQueryTypesAndInputs = `
         proj_desc: String
         proj_type: String
         proj_techs_used:String
+
     }
 
     type techStack{
@@ -137,6 +142,7 @@ const developerQueryTypesAndInputs = `
         developer_country: String
         developer_password: String
         developer_type: String
+        developer_prof_summary: String
     }
     input ExperienceDetails{
         tech_stack: String
@@ -342,6 +348,7 @@ const developerQueryResolvers = {
                 serial: args.serial,
             }
         });
+
         if (!project) return new ApolloError('Experience does not exist!');
 
         return project;
@@ -470,11 +477,10 @@ const developerMutationResolver = {
                 developer_email: data.developer_email
             }
         });
-        console.log(developer);
         if (!developer) throw AuthenticationError('Invalid email');
         const isMatch = data.developer_password == developer.developer_password
         if (!isMatch) throw new AuthenticationError("Invalid Password")
-        const token = jwt.sign({ userId: developer.developer_id, role: ROLES[3] }, process.env.JWT_SECRET_KEY)
+        const token = jwt.sign({ userId: developer.developer_id, role: ROLES[3] }, process.env.JWT_SECRET_KEY);
         return {
             token,
             developer_fname: developer.developer_fname,
@@ -505,6 +511,8 @@ const developerMutationResolver = {
     },
 
     updateDeveloper: async (_, { data }, { userId }) => {
+
+        console.log(data);
         const updatedDeveloper = await prisma.jmkdevinfo.update({
             where: { developer_id: userId },
             data: { ...data },
