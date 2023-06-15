@@ -23,6 +23,8 @@ model jmkcrsinfo {
   crs_image       String?      @db.VarChar(1000)
   crs_image_key   String?      @db.VarChar(1000)
   cid             Int?
+  crs_code        String?      @db.VarChar(40)
+  tr_id           Int?
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]
   jmkvidinfo      jmkvidinfo[]
@@ -530,9 +532,18 @@ model jmkstdbillmstr {
   dis_amt     Int?
   net_amt     Int?
   amount_paid Int?
-  due_amt     Int?
   bill_dt     DateTime? @default(dbgenerated("(curdate())")) @db.Date
   std_id      Int?
+  due_amt     Int?
+}
+
+model jmktstdpayinfo {
+  pay_id         Int       @id @default(autoincrement())
+  payment_date   DateTime? @default(dbgenerated("(curdate())")) @db.Date
+  pay_amount     Int?
+  std_id         Int?
+  transaction_id String?   @db.VarChar(30)
+  pay_verified   Boolean?
 }
 
 enum jmkcrsmain_cramain_del_mod {
