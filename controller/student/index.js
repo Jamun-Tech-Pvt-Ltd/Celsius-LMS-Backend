@@ -84,6 +84,13 @@ const studentQueryTypesAndInputs = `
         std_test_set_id: Int!
      }
 
+     input addStudentPaymentInput{
+        payment_date: Date!
+        pay_amount: Int!
+        transaction_id: String!
+     }
+
+
      type Feedback {
         grv_id : ID!
         std_id: String!
@@ -105,7 +112,7 @@ const studentQueryTypesAndInputs = `
         timer: Int!
      }
   
-  
+     
      type studentQA {
         question: String!
         rtans: String!
@@ -257,6 +264,8 @@ const studentMutation = `
     forgotPassword(data:forgotPasswordInput):String!
     uploadFile(file: Upload!): User
     studentReview(data:studentReviewInput):String
+
+    addStudentPayInfo(data:addStudentPaymentInput): String!
     
     
 
@@ -469,6 +478,23 @@ const studentResolvers = {
         crs_id: parseInt(data.crs_id),
         crs_start_dt: data.crs_start_dt,
         std_id: userId,
+      },
+    })
+    return 'success'
+  },
+
+  addStudentPayInfo: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    await prisma.jmktstdpayinfo.create({
+      data: {
+        std_id: user.std_id,
+        payment_date: new Date(data.payment_date),
+        pay_amount: parseInt(data.pay_amount),
+        transaction_id: data.transaction_id,
       },
     })
     return 'success'
@@ -822,6 +848,7 @@ const studentResolversQuery = {
         where: { std_id: userId, crs_id: user.crs_id },
       })
       if (!stdcourse) throw new ForbiddenError('invalid')
+
       const crs = await prisma.jmkcrsinfo.findFirst({
         where: { crs_id: user.crs_id },
       })
