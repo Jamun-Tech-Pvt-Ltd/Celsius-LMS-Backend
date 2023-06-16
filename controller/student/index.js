@@ -934,7 +934,7 @@ const studentResolversQuery = {
         where: { std_id: userId },
       })
       if (!user) throw new AuthenticationError('invalid user credentials')
-      const testlevel = await prisma.jmkstdtestset.findMany({
+      const testlevel = await prisma.jmkstdtestset.findFirst({
         where: {
           std_id: user.std_id,
           crs_id: user.crs_id,
