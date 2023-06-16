@@ -602,10 +602,11 @@ const studentResolvers = {
       where: { std_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user')
+
     const questionsSet = await prisma.jmkstdtestset.findFirst({
       where: {
         std_id: userId,
-        isComplete: true,
+        isComplete: false,
         crs_id: user.crs_id,
         serial: parseInt(data[0].std_test_set_id),
       },
@@ -625,35 +626,15 @@ const studentResolvers = {
         },
       })
     }
-    //creating new testlbl if isComplete = true for previous
-    const testLevel = await prisma.jmkstdtestset.findFirst({
-      where: {
-        std_id: userId,
-        crs_id: user.crs_id,
-      },
-      orderBy: {
-        testlbl: 'desc',
-      },
-    })
-    if (testLevel.isComplete === true) {
-      if (testLevel.testlbl < 4) {
-        await prisma.jmkstdtestset.create({
-          data: {
-            std_id: user.std_id,
-            crs_id: user.crs_id,
-            test_category: testLevel.testlbl >= 2 ? 'Advance' : 'Fundamental',
-            isComplete: false,
-            timer: testLevel.testlbl >= 2 ? 30 : 20,
-            testlbl: testLevel.testlbl + 1,
-          },
-        })
-      }
-    }
 
     //updating the score
     const studentAnswers = await prisma.jmkstdtestqa.findMany({
       select: { ques_id: true, std_ans: true, std_test_set_id: true },
+      where: {
+        std_test_set_id: parseInt(data[0].std_test_set_id),
+      },
     })
+
     const allRightAnswer = await prisma.jmkquesans.findMany({
       select: { rtans: true, ques_id: true },
     })
@@ -681,6 +662,44 @@ const studentResolvers = {
         }
       }
     }
+
+    const questionsSetUpdate = await prisma.jmkstdtestset.update({
+      data: {
+        isComplete: true,
+      },
+      where: {
+        serial: parseInt(data[0].std_test_set_id),
+      },
+    })
+
+    if (!questionsSetUpdate) throw new ApolloError('Somethig went wrong !')
+
+    //creating new testlbl if isComplete = true for previous
+    const testLevel = await prisma.jmkstdtestset.findFirst({
+      where: {
+        std_id: userId,
+        crs_id: user.crs_id,
+      },
+      orderBy: {
+        testlbl: 'desc',
+      },
+    })
+
+    if (testLevel.isComplete === true) {
+      if (testLevel.testlbl < 4) {
+        await prisma.jmkstdtestset.create({
+          data: {
+            std_id: user.std_id,
+            crs_id: user.crs_id,
+            test_category: testLevel.testlbl >= 2 ? 'Advance' : 'Fundamental',
+            isComplete: false,
+            timer: testLevel.testlbl >= 2 ? 30 : 20,
+            testlbl: testLevel.testlbl + 1,
+          },
+        })
+      }
+    }
+
     //
     return 'success'
   },
@@ -1038,15 +1057,15 @@ const studentResolversQuery = {
         },
       })
       if (!questionsSet) throw new ApolloError('Empty questions !')
-      const questionsSetUpdate = await prisma.jmkstdtestset.update({
-        data: {
-          isComplete: true,
-        },
-        where: {
-          serial: parseInt(args.set_id),
-        },
-      })
-      if (!questionsSetUpdate) throw new ApolloError('Somethig went wrong !')
+      // const questionsSetUpdate = await prisma.jmkstdtestset.update({
+      //   data: {
+      //     isComplete: true,
+      //   },
+      //   where: {
+      //     serial: parseInt(args.set_id),
+      //   },
+      // })
+      // if (!questionsSetUpdate) throw new ApolloError('Somethig went wrong !')
       return 'success'
     }
     throw new ForbiddenError('Bad request !!')
