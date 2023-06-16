@@ -957,10 +957,6 @@ const studentResolversQuery = {
         where: {
           std_id: user.std_id,
           crs_id: user.crs_id,
-          test_category: 'Fundamental',
-          isComplete: false,
-          timer: 20,
-          testlbl: 1,
         },
       })
       if (!testlevel) {
@@ -975,25 +971,6 @@ const studentResolversQuery = {
           },
         })
       }
-      // for (let i = 0; i < 4; i++) {
-      //   const testLevel = await prisma.jmkstdtestset.findFirst({
-      //     where: {
-      //       testlbl: i + 1,
-      //     },
-      //   })
-      //   if (!testLevel) {
-      //     await prisma.jmkstdtestset.create({
-      //       data: {
-      //         std_id: user.std_id,
-      //         crs_id: user.crs_id,
-      //         test_category: i > 1 ? 'Advance' : 'Fundamental',
-      //         isComplete: false,
-      //         timer: i > 1 ? 30 : 20,
-      //         testlbl: i + 1,
-      //       },
-      //     })
-      //   }
-      // }
 
       return 'Test Loaded'
     }
