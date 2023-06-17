@@ -365,6 +365,13 @@ model jmkcrsdet {
   @@index([crsmain_id], map: "jmkcrsdet_crsmain_id_fkey")
 }
 
+model jmkcrsupcom {
+  serial     Int       @id @default(autoincrement())
+  crsmain_id Int?
+  start_date DateTime? @db.Date
+  // jmkcrsmain jmkcrsmain[]
+}
+
 model jmkcrsmain {
   crsmain_id       Int                         @id @default(autoincrement())
   crsmain_overview String?                     @db.Text
@@ -377,6 +384,9 @@ model jmkcrsmain {
   crsmain_type     String?
   crsmain_img_key  String?                     @db.VarChar(1000)
   jmkcrsdet        jmkcrsdet[]
+  // upcom_id  Int
+  // jmkcrsupcom      jmkcrsupcom @relation(fields: [upcom_id], references: [serial], onDelete: Cascade)
+  
 }
 
 model jmkconsulfaq {
@@ -450,11 +460,7 @@ model jmkdevexp {
   exp_role_pos   String?   @db.VarChar(100)
 }
 
-model jmkcrsupcom {
-  serial     Int       @id @default(autoincrement())
-  crsmain_id Int?
-  start_date DateTime? @db.Date
-}
+
 
 model jmkdevtestdet {
   testdet_id  Int     @id @default(autoincrement())
