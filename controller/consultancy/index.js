@@ -233,6 +233,17 @@ const consultancyQueryTypesAndInputs = `
         descount:[admitStudentDes]
      }
 
+     input updateAdmitStudentInput {
+        bill_id: Int!
+        bill_amt:Int!
+        dis_amt:Int!
+        net_amt:Int!
+        amount_paid:Int!
+        due_amt:Int!
+        std_id:Int!
+        descount:[admitStudentDes]
+     }
+
      input admitStudentDes {
         id:Int!
         descount:Int!
@@ -304,6 +315,9 @@ const consultancyMutation = `
     deleteSchoolFees(fee_id:Int!):String!
 
     admitStudent(data:admitStudentInput):String!
+
+    updateAdmitStudent(data:updateAdmitStudentInput):String!
+
 `
 
 const consultancyResolvers = {
@@ -623,6 +637,45 @@ const consultancyResolvers = {
                         fee_dis: desc.descount,
                         net_fee: stdBill[index].fee_amount - Math.round((stdBill[index].fee_amount / 100) * desc.descount)
                     }
+                })
+            }
+            if (!bill) throw new AuthenticationError("invalid !!")
+            return "success"
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    updateAdmitStudent: async (_, { data }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy");
+            if (!consultancy) throw new AuthenticationError("invalid credentials");
+            const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: data.std_id } })
+            if (!std) throw new AuthenticationError("invalid !!")
+            const bill = await prisma.jmkstdbillmstr.update({
+                data: {
+                    bill_amt: data.bill_amt,
+                    dis_amt: data.dis_amt,
+                    net_amt: data.net_amt,
+                    amount_paid: data.amount_paid,
+                    due_amt: data.due_amt,
+                    std_id: data.std_id,
+                },
+                where: { bill_id: data.bill_id }
+            })
+
+            await prisma.jmkstdbilldet.deleteMany({ where: { bill_id: bill.bill_id } })
+            const stdBill = await prisma.jmkfeemstr.findMany({ where: { crs_id: std.crs_id } })
+            for (let index = 0; index < stdBill.length; index++) {
+                const desc = data.descount.find(item => item.id === stdBill[index].fee_id)
+                await prisma.jmkstdbilldet.create({
+                    data: {
+                        bill_id: bill.bill_id,
+                        fee_id: stdBill[index].fee_id,
+                        fee_amount: stdBill[index].fee_amount,
+                        fee_dis: desc.descount,
+                        net_fee: stdBill[index].fee_amount - Math.round((stdBill[index].fee_amount / 100) * desc.descount)
+                    },
                 })
             }
             if (!bill) throw new AuthenticationError("invalid !!")
