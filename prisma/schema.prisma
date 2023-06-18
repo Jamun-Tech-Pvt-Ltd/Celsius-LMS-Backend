@@ -367,9 +367,10 @@ model jmkcrsdet {
 
 model jmkcrsupcom {
   serial     Int       @id @default(autoincrement())
-  crsmain_id Int?
+  crsmain_id Int
   start_date DateTime? @db.Date
-  // jmkcrsmain jmkcrsmain[]
+
+  @@index([crsmain_id], map: "jmkcrsupcom_crsmain_id_fkey")
 }
 
 model jmkcrsmain {
@@ -384,9 +385,6 @@ model jmkcrsmain {
   crsmain_type     String?
   crsmain_img_key  String?                     @db.VarChar(1000)
   jmkcrsdet        jmkcrsdet[]
-  // upcom_id  Int
-  // jmkcrsupcom      jmkcrsupcom @relation(fields: [upcom_id], references: [serial], onDelete: Cascade)
-  
 }
 
 model jmkconsulfaq {
@@ -459,8 +457,6 @@ model jmkdevexp {
   exp_desc       String?   @db.VarChar(1000)
   exp_role_pos   String?   @db.VarChar(100)
 }
-
-
 
 model jmkdevtestdet {
   testdet_id  Int     @id @default(autoincrement())
@@ -550,6 +546,13 @@ model jmktstdpayinfo {
   std_id         Int?
   transaction_id String?   @db.VarChar(30)
   pay_verified   Boolean?
+}
+
+model jmkstdfeediscount {
+  serial           Int  @id @default(autoincrement())
+  fee_id           Int?
+  fee_discount_per Int?
+  std_id           Int?
 }
 
 enum jmkcrsmain_cramain_del_mod {
