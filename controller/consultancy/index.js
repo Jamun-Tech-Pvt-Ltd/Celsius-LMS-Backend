@@ -116,6 +116,25 @@ const consultancyQueryTypesAndInputs = `
         fee_amount:Int
      }
 
+     type studentFee {
+        serial:Int!
+        fee_id: Int
+        fee_amount: Int
+        fee_dis: Int
+        net_fee: Int
+     }
+
+     type studentBill {
+        bill_id:Int!
+        bill_amt:Int!
+        dis_amt:Int!
+        net_amt:Int!
+        amount_paid:Int!
+        due_amt:Int!
+        std_id:Int!
+        bill_dt:Date!
+     }
+
     input signinConsultancyInput{
         cemail: String!
         cpassword: String!
@@ -248,6 +267,8 @@ const consultancyQuery = `
 
     getSchoolFeeByCrsId(std_id:Int!):[schoolStudentFee]
 
+    getStudentFee(std_id:Int!):[studentFee]
+    getStudentFeeBill(std_id:Int!):[studentBill]
 
 `
 
@@ -879,6 +900,33 @@ const consultancyResolversQuery = {
         }
         throw new AuthenticationError("invalid credentials !")
     },
+
+    getStudentFeeBill: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid credentials")
+        if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
+            const bill = await prisma.jmkstdbillmstr.findMany({ where: { std_id: args.std_id } })
+            if (!bill) throw new AuthenticationError("Data not found !!")
+            return bill;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
+
+
+    getStudentFee: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid credentials")
+        if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
+            const bill = await prisma.jmkstdbillmstr.findMany({ where: { std_id: args.std_id } })
+            const fee = await prisma.jmkstdbilldet.findMany({ where: { bill_id: bill[0].bill_id } })
+            if (!fee) throw new AuthenticationError("Data not found !!")
+            return fee;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
+
 
 }
 
