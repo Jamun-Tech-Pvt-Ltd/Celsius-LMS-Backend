@@ -510,6 +510,16 @@ model jmkfeemstr {
   cid        Int?
 }
 
+model jmkstdmktg {
+  srno        Int     @id @default(autoincrement())
+  std_name    String? @db.VarChar(200)
+  std_phone   String? @db.VarChar(15)
+  std_address String? @db.VarChar(200)
+  stdfeedbk   String? @db.VarChar(100)
+  program     String? @db.VarChar(100)
+  schcol      String? @db.VarChar(200)
+}
+
 model jmkeventreg {
   reg_id    Int       @id @default(autoincrement())
   reg_name  String?   @db.VarChar(200)
