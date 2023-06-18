@@ -23,6 +23,8 @@ model jmkcrsinfo {
   crs_image       String?      @db.VarChar(1000)
   crs_image_key   String?      @db.VarChar(1000)
   cid             Int?
+  crs_code        String?      @db.VarChar(40)
+  tr_id           Int?
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]
   jmkvidinfo      jmkvidinfo[]
@@ -184,14 +186,16 @@ model jmkstdcrsinfo {
 }
 
 model jmkquesans {
-  ques_id  Int     @id @default(autoincrement())
-  question String? @db.VarChar(100)
-  ans1     String? @db.VarChar(100)
-  ans2     String? @db.VarChar(100)
-  ans3     String? @db.VarChar(100)
-  ans4     String? @db.VarChar(100)
-  rtans    String? @db.VarChar(100)
-  mod_id   Int?
+  ques_id    Int     @id @default(autoincrement())
+  question   String? @db.VarChar(100)
+  ans1       String? @db.VarChar(100)
+  ans2       String? @db.VarChar(100)
+  ans3       String? @db.VarChar(100)
+  ans4       String? @db.VarChar(100)
+  rtans      String? @db.VarChar(100)
+  mod_id     Int?
+  testlbl    Int?
+  crsmain_id Int?
 }
 
 model jmkstdtestset {
@@ -201,6 +205,8 @@ model jmkstdtestset {
   test_category String  @db.VarChar(50)
   isComplete    Boolean @default(false)
   timer         Int
+  testlbl       Int?    @default(1)
+  totalrt       Int?    @default(0)
 }
 
 model jmkstdtestqa {
@@ -359,6 +365,14 @@ model jmkcrsdet {
   @@index([crsmain_id], map: "jmkcrsdet_crsmain_id_fkey")
 }
 
+model jmkcrsupcom {
+  serial     Int       @id @default(autoincrement())
+  crsmain_id Int
+  start_date DateTime? @db.Date
+
+  @@index([crsmain_id], map: "jmkcrsupcom_crsmain_id_fkey")
+}
+
 model jmkcrsmain {
   crsmain_id       Int                         @id @default(autoincrement())
   crsmain_overview String?                     @db.Text
@@ -444,12 +458,6 @@ model jmkdevexp {
   exp_role_pos   String?   @db.VarChar(100)
 }
 
-model jmkcrsupcom {
-  serial     Int       @id @default(autoincrement())
-  crsmain_id Int?
-  start_date DateTime? @db.Date
-}
-
 model jmkdevtestdet {
   testdet_id  Int     @id @default(autoincrement())
   testmstr_id Int?
@@ -528,6 +536,23 @@ model jmkstdbillmstr {
   amount_paid Int?
   bill_dt     DateTime? @default(dbgenerated("(curdate())")) @db.Date
   std_id      Int?
+  due_amt     Int?
+}
+
+model jmktstdpayinfo {
+  pay_id         Int       @id @default(autoincrement())
+  payment_date   DateTime? @default(dbgenerated("(curdate())")) @db.Date
+  pay_amount     Int?
+  std_id         Int?
+  transaction_id String?   @db.VarChar(30)
+  pay_verified   Boolean?
+}
+
+model jmkstdfeediscount {
+  serial           Int  @id @default(autoincrement())
+  fee_id           Int?
+  fee_discount_per Int?
+  std_id           Int?
 }
 
 enum jmkcrsmain_cramain_del_mod {
