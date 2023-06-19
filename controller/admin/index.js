@@ -213,7 +213,15 @@ const adminQueryTypesAndInputs = `
       crsmain_type: String
      }
 
-
+     type AdminType{
+      usr_id:Int!
+      usr_email:String
+      usr_role: String
+      usr_fname:String
+      usr_mname:String
+      usr_lname:String
+      usr_img_url:String
+     }
 
 
      input createStaticCourseInput{
@@ -349,11 +357,13 @@ const adminQueryTypesAndInputs = `
       reg_phone:String
      }
 
+
 `
 
 const adminQuery = `
     admin:Admin!
 
+    getAdminById: AdminType
     getstudentForAdmin:[AdminStudent]
     getstudentByIdForAdmin(std_id:Int!):AdminStudent
     getstudentCourseByIdForAdmin(serial:Int!):UserCourse
@@ -1337,6 +1347,22 @@ const adminResolversQuery = {
       return course
     }
     throw new AuthenticationError('invalid access')
+  },
+  getAdminById: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin credentials')
+
+      const user = await prisma.jmkuserinfo.findFirst({
+        where: {
+          usr_id: userId,
+        },
+      })
+      return user
+    }
   },
 
   getStaticCoursesDataForAdmin: async (_, args, { userId, role }) => {
