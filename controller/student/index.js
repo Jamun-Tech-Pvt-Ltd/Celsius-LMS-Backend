@@ -288,7 +288,7 @@ const studentResolvers = {
     return { token }
   },
 
-  signupUser: async (_, { userNew }) => {
+  signupUser: async (_, { userNew }, { userId, role }) => {
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userNew.std_email },
     })
@@ -300,6 +300,24 @@ const studentResolvers = {
       },
     })
     if (!course) throw new AuthenticationError('invalid course')
+    if (role === ROLES[2]) {
+      const newUser = await prisma.jmkstdinfo.create({
+        data: { ...userNew ,cid: userId},
+      })
+      await prisma.jmkstdcrsinfo.create({
+        data: {
+          crs_id: userNew.crs_id,
+          crs_start_dt: userNew.crs_ecp_st_d,
+          std_id: newUser.std_id,
+        },
+      })
+      const token = jwt.sign(
+        { userId: newUser.std_id, role: ROLES[0] },
+        process.env.JWT_SECRET_KEY
+      )
+      return { token }
+    }
+
     const newUser = await prisma.jmkstdinfo.create({
       data: { ...userNew },
     })
