@@ -629,15 +629,18 @@ const consultancyResolvers = {
             const stdBill = await prisma.jmkfeemstr.findMany({ where: { crs_id: std.crs_id } })
             for (let index = 0; index < stdBill.length; index++) {
                 const desc = data.descount.find(item => item.id === stdBill[index].fee_id)
-                await prisma.jmkstdbilldet.create({
-                    data: {
-                        bill_id: bill.bill_id,
-                        fee_id: stdBill[index].fee_id,
-                        fee_amount: stdBill[index].fee_amount,
-                        fee_dis: desc.descount,
-                        net_fee: stdBill[index].fee_amount - Math.round((stdBill[index].fee_amount / 100) * desc.descount)
-                    }
-                })
+                if (desc) {
+                    await prisma.jmkstdbilldet.create({
+                        data: {
+                            bill_id: bill.bill_id,
+                            fee_id: stdBill[index].fee_id,
+                            fee_amount: stdBill[index].fee_amount,
+                            fee_dis: desc.descount,
+                            net_fee: stdBill[index].fee_amount - Math.round((stdBill[index].fee_amount / 100) * desc.descount)
+                        }
+                    })
+                }
+
             }
             if (!bill) throw new AuthenticationError("invalid !!")
             return "success"
@@ -668,15 +671,18 @@ const consultancyResolvers = {
             const stdBill = await prisma.jmkfeemstr.findMany({ where: { crs_id: std.crs_id } })
             for (let index = 0; index < stdBill.length; index++) {
                 const desc = data.descount.find(item => item.id === stdBill[index].fee_id)
-                await prisma.jmkstdbilldet.create({
-                    data: {
-                        bill_id: bill.bill_id,
-                        fee_id: stdBill[index].fee_id,
-                        fee_amount: stdBill[index].fee_amount,
-                        fee_dis: desc.descount,
-                        net_fee: stdBill[index].fee_amount - Math.round((stdBill[index].fee_amount / 100) * desc.descount)
-                    },
-                })
+                if (desc) {
+                    await prisma.jmkstdbilldet.create({
+                        data: {
+                            bill_id: bill.bill_id,
+                            fee_id: stdBill[index].fee_id,
+                            fee_amount: stdBill[index].fee_amount,
+                            fee_dis: desc.descount,
+                            net_fee: stdBill[index].fee_amount - Math.round((stdBill[index].fee_amount / 100) * desc.descount)
+                        },
+                    })
+                }
+
             }
             if (!bill) throw new AuthenticationError("invalid !!")
             return "success"
