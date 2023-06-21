@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { ApolloError, AuthenticationError, ForbiddenError } from 'apollo-server-express';
 import { ROLES } from "../../utils/helper.js";
 import { uploadImgToAWS, deleteImgToAWS } from '../../utils/imageHandler.js'
+import { compareDates } from "../../utils/DateHelper.js";
 
 const developerQueryTypesAndInputs = `
     type Developer {
@@ -40,7 +41,7 @@ const developerQueryTypesAndInputs = `
         serial: Int!
         tech_stack: String
         tech_stack_exp: String
-        tech_last_used: String
+        tech_last_used: Date
         developer_id: Int 
         techstk_id: techStack  
     }
@@ -52,7 +53,8 @@ const developerQueryTypesAndInputs = `
         proj_desc: String
         proj_type: String
         proj_techs_used:String
-
+        proj_end_dt: Date
+        proj_strt_dt: Date
     }
 
     type techStack{
@@ -168,6 +170,9 @@ const developerQueryTypesAndInputs = `
         proj_desc: String
         proj_type: String
         proj_techs_used:String
+        proj_end_dt: Date
+        proj_strt_dt: Date
+
     }
     input deleteProjInput{
         serial:Int!
@@ -179,6 +184,8 @@ const developerQueryTypesAndInputs = `
         proj_desc: String
         proj_type: String
         proj_techs_used:String
+        proj_strt_dt: Date
+        proj_end_dt: Date
     }
 
     input UpdateWorkExperience{
@@ -305,10 +312,6 @@ const developerQueryResolvers = {
         });
         const techStack = await prisma.jmktechstk.findMany();
         experienceList.forEach((experience) => {
-            if (experience.tech_last_used) {
-                const timestamp = experience.tech_last_used.getTime();
-                experience.tech_last_used = new Date(timestamp).toLocaleDateString();
-            }
             if (experience.techstk_id) {
                 const techStackItem = techStack.find((item) => item.techstk_id === experience.techstk_id);
                 experience.techstk_id = techStackItem;
@@ -349,16 +352,25 @@ const developerQueryResolvers = {
             }
         });
 
-        if (!project) return new ApolloError('Experience does not exist!');
+        if (!project) return new ApolloError('Project does not exist!');
 
         return project;
     },
     getDeveloperProjectList: async (_, args, { userId, role }) => {
         // if (!userId) throw new ForbiddenError('user need to login');
-
         const projectList = await prisma.jmkdevprojdet.findMany({
             where: {
                 developer_id: args.userId
+            }
+        });
+        projectList.forEach((project) => {
+            if (project.proj_strt_dt) {
+                const timestamp = project.proj_strt_dt.getTime();
+                project.proj_strt_dt = new Date(timestamp).toLocaleDateString();
+            }
+            if (project.proj_end_dt) {
+                const timestamp = project.proj_end_dt.getTime();
+                project.proj_end_dt = new Date(timestamp).toLocaleDateString();
             }
         });
         return projectList;
@@ -432,7 +444,6 @@ const developerQueryResolvers = {
         const experience = await prisma.jmkdevexp.findFirst({
             where: {
                 exp_id: args.exp_id,
-
             }
         });
 
@@ -512,7 +523,6 @@ const developerMutationResolver = {
 
     updateDeveloper: async (_, { data }, { userId }) => {
 
-        console.log(data);
         const updatedDeveloper = await prisma.jmkdevinfo.update({
             where: { developer_id: userId },
             data: { ...data },
@@ -601,6 +611,9 @@ const developerMutationResolver = {
     },
     updateProject: async (_, { data }, { userId }) => {
         const { serial, ..._updatedData } = data;
+        //Comparing start and end date
+        compareDates(data.proj_strt_dt, data.proj_end_dt);
+
         const project = await prisma.jmkdevprojdet.findFirst({
             where: {
                 serial: serial
@@ -621,7 +634,7 @@ const developerMutationResolver = {
     },
     createProject: async (_, { data }, { userId }) => {
         if (!userId) return new AuthenticationError("Login to continue");
-
+        compareDates(data.proj_strt_dt, data.proj_end_dt);
         const newProject = await prisma.jmkdevprojdet.create({
             data: {
                 developer_id: userId ?? data.developer_id,
@@ -629,6 +642,8 @@ const developerMutationResolver = {
                 proj_desc: data.proj_desc,
                 proj_techs_used: data.proj_techs_used,
                 proj_type: data.proj_type,
+                proj_end_dt: data.proj_end_dt,
+                proj_strt_dt: data.proj_strt_dt
             },
         });
         if (!newProject) return new ApolloError('Something went wrong!');
@@ -636,9 +651,14 @@ const developerMutationResolver = {
 
     },
     updateWorkExperience: async (_, { data }, { userId }) => {
-        // if (!userId) return new AuthenticationError("Login to continue");
+        if (!userId) return new AuthenticationError("Login to continue");
 
         const { exp_id, ..._updatedData } = data;
+
+        //Comparing Start and End dates
+        compareDates(data.exp_start_date, data.exp_end_date);
+
+
 
         const newWorkExperience = await prisma.jmkdevexp.update({
             where: {
@@ -652,12 +672,11 @@ const developerMutationResolver = {
         return 'success';
     },
     AddWorkExperience: async (_, { data }, { userId }) => {
-        // if (!userId) return new AuthenticationError("Login to continue");
-        const startDateObj = new Date(data.exp_start_date);
-        const endDateObj = new Date(data.exp_end_date);
-        if (startDateObj >= endDateObj) {
-            throw new ApolloError('Start date must be before end date');
-        }
+        if (!userId) return new AuthenticationError("Login to continue");
+
+        //Comparing Start and End dates
+        compareDates(data.exp_start_date, data.exp_end_date);
+
         const newWorkExperience = await prisma.jmkdevexp.create({
             data: {
                 company_name: data.company_name,
