@@ -557,7 +557,8 @@ model jmktstdpayinfo {
   pay_amount     Int?
   std_id         Int?
   transaction_id String?   @db.VarChar(30)
-  pay_verified   Boolean?
+  pay_verified   Boolean?  @default(false)
+  crs_id         Int?
 }
 
 model jmkstdfeediscount {
