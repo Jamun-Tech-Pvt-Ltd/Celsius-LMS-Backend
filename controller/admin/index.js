@@ -59,6 +59,14 @@ const adminQueryTypesAndInputs = `
         usr_role: String!
      }
 
+     type logInfo{
+      log_id:Int
+      ip:String
+      user_id:String
+      role:String
+      method:String
+     }
+
      type AdminStudent {
         std_id: ID!
         std_fname: String!
@@ -389,6 +397,7 @@ const adminQuery = `
 
     getUpcomingCourses:[upComingCourse]
     getUpcomingCourseById(serial:Int!):upComingCourse
+    getUserLog:[logInfo]
 
 `
 
@@ -1581,6 +1590,27 @@ const adminResolversQuery = {
       crsmain_duration: mainCourse.crsmain_duration,
       crsmain_type: mainCourse.crsmain_type,
     }
+  },
+  getUserLog: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const logs = await prisma.jmkloginfo.findMany({})
+    const logging = []
+    logs.map((log) => {
+      let monitor = log.log_desc.split(' ')
+      logging.push({
+        log_id: log.log_id,
+        ip: monitor[0],
+        user_id: monitor[1],
+
+        role: monitor[2],
+        method: monitor[3],
+      })
+    })
+    return logging
   },
 }
 

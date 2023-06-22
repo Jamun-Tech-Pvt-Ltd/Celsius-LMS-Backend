@@ -395,12 +395,14 @@ model jmkconsulfaq {
 }
 
 model jmkdevprojdet {
-  serial          Int     @id @default(autoincrement())
+  serial          Int       @id @default(autoincrement())
   developer_id    Int?
-  proj_title      String? @db.VarChar(100)
-  proj_desc       String? @db.VarChar(2000)
-  proj_techs_used String? @db.VarChar(100)
-  proj_type       String? @db.VarChar(20)
+  proj_title      String?   @db.VarChar(100)
+  proj_desc       String?   @db.VarChar(2000)
+  proj_techs_used String?   @db.VarChar(100)
+  proj_type       String?   @db.VarChar(20)
+  proj_strt_dt    DateTime? @db.Date
+  proj_end_dt     DateTime? @db.Date
 }
 
 model jmkdevtechdet {
@@ -563,6 +565,11 @@ model jmkstdfeediscount {
   fee_id           Int?
   fee_discount_per Int?
   std_id           Int?
+}
+
+model jmkloginfo {
+  log_id   Int     @id @default(autoincrement())
+  log_desc String? @db.VarChar(200)
 }
 
 enum jmkcrsmain_cramain_del_mod {
