@@ -10,6 +10,7 @@ import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 import { sendMail } from '../../utils/mailHandler.js'
 import registerrHTML from '../../utils/signup.js'
 import newUserSignupNotification from '../../utils/newUsersignup.js'
+import forgotPasswordHTML from '../../utils/forgotPassword.js'
 
 const studentQueryTypesAndInputs = `
     input SigninInput{
@@ -302,7 +303,7 @@ const studentResolvers = {
     if (!course) throw new AuthenticationError('invalid course')
     if (role === ROLES[2]) {
       const newUser = await prisma.jmkstdinfo.create({
-        data: { ...userNew ,cid: userId},
+        data: { ...userNew, cid: userId },
       })
       await prisma.jmkstdcrsinfo.create({
         data: {
@@ -373,7 +374,11 @@ const studentResolvers = {
       }
     )
     const url = `${process.env.CLIENT_URL}forgotpassword/verification?token=${token}`
-    // await sendMail(user.std_email, 'Reset your password !', forgotPasswordHTML(url))
+    await sendMail(
+      user.std_email,
+      'Reset your password !',
+      forgotPasswordHTML(url)
+    )
     return 'Email send !!'
   },
 
