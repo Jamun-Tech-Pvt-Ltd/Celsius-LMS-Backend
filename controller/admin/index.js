@@ -59,6 +59,15 @@ const adminQueryTypesAndInputs = `
         usr_role: String!
      }
 
+     type logInfo{
+      log_id:Int
+      ip:String
+      user_id:String
+      role:String
+      method:String
+      time:Date
+     }
+
      type AdminStudent {
         std_id: ID!
         std_fname: String!
@@ -222,6 +231,15 @@ const adminQueryTypesAndInputs = `
       usr_lname:String
       usr_img_url:String
      }
+     type PaymentInfo{
+      pay_id: Int!
+      payment_date: Date!
+      pay_amount: Int!
+      std_email: String!
+      transaction_id: String!
+      crs_name:String!
+      pay_verified: Boolean!
+     }
 
 
      input createStaticCourseInput{
@@ -358,6 +376,7 @@ const adminQueryTypesAndInputs = `
      }
 
 
+
 `
 
 const adminQuery = `
@@ -389,6 +408,8 @@ const adminQuery = `
 
     getUpcomingCourses:[upComingCourse]
     getUpcomingCourseById(serial:Int!):upComingCourse
+    getUserLog:[logInfo]
+    getPaymentInfo:[PaymentInfo]
 
 `
 
@@ -424,6 +445,8 @@ const adminMutation = `
     deleteUpcomingCourseById(serial:Int!): String!
 
     registerNewEventUser(data:createNewEventUser!):String
+    
+    updatePaymentStatus(pay_id:Int!): String
 
 `
 
@@ -1000,6 +1023,38 @@ const adminResolvers = {
       data: { ...data },
     })
     if (!newEventUser) throw new ApolloError('something went wrong !')
+
+    return 'success'
+  },
+  updatePaymentStatus: async (_, { pay_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+
+    const paymentdet = await prisma.jmktstdpayinfo.findFirst({
+      where: {
+        pay_id,
+      },
+    })
+
+    const studentInfo = await prisma.jmkstdinfo.findFirst({
+      where: {
+        std_id: paymentdet.std_id,
+        crs_id: paymentdet.crs_id,
+      },
+    })
+    if (!paymentdet) throw new ApolloError('No such payement info exist')
+    await prisma.jmktstdpayinfo.update({
+      data: {
+        pay_verified: !paymentdet.pay_verified,
+      },
+      where: {
+        pay_id,
+      },
+    })
 
     return 'success'
   },
@@ -1581,6 +1636,59 @@ const adminResolversQuery = {
       crsmain_duration: mainCourse.crsmain_duration,
       crsmain_type: mainCourse.crsmain_type,
     }
+  },
+  getUserLog: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const logs = await prisma.jmkloginfo.findMany({})
+    const logging = []
+    logs.map((log) => {
+      let monitor = log.log_desc.split(' ')
+      logging.push({
+        log_id: log.log_id,
+        ip: monitor[0],
+        user_id: monitor[1],
+        role: monitor[2],
+        method: monitor[3],
+        time: `${monitor[4]} ${monitor[5]} ${monitor[6]} ${monitor[7]} ${monitor[8]} ${monitor[9]} ${monitor[10]} ${monitor[11]}`,
+      })
+    })
+    return logging
+  },
+  getPaymentInfo: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const paymentInfos = []
+    const paymentsInfo = await prisma.jmktstdpayinfo.findMany({})
+
+    for (let i = 0; i < paymentsInfo.length; i++) {
+      const course = await prisma.jmkcrsinfo.findUnique({
+        where: {
+          crs_id: paymentsInfo[i]?.crs_id,
+        },
+      })
+      const student = await prisma.jmkstdinfo.findUnique({
+        where: {
+          std_id: paymentsInfo[i]?.std_id,
+        },
+      })
+      paymentInfos.push({
+        pay_id: paymentsInfo[i].pay_id,
+        payment_date: paymentsInfo[i].payment_date,
+        pay_amount: paymentsInfo[i].pay_amount,
+        std_email: student?.std_email,
+        transaction_id: paymentsInfo[i].transaction_id,
+        crs_name: course?.crs_name,
+        pay_verified: paymentsInfo[i].pay_verified,
+      })
+    }
+    return paymentInfos
   },
 }
 
