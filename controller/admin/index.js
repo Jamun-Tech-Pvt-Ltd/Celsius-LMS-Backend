@@ -143,6 +143,7 @@ const adminQueryTypesAndInputs = `
         developer_mname: String
         developer_lname: String!
         developer_phone: String!
+        developer_tech1: String!
         developer_country: String!
         developer_email: String!
         developer_password: String!
@@ -520,8 +521,11 @@ const adminResolvers = {
         where: { usr_id: userId, usr_role: role },
       })
       if (!admin) throw new AuthenticationError('invalid admin')
+
       const student = await prisma.jmkstdinfo.update({
-        data: { ...data },
+        data: {
+          ...data,
+        },
         where: { std_id: data.std_id },
       })
       if (!student) throw new AuthenticationError('Error')
@@ -545,18 +549,24 @@ const adminResolvers = {
 
   updateStudentCourseFromAdmin: async (_, { data }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
-    if (role === 'admin') {
+
+    if (role == 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
         where: { usr_id: userId, usr_role: role },
       })
-      if (!admin) throw new AuthenticationError('invalid admin')
-      if (!access.includes(admin.usr_role))
+      if (!admin) {
+        throw new AuthenticationError('invalid admin')
+      }
+      if (!admin.usr_role) {
         throw new ForbiddenError('You dont have access to create course')
+      }
       const student = await prisma.jmkstdcrsinfo.update({
         data: { ...data },
         where: { serial: data.serial },
       })
-      if (!student) throw new AuthenticationError('Error')
+      if (!student) {
+        throw new AuthenticationError('Error')
+      }
       return 'success'
     }
     if (role === ROLES[2]) {
@@ -571,6 +581,7 @@ const adminResolvers = {
       if (!student) throw new AuthenticationError('Error')
       return 'success'
     }
+
     throw new AuthenticationError('Invalid access')
   },
 
@@ -1187,6 +1198,7 @@ const adminResolversQuery = {
             developer_phone,
             developer_country,
             developer_email,
+            developer_tech1,
             developer_password,
           } = element
 
@@ -1197,6 +1209,7 @@ const adminResolversQuery = {
             developer_mname,
             developer_lname,
             developer_phone,
+            developer_tech1,
             developer_country,
             developer_email,
             developer_password,
