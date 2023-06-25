@@ -61,6 +61,7 @@ input createCourseInput {
         crs_type: String!
         crs_nxt_st_date:Date
         crs_image:String
+        crs_code: String
     }
 
     type PublicCourse {
