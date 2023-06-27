@@ -143,6 +143,19 @@ const consultancyQueryTypesAndInputs = `
         std_id:Int!
      }
 
+     type courseSubject {
+        subject_id:Int!
+        subject_code:String
+        crs_id:Int
+        subject_desc:String
+        subject_full_m:Int
+        subject_pass_m:Int
+        subject_theory_m:Int
+        subject_practical_m:Int
+        subject_type:String
+     }
+
+    
     input signinConsultancyInput{
         cemail: String!
         cpassword: String!
@@ -265,7 +278,21 @@ const consultancyQueryTypesAndInputs = `
      }
 
 
+    input courseSubjectInput {
+        subject_id:Int
+        subject_code:String
+        crs_id:Int
+        subject_desc:String
+        subject_full_m:Int
+        subject_pass_m:Int
+        subject_theory_m:Int
+        subject_practical_m:Int
+        subject_type:String
+    }
+
 `
+
+
 
 const consultancyQuery = `
     getConsultancy:Consultancy
@@ -298,6 +325,8 @@ const consultancyQuery = `
     getStudentFeeBill(std_id:Int!):[studentBill]
 
     getStudentFeeDes(std_id:Int!):[studentFeeSec]
+
+    getSubByCourseId(crs_id:Int!):[courseSubject]
 
 `
 
@@ -340,8 +369,12 @@ const consultancyMutation = `
     updateStudentFeeDes(data:stdFeeDecInput):String!
     deleteStudentFeeDes(serial:Int!):String!
 
-
+    createCourseSub(data:courseSubjectInput):String!
+    updateCourseSub(data:courseSubjectInput):String!
+    deleteeCourseSub(subject_id:Int!):String!
 `
+
+
 
 const consultancyResolvers = {
 
@@ -629,7 +662,6 @@ const consultancyResolvers = {
         throw new AuthenticationError("invalid access !!")
     },
 
-
     admitStudent: async (_, { data }, { userId, role }) => {
         if (userId) {
             const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
@@ -760,6 +792,67 @@ const consultancyResolvers = {
                     where: { serial: serial }
                 })
                 if (!dec) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    createCourseSub: async (_, { data }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id } })
+                if (!crs) throw new AuthenticationError("invalid course id")
+                const oldSub = await prisma.jmksubjectmaster.findFirst({ where: { crs_id: data.crs_id, subject_code: data.subject_code } })
+                if (oldSub) throw new AuthenticationError("Alreay exist")
+                const sub = await prisma.jmksubjectmaster.create({
+                    data: {
+                        ...data,
+                    },
+                })
+                if (!sub) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    updateCourseSub: async (_, { data }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id } })
+                if (!crs) throw new AuthenticationError("invalid course id")
+                const sub = await prisma.jmksubjectmaster.update({
+                    data: {
+                        ...data,
+                    },
+                    where: { subject_id: data.subject_id }
+                })
+                if (!sub) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    deleteeCourseSub: async (_, { subject_id }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const sub = await prisma.jmksubjectmaster.delete({
+                    where: { subject_id: subject_id }
+                })
+                if (!sub) throw new AuthenticationError("invalid !!")
                 return "success"
             }
             throw new AuthenticationError("invalid access !!")
@@ -1075,6 +1168,19 @@ const consultancyResolversQuery = {
         }
         throw new AuthenticationError("invalid credentials !")
     },
+
+    getSubByCourseId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
+            const sub = await prisma.jmksubjectmaster.findMany({ where: { crs_id: args.crs_id } })
+            if (!sub) throw new AuthenticationError("Data not found !!")
+            return sub;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
+
 
 }
 
