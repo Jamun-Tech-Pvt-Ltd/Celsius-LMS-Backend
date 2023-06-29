@@ -223,6 +223,17 @@ const adminQueryTypesAndInputs = `
       crsmain_type: String
      }
 
+
+     type followUpStudent{
+      std_name:String
+      std_phone:String
+      std_address:String
+      stdfeedbk:String
+      program:String
+      schcol:String
+     }
+
+
      type AdminType{
       usr_id:Int!
       usr_email:String
@@ -411,6 +422,10 @@ const adminQuery = `
     getUpcomingCourseById(serial:Int!):upComingCourse
     getUserLog:[logInfo]
     getPaymentInfo:[PaymentInfo]
+
+
+    getFolloUpStudent:[followUpStudent]
+
 
 `
 
@@ -1703,6 +1718,20 @@ const adminResolversQuery = {
     }
     return paymentInfos
   },
+
+  getFolloUpStudent: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const folloUpStudent = await prisma.jmkstdmktg.findMany({})
+    if (folloUpStudent) {
+      return folloUpStudent
+    }
+    return 'No record Found'
+  },
+
 }
 
 export {
