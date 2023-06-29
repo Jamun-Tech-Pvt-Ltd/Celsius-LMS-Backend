@@ -1,9 +1,12 @@
-import { ApolloError, AuthenticationError, ForbiddenError } from 'apollo-server-express'
+import {
+  ApolloError,
+  AuthenticationError,
+  ForbiddenError,
+} from 'apollo-server-express'
 import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
 import { uploadImgToAWS, deleteImgToAWS } from '../../utils/imageHandler.js'
 import { ROLES } from '../../utils/helper.js'
-
 
 const adminQueryTypesAndInputs = `
 
@@ -54,6 +57,15 @@ const adminQueryTypesAndInputs = `
         usr_code: String
         usr_email: String!
         usr_role: String!
+     }
+
+     type logInfo{
+      log_id:Int
+      ip:String
+      user_id:String
+      role:String
+      method:String
+      time:Date
      }
 
      type AdminStudent {
@@ -131,6 +143,7 @@ const adminQueryTypesAndInputs = `
         developer_mname: String
         developer_lname: String!
         developer_phone: String!
+        developer_tech1: String!
         developer_country: String!
         developer_email: String!
         developer_password: String!
@@ -199,6 +212,43 @@ const adminQueryTypesAndInputs = `
          event_id:Int!
          reg_email:String
          reg_phone:String
+     }
+
+     type upComingCourse{
+      start_date: Date!
+      crsmain_id: Int!
+      serial: Int!
+      crsmain_title: String
+      crsmain_duration: Int
+      crsmain_type: String
+     }
+
+     type followUpStudent{
+      std_name:String
+      std_phone:String
+      std_address:String
+      stdfeedbk:String
+      program:String
+      schcol:String
+     }
+
+     type AdminType{
+      usr_id:Int!
+      usr_email:String
+      usr_role: String
+      usr_fname:String
+      usr_mname:String
+      usr_lname:String
+      usr_img_url:String
+     }
+     type PaymentInfo{
+      pay_id: Int!
+      payment_date: Date!
+      pay_amount: Int!
+      std_email: String!
+      transaction_id: String!
+      crs_name:String!
+      pay_verified: Boolean!
      }
 
 
@@ -318,6 +368,15 @@ const adminQueryTypesAndInputs = `
 
 
      }
+     input upcomingCourseInput{
+      crsmain_id: Int!
+      start_date: Date!
+     }
+     input updateUpcomingCourseInput{
+      crsmain_id: Int!
+      start_date: Date!
+      serial: Int!
+     }
 
      input createNewEventUser{
       reg_name:String
@@ -326,11 +385,14 @@ const adminQueryTypesAndInputs = `
       reg_phone:String
      }
 
+
+
 `
 
 const adminQuery = `
     admin:Admin!
 
+    getAdminById: AdminType
     getstudentForAdmin:[AdminStudent]
     getstudentByIdForAdmin(std_id:Int!):AdminStudent
     getstudentCourseByIdForAdmin(serial:Int!):UserCourse
@@ -354,9 +416,14 @@ const adminQuery = `
 
     getAllEventRegisteredUser:[eventRegisteredInfo]
 
+    getUpcomingCourses:[upComingCourse]
+    getUpcomingCourseById(serial:Int!):upComingCourse
+    getUserLog:[logInfo]
+    getPaymentInfo:[PaymentInfo]
+
+    getFolloUpStudent:[followUpStudent]
+
 `
-
-
 
 const adminMutation = `
 
@@ -385,892 +452,1286 @@ const adminMutation = `
     updateSelectedEvent(data:updateEventInput):String!
     deleteEventById(eventId:Int!):String!
 
+    addUpcomingCourse(data:upcomingCourseInput):String!
+    updateSelectedUpcomingCourse(data:updateUpcomingCourseInput):String!
+    deleteUpcomingCourseById(serial:Int!): String!
+
     registerNewEventUser(data:createNewEventUser!):String
+    
+    updatePaymentStatus(pay_id:Int!): String
 
 `
 
 const adminResolvers = {
+  signinAdmin: async (_, { data }) => {
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_email: data.usr_email },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const isMatch = data.usr_password == admin.usr_password
+    if (!isMatch) throw new AuthenticationError('invalid user credentials')
+    const token = jwt.sign(
+      { userId: admin.usr_id, role: admin.usr_role },
+      process.env.JWT_SECRET_KEY
+    )
+    return { token }
+  },
 
-   signinAdmin: async (_, { data }) => {
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_email: data.usr_email },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin credentials')
-      const isMatch = data.usr_password == admin.usr_password
-      if (!isMatch) throw new AuthenticationError('invalid user credentials')
-      const token = jwt.sign(
-         { userId: admin.usr_id, role: admin.usr_role },
-         process.env.JWT_SECRET_KEY
-      )
-      return { token }
-   },
+  signupAdmin: async (_, { data }, { userId }) => {
+    if (!userId) throw new AuthenticationError('invalid Token')
+    const suAdmin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    })
+    if (!suAdmin) throw new AuthenticationError('invalid admin credentials')
+    if (suAdmin.usr_role !== 'admin')
+      throw new AuthenticationError("You don't have acess to create admin")
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_email: data.usr_email },
+    })
+    if (admin)
+      throw new AuthenticationError('admin already exist with that email')
+    const newAdmin = await prisma.jmkuserinfo.create({
+      data: { ...data },
+    })
+    const token = jwt.sign(
+      { userId: newAdmin.usr_id, role: data.usr_role },
+      process.env.JWT_SECRET_KEY
+    )
+    await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
+    await sendMail(
+      'riwaz@jamuntek.com',
+      'New Admin Created !',
+      newUserSignupNotification(newUser, course.crs_name)
+    )
+    await sendMail(
+      'jenish@jamuntek.com',
+      'New Admin Created !',
+      newUserSignupNotification(newUser, course.crs_name)
+    )
+    return { token }
+  },
 
-   signupAdmin: async (_, { data }, { userId }) => {
-      if (!userId) throw new AuthenticationError('invalid Token')
-      const suAdmin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId },
-      })
-      if (!suAdmin) throw new AuthenticationError('invalid admin credentials')
-      if (suAdmin.usr_role !== 'admin')
-         throw new AuthenticationError("You don't have acess to create admin")
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_email: data.usr_email },
-      })
-      if (admin)
-         throw new AuthenticationError('admin already exist with that email')
-      const newAdmin = await prisma.jmkuserinfo.create({
-         data: { ...data },
-      })
-      const token = jwt.sign(
-         { userId: newAdmin.usr_id, role: data.usr_role },
-         process.env.JWT_SECRET_KEY
-      )
-      await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
-      await sendMail('riwaz@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
-      await sendMail('jenish@jamuntek.com', 'New Admin Created !', newUserSignupNotification(newUser, course.crs_name))
-      return { token }
-   },
+  updateAdmin: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    const newAdmin = await prisma.jmkuserinfo.update({
+      data: { ...data },
+      where: { usr_id: userId },
+    })
+    if (!newAdmin) throw new Error('something went wrong!!')
+    return newAdmin
+  },
 
-   updateAdmin: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
+  updateStudentFromAdmin: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
+        where: { usr_id: userId, usr_role: role },
       })
       if (!admin) throw new AuthenticationError('invalid admin')
-      const newAdmin = await prisma.jmkuserinfo.update({
-         data: { ...data },
-         where: { usr_id: userId },
+
+      const student = await prisma.jmkstdinfo.update({
+        data: {
+          ...data,
+        },
+        where: { std_id: data.std_id },
       })
-      if (!newAdmin) throw new Error('something went wrong!!')
-      return newAdmin
-   },
+      if (!student) throw new AuthenticationError('Error')
+      return 'success'
+    }
 
-   updateStudentFromAdmin: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      if (role === 'admin') {
-         const admin = await prisma.jmkuserinfo.findFirst({
-            where: { usr_id: userId, usr_role: role },
-         })
-         if (!admin) throw new AuthenticationError('invalid admin')
-         const student = await prisma.jmkstdinfo.update({
-            data: { ...data },
-            where: { std_id: data.std_id },
-         })
-         if (!student) throw new AuthenticationError('Error')
-         return 'success'
-      }
+    if (role === ROLES[2]) {
+      const consultancy = await prisma.jmkconsulinfo.findFirst({
+        where: { serial: userId },
+      })
+      if (!consultancy) throw new AuthenticationError('invalid consultancy')
+      const student = await prisma.jmkstdinfo.update({
+        data: { ...data, cid: userId },
+        where: { std_id: data.std_id },
+      })
+      if (!student) throw new AuthenticationError('Error')
+      return 'success'
+    }
+    throw new AuthenticationError('invalid Access')
+  },
 
-      if (role === ROLES[2]) {
-         const consultancy = await prisma.jmkconsulinfo.findFirst({
-            where: { serial: userId },
-         })
-         if (!consultancy) throw new AuthenticationError('invalid consultancy')
-         const student = await prisma.jmkstdinfo.update({
-            data: { ...data, cid: userId },
-            where: { std_id: data.std_id },
-         })
-         if (!student) throw new AuthenticationError('Error')
-         return 'success'
-      }
-      throw new AuthenticationError('invalid Access')
-   },
+  updateStudentCourseFromAdmin: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
 
-   updateStudentCourseFromAdmin: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      if (role === 'admin') {
-         const admin = await prisma.jmkuserinfo.findFirst({
-            where: { usr_id: userId, usr_role: role },
-         })
-         if (!admin) throw new AuthenticationError('invalid admin')
-         if (!access.includes(admin.usr_role))
-            throw new ForbiddenError('You dont have access to create course')
-         const student = await prisma.jmkstdcrsinfo.update({
-            data: { ...data },
-            where: { serial: data.serial },
-         })
-         if (!student) throw new AuthenticationError('Error')
-         return 'success'
-      }
-      if (role === ROLES[2]) {
-         const consultancy = await prisma.jmkconsulinfo.findFirst({
-            where: { serial: userId },
-         })
-         if (!consultancy) throw new AuthenticationError('invalid admin')
-         const student = await prisma.jmkstdcrsinfo.update({
-            data: { ...data },
-            where: { serial: data.serial },
-         })
-         if (!student) throw new AuthenticationError('Error')
-         return 'success'
-      }
-      throw new AuthenticationError('Invalid access')
-   },
-
-   updateTrainerFromDashboard: async (_, { data }, { userId, role }) => {
-
-      if (!userId) throw new ForbiddenError('invalid token')
-
+    if (role == 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
+        where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) {
+        throw new AuthenticationError('invalid admin')
+      }
+      if (!admin.usr_role) {
+        throw new ForbiddenError('You dont have access to create course')
+      }
+      const student = await prisma.jmkstdcrsinfo.update({
+        data: { ...data },
+        where: { serial: data.serial },
+      })
+      if (!student) {
+        throw new AuthenticationError('Error')
+      }
+      return 'success'
+    }
+    if (role === ROLES[2]) {
+      const consultancy = await prisma.jmkconsulinfo.findFirst({
+        where: { serial: userId },
+      })
+      if (!consultancy) throw new AuthenticationError('invalid admin')
+      const student = await prisma.jmkstdcrsinfo.update({
+        data: { ...data },
+        where: { serial: data.serial },
+      })
+      if (!student) throw new AuthenticationError('Error')
+      return 'success'
+    }
+
+    throw new AuthenticationError('Invalid access')
+  },
+
+  updateTrainerFromDashboard: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+
+    if (!admin) throw new AuthenticationError('invalid admin')
+
+    const trainer = await prisma.jmktrinfo.update({
+      data: { ...data },
+      where: { tr_id: parseInt(data.tr_id) },
+    })
+
+    if (!trainer) throw new AuthenticationError('Something went wrong')
+
+    return 'success'
+  },
+  createStaticCourse: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    let file
+    if (data.crsmain_img_url) {
+      file = await uploadImgToAWS(data.crsmain_img_url, 'webimages/')
+      if (!file.data) throw new ApolloError('Something went wrong !')
+    }
+    const newStaticCourse = await prisma.jmkcrsmain.create({
+      data: {
+        ...data,
+        crsmain_img_url: file?.data?.Location ?? null,
+        crsmain_img_key: file?.data?.key ?? '',
+      },
+    })
+
+    if (!newStaticCourse) throw new ApolloError('something went wrong !')
+    return newStaticCourse.crsmain_id
+  },
+  updateStaticCourse: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    const selectedStaticCourse = await prisma.jmkcrsmain.findFirst({
+      where: { crsmain_id: parseInt(data.crsmain_id) },
+    })
+    if (!selectedStaticCourse) throw new ApolloError('invalid course')
+
+    let file
+    if (data.crsmain_img_url !== null) {
+      await deleteImgToAWS(selectedStaticCourse?.crsmain_img_key)
+
+      file = await uploadImgToAWS(data.crsmain_img_url, 'webimages/')
+      if (!file.data) throw new ApolloError('Something went wrong !')
+    }
+    const course = await prisma.jmkcrsmain.update({
+      data: {
+        ...data,
+        crsmain_img_url:
+          data.crsmain_img_url !== null
+            ? file?.data?.Location
+            : selectedStaticCourse.crsmain_img_url,
+        crsmain_img_key:
+          data.crsmain_img_url !== null
+            ? file?.data?.key
+            : selectedStaticCourse.crsmain_img_key,
+      },
+      where: {
+        crsmain_id: parseInt(data.crsmain_id),
+      },
+    })
+    if (!course) throw new ApolloError('something went wrong !')
+    return 'success'
+  },
+  deleteStaticCourse: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    const crs = await prisma.jmkcrsmain.findFirst({
+      where: { crsmain_id: data.crsmain_id },
+    })
+    await deleteImgToAWS(crs?.crsmain_img_key)
+    const deleteStaticCourse = await prisma.jmkcrsmain.delete({
+      where: { crsmain_id: data.crsmain_id },
+    })
+
+    const staticCourseDetails = await prisma.jmkcrsdet.findMany({
+      where: { crsmain_id: data.crsmain_id },
+    })
+
+    staticCourseDetails.forEach(async (element) => {
+      const deleteStaticCourseDetails = await prisma.jmkcrsdet.delete({
+        where: { crsmain_id: element.crsmain_id },
+      })
+      if (!deleteStaticCourseDetails)
+        throw new ApolloError('something went wrong !')
+    })
+    if (!deleteStaticCourse) throw new ApolloError('something went wrong !')
+    return 'success'
+  },
+
+  addStaticCourseDetails: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+
+    data.forEach(async (element) => {
+      const newStaticCourseDetails = await prisma.jmkcrsdet.create({
+        data: { ...element },
+      })
+      if (!newStaticCourseDetails)
+        throw new ApolloError('something went wrong !')
+    })
+
+    return 'success'
+  },
+  updateStaticCourseDetails: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+
+    data.forEach(async (element) => {
+      if (!element.crsdet_title) return
+      if (element.crsdet_id) {
+        const updateStaticCourseDetails = await prisma.jmkcrsdet.update({
+          data: { ...element },
+          where: {
+            crsdet_id: parseInt(element.crsdet_id),
+          },
+        })
+      } else {
+        const createStaticCourseDetails = await prisma.jmkcrsdet.create({
+          data: {
+            crsdet_title: element.crsdet_title,
+            crsdet_sub_title: element.crsdet_sub_title,
+            crsmain_id: element.crsmain_id,
+          },
+        })
+      }
+    })
+
+    return 'success'
+  },
+
+  deleteStaticCourseDetailTitleById: async (
+    _,
+    { crsDetId },
+    { userId, role }
+  ) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+
+    if (crsDetId) {
+      const deleteDet = await prisma.jmkcrsdet.delete({
+        where: { crsdet_id: crsDetId },
       })
 
+      if (!deleteDet) throw new AuthenticationError('invalid !!')
+    }
+
+    return 'success'
+
+    throw new AuthenticationError('invalid access !!')
+  },
+
+  deleteUpcomingCourseById: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    if (admin.usr_role === 'admin') {
+      if (serial) {
+        const deleteUpcoming = await prisma.jmkcrsupcom.findFirst({
+          where: { serial: serial },
+        })
+
+        if (!deleteUpcoming) throw new AuthenticationError('invalid !!')
+        await prisma.jmkcrsupcom.delete({
+          where: { serial: serial },
+        })
+
+        return 'success'
+      }
+    }
+
+    throw new AuthenticationError('invalid access !!')
+  },
+  addUpcomingCourse: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    await prisma.jmkcrsupcom.create({
+      data: {
+        start_date: data.start_date,
+        crsmain_id: data.crsmain_id,
+      },
+    })
+    return 'success'
+  },
+  updateSelectedUpcomingCourse: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    const selectedCourse = await prisma.jmkcrsupcom.findFirst({
+      where: {
+        serial: data.serial,
+      },
+    })
+    if (!selectedCourse) throw new ApolloError('No such upcoming course')
+    await prisma.jmkcrsupcom.update({
+      data: {
+        start_date: data.start_date,
+        crsmain_id: data.crsmain_id,
+        serial: data.serial,
+      },
+      where: {
+        serial: data.serial,
+      },
+    })
+    return 'success'
+  },
+  updateDeveloperFromDashboard: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId, usr_role: role },
+      })
       if (!admin) throw new AuthenticationError('invalid admin')
 
-      const trainer = await prisma.jmktrinfo.update({
-         data: { ...data },
-         where: { tr_id: parseInt(data.tr_id) },
+      const uppdateDev = await prisma.jmkdevinfo.update({
+        data: { ...data },
+        where: { developer_id: data.developer_id },
       })
-
-      if (!trainer) throw new AuthenticationError('Something went wrong')
+      if (!uppdateDev) throw new AuthenticationError('invalid update !')
 
       return 'success'
-   },
-   createStaticCourse: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
+    }
+
+    if (role === ROLES[2]) {
+      const consultancy = await prisma.jmkconsulinfo.findFirst({
+        where: { serial: userId },
       })
-      if (!admin) throw new AuthenticationError('invalid admin')
-      let file
-      if (data.crsmain_img_url) {
-         file = await uploadImgToAWS(data.crsmain_img_url, 'webimages/')
-         if (!file.data) throw new ApolloError('Something went wrong !')
-      }
-      const newStaticCourse = await prisma.jmkcrsmain.create({
-         data: {
-            ...data,
-            crsmain_img_url: file?.data?.Location ?? null,
-            crsmain_img_key: file?.data?.key ?? '',
-         },
+      if (!consultancy) throw new AuthenticationError('invalid consultancy !')
+
+      const uppdateDev = await prisma.jmkdevinfo.update({
+        data: { ...data, cid: userId },
+        where: { developer_id: data.developer_id },
       })
-
-      if (!newStaticCourse) throw new ApolloError('something went wrong !')
-      return newStaticCourse.crsmain_id
-
-   },
-   updateStaticCourse: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-      const selectedStaticCourse = await prisma.jmkcrsmain.findFirst({
-         where: { crsmain_id: parseInt(data.crsmain_id) },
-      })
-      if (!selectedStaticCourse) throw new ApolloError('invalid course')
-
-      let file
-      if (data.crsmain_img_url !== null) {
-
-         await deleteImgToAWS(selectedStaticCourse?.crsmain_img_key)
-
-         file = await uploadImgToAWS(data.crsmain_img_url, 'webimages/')
-         if (!file.data) throw new ApolloError('Something went wrong !')
-      }
-      const course = await prisma.jmkcrsmain.update({
-         data: {
-            ...data,
-            crsmain_img_url: (data.crsmain_img_url !== null) ? (file?.data?.Location) : (selectedStaticCourse.crsmain_img_url),
-            crsmain_img_key: (data.crsmain_img_url !== null) ? (file?.data?.key) : (selectedStaticCourse.crsmain_img_key),
-         },
-         where: {
-            crsmain_id: parseInt(data.crsmain_id),
-         },
-      })
-      if (!course) throw new ApolloError('something went wrong !')
-      return 'success'
-
-   },
-   deleteStaticCourse: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-      const crs = await prisma.jmkcrsmain.findFirst({
-         where: { crsmain_id: data.crsmain_id },
-      })
-      await deleteImgToAWS(crs?.crsmain_img_key)
-      const deleteStaticCourse = await prisma.jmkcrsmain.delete({
-         where: { crsmain_id: data.crsmain_id },
-      })
-
-      const staticCourseDetails = await prisma.jmkcrsdet.findMany({
-         where: { crsmain_id: data.crsmain_id },
-      })
-
-      staticCourseDetails.forEach(async (element) => {
-
-         const deleteStaticCourseDetails = await prisma.jmkcrsdet.delete({
-            where: { crsmain_id: element.crsmain_id },
-         })
-         if (!deleteStaticCourseDetails) throw new ApolloError('something went wrong !')
-      });
-      if (!deleteStaticCourse) throw new ApolloError('something went wrong !')
-      return 'success'
-
-   },
-   addStaticCourseDetails: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-
-      data.forEach(async (element) => {
-         const newStaticCourseDetails = await prisma.jmkcrsdet.create({
-            data: { ...element }
-         })
-         if (!newStaticCourseDetails) throw new ApolloError('something went wrong !')
-      });
+      if (!uppdateDev) throw new AuthenticationError('invalid update !')
 
       return 'success'
+    }
+    throw new AuthenticationError('invalid aceess !')
+  },
 
-   },
-   updateStaticCourseDetails: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
+  createNewUser: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
 
-      data.forEach(async (element) => {
-         if (!element.crsdet_title) return
-         if (element.crsdet_id) {
+    let file
+    if (data.usr_img_url) {
+      file = await uploadImgToAWS(data.usr_img_url, 'admin_users_profilePic/')
+      if (!file.data) throw new ApolloError('Something went wrong !')
+    }
+    const newUser = await prisma.jmkuserinfo.create({
+      data: {
+        ...data,
+        usr_img_url: file?.data?.Location ?? null,
+        usr_img_key: file?.data?.key ?? '',
+      },
+    })
 
-            const updateStaticCourseDetails = await prisma.jmkcrsdet.update({
-               data: { ...element },
-               where: {
-                  crsdet_id: parseInt(element.crsdet_id),
-               },
-            })
-         }
-         else {
+    if (!newUser) throw new ApolloError('something went wrong !')
 
-            const createStaticCourseDetails = await prisma.jmkcrsdet.create({
-               data: {
-                  crsdet_title: element.crsdet_title,
-                  crsdet_sub_title: element.crsdet_sub_title,
-                  crsmain_id: element.crsmain_id
-               }
+    return 'success'
+  },
+  updateSelectedUser: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
 
-            })
-         }
+    const selectedUser = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: parseInt(data.usr_id) },
+    })
 
-      });
+    if (!selectedUser) throw new ApolloError('invalid user')
 
-      return 'success'
+    let file
+    if (data.usr_img_url !== null) {
+      await deleteImgToAWS(selectedUser?.usr_img_key)
 
-   },
+      file = await uploadImgToAWS(data.usr_img_url, 'admin_users_profilePic/')
+      if (!file.data) throw new ApolloError('Something went wrong !')
+    }
+    const user = await prisma.jmkuserinfo.update({
+      data: {
+        ...data,
+        usr_img_url:
+          data.usr_img_url !== null
+            ? file?.data?.Location
+            : selectedUser.usr_img_url,
+        usr_img_key:
+          data.usr_img_url !== null
+            ? file?.data?.key
+            : selectedUser.usr_img_key,
+      },
+      where: {
+        usr_id: parseInt(data.usr_id),
+      },
+    })
+    if (!user) throw new ApolloError('something went wrong !')
+    return 'success'
+  },
+  deleteUserById: async (_, { usrId }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
 
-   deleteStaticCourseDetailTitleById: async (_, { crsDetId }, { userId, role }) => {
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
 
-      if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
+    const user = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: usrId },
+    })
 
-      if (crsDetId) {
+    if (user.usr_role === 'admin') throw new Error('Cannot delete admin')
 
-         const deleteDet = await prisma.jmkcrsdet.delete({ where: { crsdet_id: crsDetId } })
+    await deleteImgToAWS(user?.usr_img_key)
+    const selectedUser = await prisma.jmkuserinfo.delete({
+      where: { usr_id: usrId },
+    })
 
-         if (!deleteDet) throw new AuthenticationError("invalid !!")
-      }
+    if (!selectedUser) throw new ApolloError('something went wrong !')
+    return 'success'
+  },
 
-      return "success"
+  createNewEvent: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
 
+    let file
+    if (data.event_img_url) {
+      file = await uploadImgToAWS(data.event_img_url, 'upcomingEvents/')
+      if (!file.data) throw new ApolloError('Something went wrong !')
+    }
 
-      throw new AuthenticationError("invalid access !!")
-   },
+    const newEvent = await prisma.jmkevents.create({
+      data: {
+        ...data,
+        event_img_url: file?.data?.Location ?? null,
+        event_img_key: file?.data?.key ?? '',
+      },
+    })
 
-   updateDeveloperFromDashboard: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      if (role === 'admin') {
-         const admin = await prisma.jmkuserinfo.findFirst({
-            where: { usr_id: userId, usr_role: role },
-         })
-         if (!admin) throw new AuthenticationError('invalid admin')
+    if (!newEvent) throw new ApolloError('something went wrong !')
 
-         const uppdateDev = await prisma.jmkdevinfo.update({ data: { ...data }, where: { developer_id: data.developer_id } })
-         if (!uppdateDev) throw new AuthenticationError('invalid update !')
+    return 'success'
+  },
+  updateSelectedEvent: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
 
-         return 'success'
-      }
+    const selectedEvent = await prisma.jmkevents.findFirst({
+      where: { events_id: parseInt(data.events_id) },
+    })
 
-      if (role === ROLES[2]) {
-         const consultancy = await prisma.jmkconsulinfo.findFirst({
-            where: { serial: userId },
-         })
-         if (!consultancy) throw new AuthenticationError('invalid consultancy !')
+    if (!selectedEvent) throw new ApolloError('invalid event')
 
-         const uppdateDev = await prisma.jmkdevinfo.update({ data: { ...data, cid: userId }, where: { developer_id: data.developer_id } })
-         if (!uppdateDev) throw new AuthenticationError('invalid update !')
+    let file
+    if (data.event_img_url !== null) {
+      await deleteImgToAWS(selectedEvent?.event_img_key)
 
-         return 'success'
-      }
-      throw new AuthenticationError('invalid aceess !')
+      file = await uploadImgToAWS(data?.event_img_url, 'upcomingEvents/')
+      if (!file.data) throw new ApolloError('Something went wrong !')
+    }
+    const event = await prisma.jmkevents.update({
+      data: {
+        ...data,
+        event_img_url:
+          data.event_img_url !== null
+            ? file?.data?.Location
+            : selectedEvent.event_img_url,
+        event_img_key:
+          data.event_img_url !== null
+            ? file?.data?.key
+            : selectedEvent.event_img_key,
+      },
+      where: {
+        events_id: parseInt(data.events_id),
+      },
+    })
+    if (!event) throw new ApolloError('something went wrong !')
+    return 'success'
+  },
+  deleteEventById: async (_, { eventId }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
 
-   },
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
 
-   createNewUser: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
+    const event = await prisma.jmkevents.findFirst({
+      where: { events_id: eventId },
+    })
 
-      let file
-      if (data.usr_img_url) {
-         file = await uploadImgToAWS(data.usr_img_url, 'admin_users_profilePic/')
-         if (!file.data) throw new ApolloError('Something went wrong !')
-      }
-      const newUser = await prisma.jmkuserinfo.create({
-         data: {
-            ...data,
-            usr_img_url: file?.data?.Location ?? null,
-            usr_img_key: file?.data?.key ?? '',
-         },
-      })
-      
-      if (!newUser) throw new ApolloError('something went wrong !')
+    await deleteImgToAWS(event?.event_img_key)
+    const selectedEvent = await prisma.jmkevents.delete({
+      where: { events_id: eventId },
+    })
 
-      return 'success'
+    if (!selectedEvent) throw new ApolloError('something went wrong !')
+    return 'success'
+  },
 
-   },
-   updateSelectedUser: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
+  registerNewEventUser: async (_, { data }, { userId, role }) => {
+    const newEventUser = await prisma.jmkeventreg.create({
+      data: { ...data },
+    })
+    if (!newEventUser) throw new ApolloError('something went wrong !')
 
-      const selectedUser = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: parseInt(data.usr_id) },
-      })
+    return 'success'
+  },
+  updatePaymentStatus: async (_, { pay_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
 
-      if (!selectedUser) throw new ApolloError('invalid user')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
 
-      let file
-      if (data.usr_img_url!==null) {
-         
-         await deleteImgToAWS(selectedUser?.usr_img_key)
+    const paymentdet = await prisma.jmktstdpayinfo.findFirst({
+      where: {
+        pay_id,
+      },
+    })
 
-         file = await uploadImgToAWS(data.usr_img_url, 'admin_users_profilePic/')
-         if (!file.data) throw new ApolloError('Something went wrong !')
-      }
-      const user = await prisma.jmkuserinfo.update({
-         data: {
-            ...data,
-            usr_img_url:(data.usr_img_url!==null)? (file?.data?.Location): (selectedUser.usr_img_url),
-            usr_img_key:(data.usr_img_url!==null)? (file?.data?.key): (selectedUser.usr_img_key),
-         },
-         where: {
-            usr_id: parseInt(data.usr_id),
-         },
-      })
-      if (!user) throw new ApolloError('something went wrong !')
-      return 'success'
+    const studentInfo = await prisma.jmkstdinfo.findFirst({
+      where: {
+        std_id: paymentdet.std_id,
+        crs_id: paymentdet.crs_id,
+      },
+    })
+    if (!paymentdet) throw new ApolloError('No such payement info exist')
+    await prisma.jmktstdpayinfo.update({
+      data: {
+        pay_verified: !paymentdet.pay_verified,
+      },
+      where: {
+        pay_id,
+      },
+    })
 
-   },
-   deleteUserById: async (_, { usrId }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-
-      const user = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: usrId },
-      })
-
-      if(user.usr_role==="admin") throw new Error('Cannot delete admin')
-
-      await deleteImgToAWS(user?.usr_img_key)
-      const selectedUser = await prisma.jmkuserinfo.delete({
-         where: { usr_id: usrId },
-      })
-
-      if (!selectedUser) throw new ApolloError('something went wrong !')
-      return 'success'
-
-   },
-
-   createNewEvent: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-
-      let file
-      if (data.event_img_url) {
-         file = await uploadImgToAWS(data.event_img_url, 'upcomingEvents/')
-         if (!file.data) throw new ApolloError('Something went wrong !')
-      }
-
-      const newEvent = await prisma.jmkevents.create({
-         data: {
-            ...data,
-            event_img_url: file?.data?.Location ?? null,
-            event_img_key: file?.data?.key ?? '',
-         },
-      })
-      
-      if (!newEvent) throw new ApolloError('something went wrong !')
-
-      return 'success'
-
-   },
-   updateSelectedEvent: async (_, { data }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-
-      const selectedEvent = await prisma.jmkevents.findFirst({
-         where: { events_id: parseInt(data.events_id) },
-      })
-
-      if (!selectedEvent) throw new ApolloError('invalid event')
-
-      let file
-      if (data.event_img_url!==null) {
-         
-         await deleteImgToAWS(selectedEvent?.event_img_key)
-
-         file = await uploadImgToAWS(data?.event_img_url, 'upcomingEvents/')
-         if (!file.data) throw new ApolloError('Something went wrong !')
-      }
-      const event = await prisma.jmkevents.update({
-         data: {
-            ...data,
-            event_img_url:(data.event_img_url!==null)? (file?.data?.Location): (selectedEvent.event_img_url),
-            event_img_key:(data.event_img_url!==null)? (file?.data?.key): (selectedEvent.event_img_key),
-         },
-         where: {
-            events_id: parseInt(data.events_id),
-         },
-      })
-      if (!event) throw new ApolloError('something went wrong !')
-      return 'success'
-
-   },
-   deleteEventById: async (_, { eventId }, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token')
-
-      const admin = await prisma.jmkuserinfo.findFirst({
-         where: { usr_id: userId, usr_role: role },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-
-      const event = await prisma.jmkevents.findFirst({
-         where: { events_id: eventId },
-      })
-
-      await deleteImgToAWS(event?.event_img_key)
-      const selectedEvent = await prisma.jmkevents.delete({
-         where: { events_id: eventId },
-      })
-
-      if (!selectedEvent) throw new ApolloError('something went wrong !')
-      return 'success'
-
-   },
-   
-   registerNewEventUser: async (_, { data }, { userId, role }) => {
-      
-
-         const newEventUser = await prisma.jmkeventreg.create({
-            data: {...data },
-         })
-         if (!newEventUser) throw new ApolloError('something went wrong !')
-
-         return 'success'
-      
-      
-    
-
-   },
+    return 'success'
+  },
 }
 
 const adminResolversQuery = {
-   admin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-      return admin;
-   },
+  admin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    return admin
+  },
 
-   getstudentForAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-      if (admin.usr_role === 'admin') {
-         let students = [];
-         const student = await prisma.jmkstdinfo.findMany()
-         for (let index = 0; index < student.length; index++) {
-            const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student[index].crs_id } })
-            if (course) {
-               students.push({ ...student[index], crs_type: course.crs_type, crs_name: course.crs_name })
-            }
-         }
-         return students;
+  getstudentForAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    if (admin.usr_role === 'admin') {
+      let students = []
+      const student = await prisma.jmkstdinfo.findMany()
+      for (let index = 0; index < student.length; index++) {
+        const course = await prisma.jmkcrsinfo.findFirst({
+          where: { crs_id: student[index].crs_id },
+        })
+        if (course) {
+          students.push({
+            ...student[index],
+            crs_type: course.crs_type,
+            crs_name: course.crs_name,
+          })
+        }
       }
-   },
+      return students
+    }
+  },
 
-   getstudentByIdForAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-      if (admin.usr_role === 'admin') {
-         const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: args.std_id } })
-         const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student.crs_id } })
-         const join_courses = []
-         const joinCourses = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id } })
-         for (let index = 0; index < joinCourses.length; index++) {
-            const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: joinCourses[index].crs_id } })
-            join_courses.push({ ...joinCourses[index], crs_name: course.crs_name, crs_rate: course.crs_rate })
-         }
-         if (course) {
-            const mergestudent = { ...student, crs_type: course.crs_type, crs_name: course.crs_name, join_courses }
-            return mergestudent;
-         }
+  getstudentByIdForAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    if (admin.usr_role === 'admin') {
+      const student = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: args.std_id },
+      })
+      const course = await prisma.jmkcrsinfo.findFirst({
+        where: { crs_id: student.crs_id },
+      })
+      const join_courses = []
+      const joinCourses = await prisma.jmkstdcrsinfo.findMany({
+        where: { std_id: student.std_id },
+      })
+      for (let index = 0; index < joinCourses.length; index++) {
+        const course = await prisma.jmkcrsinfo.findFirst({
+          where: { crs_id: joinCourses[index].crs_id },
+        })
+        join_courses.push({
+          ...joinCourses[index],
+          crs_name: course.crs_name,
+          crs_rate: course.crs_rate,
+        })
       }
-      throw new AuthenticationError("invalid access")
-
-   },
-
-   getTrainerDataForAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-      if (admin.usr_role === 'admin') {
-         //let trainers = [];
-         const trainers = await prisma.jmktrinfo.findMany()
-
-         return trainers;
+      if (course) {
+        const mergestudent = {
+          ...student,
+          crs_type: course.crs_type,
+          crs_name: course.crs_name,
+          join_courses,
+        }
+        return mergestudent
       }
-   },
+    }
+    throw new AuthenticationError('invalid access')
+  },
 
-   getTrainerByIdForAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-      if (admin.usr_role === 'admin') {
-         const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: args.tr_id } })
+  getTrainerDataForAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    if (admin.usr_role === 'admin') {
+      //let trainers = [];
+      const trainers = await prisma.jmktrinfo.findMany()
 
-         return trainer
-      }
-      throw new AuthenticationError("invalid access")
+      return trainers
+    }
+  },
 
-   },
+  getTrainerByIdForAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    if (admin.usr_role === 'admin') {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: args.tr_id },
+      })
 
-   getDeveloperDataForAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-      if (admin.usr_role === 'admin') {
-         //let trainers = [];
+      return trainer
+    }
+    throw new AuthenticationError('invalid access')
+  },
 
-         const developers = await prisma.jmkdevinfo.findMany();
+  getDeveloperDataForAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    if (admin.usr_role === 'admin') {
+      //let trainers = [];
 
-         const allDevelopersData = await Promise.all(developers.map(async (element) => {
-           const {
-             developer_id,
-             developer_type,
-             developer_fname,
-             developer_mname,
-             developer_lname,
-             developer_phone,
-             developer_country,
-             developer_email,
-             developer_password
-           } = element;
-         
-           const newDevData = {
-             developer_id,
-             developer_type,
-             developer_fname,
-             developer_mname,
-             developer_lname,
-             developer_phone,
-             developer_country,
-             developer_email,
-             developer_password
-           };
-         
-           // tech details
-           const dev_tech_details = await prisma.jmkdevtechdet.findMany({ where: { developer_id: developer_id } });
-           const dev_tech_det = dev_tech_details.map(element => {
-             const { tech_stack, tech_stack_exp, tech_last_used, tech_stack_summary } = element;
-             return { tech_stack, tech_stack_exp, tech_last_used, tech_stack_summary };
-           });
-         
-           // tech exp
-           const dev_tech_experience = await prisma.jmkdevexp.findMany({ where: { developer_id: developer_id } });
-           const dev_tech_exp = dev_tech_experience.map(element => {
-             const { company_name, exp_desc, exp_role_pos, exp_start_date, exp_end_date } = element;
-             return { company_name, exp_desc, exp_role_pos, exp_start_date, exp_end_date };
-           });
-         
-           // proj details
-           const dev_proj_details = await prisma.jmkdevprojdet.findMany({ where: { developer_id: developer_id } });
-           const dev_proj_det = dev_proj_details.map(element => {
-             const { proj_title, proj_desc, proj_tech_used } = element;
-             return { proj_title, proj_desc, proj_tech_used };
-           });
-         
-           const mergedData = {
-             ...newDevData,
-             dev_tech_det: dev_tech_det,
-             dev_exp_det: dev_tech_exp,
-             dev_proj_det: dev_proj_det
-           };
-         
-           return mergedData;
-         }));
-         
-         return allDevelopersData;
-         
-      }
-   },
+      const developers = await prisma.jmkdevinfo.findMany()
 
-   getDeveloperByIdForAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      if (role === 'admin') {
-         const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-         if (!admin) throw new AuthenticationError("invalid admin credentials")
+      const allDevelopersData = await Promise.all(
+        developers.map(async (element) => {
+          const {
+            developer_id,
+            developer_type,
+            developer_fname,
+            developer_mname,
+            developer_lname,
+            developer_phone,
+            developer_country,
+            developer_email,
+            developer_tech1,
+            developer_password,
+          } = element
 
+          const newDevData = {
+            developer_id,
+            developer_type,
+            developer_fname,
+            developer_mname,
+            developer_lname,
+            developer_phone,
+            developer_tech1,
+            developer_country,
+            developer_email,
+            developer_password,
+          }
 
-         const developer = await prisma.jmkdevinfo.findFirst({ where: { developer_id: args.developer_id } })
-
+          // tech details
+          const dev_tech_details = await prisma.jmkdevtechdet.findMany({
+            where: { developer_id: developer_id },
+          })
+          const dev_tech_det = dev_tech_details.map((element) => {
             const {
-              developer_id,
-              developer_type,
-              developer_fname,
-              developer_mname,
-              developer_lname,
-              developer_phone,
-              developer_country,
-              developer_email,
-              developer_password
-            } = developer;
-          
-            const newDevData = {
-              developer_id,
-              developer_type,
-              developer_fname,
-              developer_mname,
-              developer_lname,
-              developer_phone,
-              developer_country,
-              developer_email,
-              developer_password
-            };
-          
-            // tech details
-            const dev_tech_details = await prisma.jmkdevtechdet.findMany({ where: { developer_id: developer_id } });
-            const dev_tech_det = dev_tech_details.map(element => {
-              const { tech_stack, tech_stack_exp, tech_last_used, tech_stack_summary } = element;
-              return { tech_stack, tech_stack_exp, tech_last_used, tech_stack_summary };
-            });
-          
-            // tech exp
-            const dev_tech_experience = await prisma.jmkdevexp.findMany({ where: { developer_id: developer_id } });
-            const dev_tech_exp = dev_tech_experience.map(element => {
-              const { company_name, exp_desc, exp_role_pos, exp_start_date, exp_end_date } = element;
-              return { company_name, exp_desc, exp_role_pos, exp_start_date, exp_end_date };
-            });
-          
-            // proj details
-            const dev_proj_details = await prisma.jmkdevprojdet.findMany({ where: { developer_id: developer_id } });
-            const dev_proj_det = dev_proj_details.map(element => {
-              const { proj_title, proj_desc, proj_tech_used } = element;
-              return { proj_title, proj_desc, proj_tech_used };
-            });
-          
-            const developerWholeData = {
-              ...newDevData,
-              dev_tech_det: dev_tech_det,
-              dev_exp_det: dev_tech_exp,
-              dev_proj_det: dev_proj_det
-            };
-          
-         
-          
-          return developerWholeData;
+              tech_stack,
+              tech_stack_exp,
+              tech_last_used,
+              tech_stack_summary,
+            } = element
+            return {
+              tech_stack,
+              tech_stack_exp,
+              tech_last_used,
+              tech_stack_summary,
+            }
+          })
 
+          // tech exp
+          const dev_tech_experience = await prisma.jmkdevexp.findMany({
+            where: { developer_id: developer_id },
+          })
+          const dev_tech_exp = dev_tech_experience.map((element) => {
+            const {
+              company_name,
+              exp_desc,
+              exp_role_pos,
+              exp_start_date,
+              exp_end_date,
+            } = element
+            return {
+              company_name,
+              exp_desc,
+              exp_role_pos,
+              exp_start_date,
+              exp_end_date,
+            }
+          })
 
+          // proj details
+          const dev_proj_details = await prisma.jmkdevprojdet.findMany({
+            where: { developer_id: developer_id },
+          })
+          const dev_proj_det = dev_proj_details.map((element) => {
+            const { proj_title, proj_desc, proj_tech_used } = element
+            return { proj_title, proj_desc, proj_tech_used }
+          })
+
+          const mergedData = {
+            ...newDevData,
+            dev_tech_det: dev_tech_det,
+            dev_exp_det: dev_tech_exp,
+            dev_proj_det: dev_proj_det,
+          }
+
+          return mergedData
+        })
+      )
+
+      return allDevelopersData
+    }
+  },
+
+  getDeveloperByIdForAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin credentials')
+
+      const developer = await prisma.jmkdevinfo.findFirst({
+        where: { developer_id: args.developer_id },
+      })
+
+      const {
+        developer_id,
+        developer_type,
+        developer_fname,
+        developer_mname,
+        developer_lname,
+        developer_phone,
+        developer_country,
+        developer_email,
+        developer_password,
+      } = developer
+
+      const newDevData = {
+        developer_id,
+        developer_type,
+        developer_fname,
+        developer_mname,
+        developer_lname,
+        developer_phone,
+        developer_country,
+        developer_email,
+        developer_password,
       }
 
-      if (role === ROLES[2]) {
-         if (!userId) throw new ForbiddenError('invalid token');
-         const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
-         if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
-         const developer = await prisma.jmkdevinfo.findFirst({ where: { developer_id: args.developer_id, cid: consultancy.serial } })
-         return developer
+      // tech details
+      const dev_tech_details = await prisma.jmkdevtechdet.findMany({
+        where: { developer_id: developer_id },
+      })
+      const dev_tech_det = dev_tech_details.map((element) => {
+        const {
+          tech_stack,
+          tech_stack_exp,
+          tech_last_used,
+          tech_stack_summary,
+        } = element
+        return {
+          tech_stack,
+          tech_stack_exp,
+          tech_last_used,
+          tech_stack_summary,
+        }
+      })
+
+      // tech exp
+      const dev_tech_experience = await prisma.jmkdevexp.findMany({
+        where: { developer_id: developer_id },
+      })
+      const dev_tech_exp = dev_tech_experience.map((element) => {
+        const {
+          company_name,
+          exp_desc,
+          exp_role_pos,
+          exp_start_date,
+          exp_end_date,
+        } = element
+        return {
+          company_name,
+          exp_desc,
+          exp_role_pos,
+          exp_start_date,
+          exp_end_date,
+        }
+      })
+
+      // proj details
+      const dev_proj_details = await prisma.jmkdevprojdet.findMany({
+        where: { developer_id: developer_id },
+      })
+      const dev_proj_det = dev_proj_details.map((element) => {
+        const { proj_title, proj_desc, proj_tech_used } = element
+        return { proj_title, proj_desc, proj_tech_used }
+      })
+
+      const developerWholeData = {
+        ...newDevData,
+        dev_tech_det: dev_tech_det,
+        dev_exp_det: dev_tech_exp,
+        dev_proj_det: dev_proj_det,
       }
-      throw new AuthenticationError("invalid access")
 
-   },
+      return developerWholeData
+    }
 
-   getstudentCourseByIdForAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      if (role === 'admin') {
-         const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-         if (!admin) throw new AuthenticationError("invalid admin credentials")
-         const course = await prisma.jmkstdcrsinfo.findFirst({ where: { serial: args.serial } })
-         if (!course) throw new ApolloError("crs not fund !!")
-         return course;
+    if (role === ROLES[2]) {
+      if (!userId) throw new ForbiddenError('invalid token')
+      const consultancy = await prisma.jmkconsulinfo.findFirst({
+        where: { serial: userId },
+      })
+      if (!consultancy)
+        throw new AuthenticationError('invalid consultancy credentials')
+      const developer = await prisma.jmkdevinfo.findFirst({
+        where: { developer_id: args.developer_id, cid: consultancy.serial },
+      })
+      return developer
+    }
+    throw new AuthenticationError('invalid access')
+  },
+
+  getstudentCourseByIdForAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin credentials')
+      const course = await prisma.jmkstdcrsinfo.findFirst({
+        where: { serial: args.serial },
+      })
+      if (!course) throw new ApolloError('crs not fund !!')
+      return course
+    }
+    if (role === ROLES[2]) {
+      const consultancy = await prisma.jmkconsulinfo.findFirst({
+        where: { serial: userId },
+      })
+      if (!consultancy)
+        throw new AuthenticationError('invalid consultancy credentials')
+      const course = await prisma.jmkstdcrsinfo.findFirst({
+        where: { serial: args.serial },
+      })
+      if (!course) throw new ApolloError('crs not fund !!')
+      return course
+    }
+    throw new AuthenticationError('invalid access')
+  },
+  getAdminById: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId, usr_role: role },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin credentials')
+
+      const user = await prisma.jmkuserinfo.findFirst({
+        where: {
+          usr_id: userId,
+        },
+      })
+      return user
+    }
+  },
+
+  getStaticCoursesDataForAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    if (admin.usr_role === 'admin') {
+      //let trainers = [];
+      const staticCourses = await prisma.jmkcrsmain.findMany()
+
+      return staticCourses
+    }
+  },
+  getStaticCourseByIdForAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    if (admin.usr_role === 'admin') {
+      const staticCourse = await prisma.jmkcrsmain.findFirst({
+        where: { crsmain_id: args.crsmain_id },
+      })
+
+      return staticCourse
+    }
+    throw new AuthenticationError('invalid access')
+  },
+  getStaticCourseDetailsByIdForAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    if (admin.usr_role === 'admin') {
+      const staticCourse = await prisma.jmkcrsmain.findFirst({
+        where: { crsmain_id: args.crsmain_id },
+      })
+
+      const staticCourseDetails = await prisma.jmkcrsdet.findMany({
+        where: { crsmain_id: staticCourse.crsmain_id },
+      })
+      return staticCourseDetails
+    }
+    throw new AuthenticationError('invalid access')
+  },
+  getDataCountForAllTableInAdmin: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+
+    const runningCourses = await prisma.jmkcrsinfo.count()
+    const dynamicCourses = await prisma.jmkcrsmain.count()
+    const students = await prisma.jmkstdinfo.count()
+    const trainers = await prisma.jmktrinfo.count()
+    const developers = await prisma.jmkdevinfo.count()
+    const users = await prisma.jmkuserinfo.count()
+    const upcomingEvents = await prisma.jmkevents.count()
+    const upcomingCourses = await prisma.jmkcrsupcom.count()
+
+    if (
+      runningCourses &&
+      dynamicCourses &&
+      students &&
+      trainers &&
+      developers &&
+      upcomingCourses
+    ) {
+      const tableCount = [
+        {
+          name: 'Running Courses',
+          count: runningCourses,
+          link: '/courses',
+        },
+        {
+          name: 'Dynamic Courses',
+          count: dynamicCourses,
+          link: '/staticCourses',
+        },
+        {
+          name: 'Students',
+          count: students,
+          link: '/students',
+        },
+        {
+          name: 'Trainers',
+          count: trainers,
+          link: '/trainer',
+        },
+        {
+          name: 'Developers',
+          count: developers,
+          link: '/developer',
+        },
+        {
+          name: 'Users',
+          count: users,
+          link: '/users',
+        },
+        {
+          name: 'Upcoming Events',
+          count: upcomingEvents,
+          link: '/upcomingEvents',
+        },
+        {
+          name: 'Upcoming Course',
+          count: upcomingCourses,
+          link: '/upcomingCourses',
+        },
+      ]
+      return tableCount
+    } else throw new AuthenticationError('Something went wrong')
+  },
+  getAllUserInfo: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const allUser = await prisma.jmkuserinfo.findMany()
+    return allUser
+  },
+  getUserInfoById: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const user = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: args.usr_id },
+    })
+    return user
+  },
+  getAllEvents: async (_, args, { userId, role }) => {
+    // if (!userId) throw new ForbiddenError('invalid token');
+    // const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
+    // if (!admin) throw new AuthenticationError("invalid admin credentials")
+    const allEvents = await prisma.jmkevents.findMany()
+    return allEvents
+  },
+  getEventsInfoById: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+
+    const event = await prisma.jmkevents.findFirst({
+      where: { events_id: parseInt(args.events_id) },
+    })
+    return event
+  },
+
+  getAllEventRegisteredUser: async (_, args, { userId, role }) => {
+    // if (!userId) throw new ForbiddenError('invalid token');
+    // const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
+    // if (!admin) throw new AuthenticationError("invalid admin credentials")
+    const allRegisteredUsers = await prisma.jmkeventreg.findMany()
+    return allRegisteredUsers
+  },
+
+  getUpcomingCourses: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const upCourse = await prisma.jmkcrsupcom.findMany({})
+    let upcoming = []
+    for (let i = 0; i < upCourse.length; i++) {
+      const mainCourse = await prisma.jmkcrsmain.findFirst({
+        where: {
+          crsmain_id: upCourse[i].crsmain_id,
+        },
+      })
+      if (mainCourse) {
+        upcoming.push({
+          ...upCourse[i],
+          crsmain_title: mainCourse.crsmain_title,
+          crsmain_duration: mainCourse.crsmain_duration,
+          crsmain_type: mainCourse.crsmain_type,
+        })
+      } else {
+        upcoming.push({
+          ...upCourse[i],
+        })
       }
-      if (role === ROLES[2]) {
-         const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
-         if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
-         const course = await prisma.jmkstdcrsinfo.findFirst({ where: { serial: args.serial } })
-         if (!course) throw new ApolloError("crs not fund !!")
-         return course;
-      }
-      throw new AuthenticationError("invalid access")
+    }
+    return upcoming
+  },
+  getUpcomingCourseById: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const upCourse = await prisma.jmkcrsupcom.findUnique({
+      where: {
+        serial: parseInt(args.serial),
+      },
+    })
 
-   },
+    if (!upCourse) throw new ApolloError('No such course')
+    const mainCourse = await prisma.jmkcrsmain.findFirst({
+      where: {
+        crsmain_id: upCourse.crsmain_id,
+      },
+    })
+    return {
+      ...upCourse,
+      crsmain_title: mainCourse.crsmain_title,
+      crsmain_duration: mainCourse.crsmain_duration,
+      crsmain_type: mainCourse.crsmain_type,
+    }
+  },
+  getUserLog: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const logs = await prisma.jmkloginfo.findMany({})
+    const logging = []
+    logs.map((log) => {
+      let monitor = log.log_desc.split(' ')
+      logging.push({
+        log_id: log.log_id,
+        ip: monitor[0],
+        user_id: monitor[1],
+        role: monitor[2],
+        method: monitor[3],
+        time: `${monitor[4]} ${monitor[5]} ${monitor[6]} ${monitor[7]} ${monitor[8]} ${monitor[9]} ${monitor[10]} ${monitor[11]}`,
+      })
+    })
+    return logging
+  },
+  getPaymentInfo: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const paymentInfos = []
+    const paymentsInfo = await prisma.jmktstdpayinfo.findMany({})
 
-   getStaticCoursesDataForAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-      if (admin.usr_role === 'admin') {
-         //let trainers = [];
-         const staticCourses = await prisma.jmkcrsmain.findMany()
-
-         return staticCourses;
-      }
-   },
-   getStaticCourseByIdForAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-      if (admin.usr_role === 'admin') {
-         const staticCourse = await prisma.jmkcrsmain.findFirst({ where: { crsmain_id: args.crsmain_id } })
-
-         return staticCourse
-      }
-      throw new AuthenticationError("invalid access")
-
-   },
-   getStaticCourseDetailsByIdForAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-      if (admin.usr_role === 'admin') {
-         const staticCourse = await prisma.jmkcrsmain.findFirst({ where: { crsmain_id: args.crsmain_id } })
-
-         const staticCourseDetails = await prisma.jmkcrsdet.findMany({ where: { crsmain_id: staticCourse.crsmain_id } })
-         return staticCourseDetails
-      }
-      throw new AuthenticationError("invalid access")
-
-   },
-   getDataCountForAllTableInAdmin: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-
-      const runningCourses = await prisma.jmkcrsinfo.count()
-      const dynamicCourses = await prisma.jmkcrsmain.count()
-      const students = await prisma.jmkstdinfo.count()
-      const trainers = await prisma.jmktrinfo.count()
-      const developers = await prisma.jmkdevinfo.count()
-      const users = await prisma.jmkuserinfo.count()
-      const upcomingEvents = await prisma.jmkevents.count()
-
-
-      if (runningCourses && dynamicCourses && students && trainers && developers) {
-
-         const tableCount = [
-            {
-               name: 'Running Courses',
-               count: runningCourses,
-               link:'/courses'
-            },
-            {
-               name: 'Dynamic Courses',
-               count: dynamicCourses,
-               link:'/staticCourses'
-            },
-            {
-               name: 'Students',
-               count: students,
-               link:'/students'
-            },
-            {
-               name: 'Trainers',
-               count: trainers,
-               link:'/trainer'
-            },
-            {
-               name: 'Developers',
-               count: developers,
-               link:'/developer'
-            },
-            {
-               name: 'Users',
-               count: users,
-               link:'/users'
-            },
-            {
-               name: 'Upcoming Events',
-               count: upcomingEvents,
-               link:'/upcomingEvents'
-            },
-
-         ]
-         return tableCount
-      }
-      else throw new AuthenticationError("Something went wrong")
-
-   },
-   getAllUserInfo: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-         const allUser = await prisma.jmkuserinfo.findMany();
-         return allUser
-   },
-   getUserInfoById: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-         const user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: args.usr_id } });
-         return user
-   },
-   getAllEvents: async (_, args, { userId, role }) => {
-      // if (!userId) throw new ForbiddenError('invalid token');
-      // const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      // if (!admin) throw new AuthenticationError("invalid admin credentials")
-         const allEvents = await prisma.jmkevents.findMany();
-         return allEvents
-   },
-   getEventsInfoById: async (_, args, { userId, role }) => {
-      if (!userId) throw new ForbiddenError('invalid token');
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      if (!admin) throw new AuthenticationError("invalid admin credentials")
-      
-         const event = await prisma.jmkevents.findFirst({ where: { events_id: parseInt(args.events_id)} });
-         return event
-   },
-
-   getAllEventRegisteredUser: async (_, args, { userId, role }) => {
-      // if (!userId) throw new ForbiddenError('invalid token');
-      // const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
-      // if (!admin) throw new AuthenticationError("invalid admin credentials")
-         const allRegisteredUsers = await prisma.jmkeventreg.findMany();
-         return allRegisteredUsers
-   },
-
+    for (let i = 0; i < paymentsInfo.length; i++) {
+      const course = await prisma.jmkcrsinfo.findUnique({
+        where: {
+          crs_id: paymentsInfo[i]?.crs_id,
+        },
+      })
+      const student = await prisma.jmkstdinfo.findUnique({
+        where: {
+          std_id: paymentsInfo[i]?.std_id,
+        },
+      })
+      paymentInfos.push({
+        pay_id: paymentsInfo[i].pay_id,
+        payment_date: paymentsInfo[i].payment_date,
+        pay_amount: paymentsInfo[i].pay_amount,
+        std_email: student?.std_email,
+        transaction_id: paymentsInfo[i].transaction_id,
+        crs_name: course?.crs_name,
+        pay_verified: paymentsInfo[i].pay_verified,
+      })
+    }
+    return paymentInfos
+  },
+  getFolloUpStudent: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const folloUpStudent = await prisma.jmkstdmktg.findMany({})
+    if (folloUpStudent) {
+      return folloUpStudent
+    }
+    return 'No record Found'
+  },
 }
 
-export { adminQueryTypesAndInputs, adminQuery, adminMutation, adminResolvers, adminResolversQuery }
+export {
+  adminQueryTypesAndInputs,
+  adminQuery,
+  adminMutation,
+  adminResolvers,
+  adminResolversQuery,
+}
