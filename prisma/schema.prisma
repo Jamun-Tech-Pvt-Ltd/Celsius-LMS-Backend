@@ -365,6 +365,14 @@ model jmkcrsdet {
   @@index([crsmain_id], map: "jmkcrsdet_crsmain_id_fkey")
 }
 
+model jmkcrsupcom {
+  serial     Int       @id @default(autoincrement())
+  crsmain_id Int
+  start_date DateTime? @db.Date
+
+  @@index([crsmain_id], map: "jmkcrsupcom_crsmain_id_fkey")
+}
+
 model jmkcrsmain {
   crsmain_id       Int                         @id @default(autoincrement())
   crsmain_overview String?                     @db.Text
@@ -387,12 +395,14 @@ model jmkconsulfaq {
 }
 
 model jmkdevprojdet {
-  serial          Int     @id @default(autoincrement())
+  serial          Int       @id @default(autoincrement())
   developer_id    Int?
-  proj_title      String? @db.VarChar(100)
-  proj_desc       String? @db.VarChar(2000)
-  proj_techs_used String? @db.VarChar(100)
-  proj_type       String? @db.VarChar(20)
+  proj_title      String?   @db.VarChar(100)
+  proj_desc       String?   @db.VarChar(2000)
+  proj_techs_used String?   @db.VarChar(100)
+  proj_type       String?   @db.VarChar(20)
+  proj_strt_dt    DateTime? @db.Date
+  proj_end_dt     DateTime? @db.Date
 }
 
 model jmkdevtechdet {
@@ -450,12 +460,6 @@ model jmkdevexp {
   exp_role_pos   String?   @db.VarChar(100)
 }
 
-model jmkcrsupcom {
-  serial     Int       @id @default(autoincrement())
-  crsmain_id Int?
-  start_date DateTime? @db.Date
-}
-
 model jmkdevtestdet {
   testdet_id  Int     @id @default(autoincrement())
   testmstr_id Int?
@@ -508,6 +512,16 @@ model jmkfeemstr {
   cid        Int?
 }
 
+model jmkstdmktg {
+  srno        Int     @id @default(autoincrement())
+  std_name    String? @db.VarChar(200)
+  std_phone   String? @db.VarChar(15)
+  std_address String? @db.VarChar(200)
+  stdfeedbk   String? @db.VarChar(100)
+  program     String? @db.VarChar(100)
+  schcol      String? @db.VarChar(200)
+}
+
 model jmkeventreg {
   reg_id    Int       @id @default(autoincrement())
   reg_name  String?   @db.VarChar(200)
@@ -543,7 +557,48 @@ model jmktstdpayinfo {
   pay_amount     Int?
   std_id         Int?
   transaction_id String?   @db.VarChar(30)
-  pay_verified   Boolean?
+  pay_verified   Boolean?  @default(false)
+  crs_id         Int?
+}
+
+model jmkstdfeediscount {
+  serial           Int  @id @default(autoincrement())
+  fee_id           Int?
+  fee_discount_per Int?
+  std_id           Int?
+}
+
+model jmkloginfo {
+  log_id   Int     @id @default(autoincrement())
+  log_desc String? @db.VarChar(200)
+}
+
+model jmkemployer {
+  employer_id          Int       @id @default(autoincrement())
+  employer_name        String?   @db.VarChar(200)
+  employer_add1        String?   @db.VarChar(200)
+  employer_add2        String?   @db.VarChar(200)
+  employer_city        String?   @db.VarChar(100)
+  employer_country     String?   @db.VarChar(100)
+  employer_reg_date    DateTime? @db.Date
+  employer_contact_p1  String?   @db.VarChar(100)
+  employer_contact_p2  String?   @db.VarChar(100)
+  employer_email       String?   @db.VarChar(100)
+  employer_contact_no1 String?   @db.VarChar(20)
+  employer_contact_no2 String?   @db.VarChar(20)
+  employer_password    String?   @db.VarChar(100)
+}
+
+model jmksubjectmaster {
+  subject_id          Int     @id @default(autoincrement())
+  subject_code        String? @db.VarChar(20)
+  crs_id              Int?
+  subject_desc        String? @db.VarChar(200)
+  subject_full_m      Int?
+  subject_pass_m      Int?
+  subject_theory_m    Int?
+  subject_practical_m Int?
+  subject_type        String? @db.VarChar(20)
 }
 
 enum jmkcrsmain_cramain_del_mod {

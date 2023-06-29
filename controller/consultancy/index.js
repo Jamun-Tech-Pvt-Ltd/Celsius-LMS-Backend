@@ -116,6 +116,46 @@ const consultancyQueryTypesAndInputs = `
         fee_amount:Int
      }
 
+     type studentFee {
+        serial:Int!
+        fee_id: Int
+        fee_amount: Int
+        fee_dis: Int
+        net_fee: Int
+     }
+
+     type studentBill {
+        bill_id:Int!
+        bill_amt:Int!
+        dis_amt:Int!
+        net_amt:Int!
+        amount_paid:Int!
+        due_amt:Int!
+        std_id:Int!
+        bill_dt:Date!
+     }
+
+
+     type studentFeeSec {
+        serial:Int!
+        fee_id:Int!
+        fee_discount_per:Int!
+        std_id:Int!
+     }
+
+     type courseSubject {
+        subject_id:Int!
+        subject_code:String
+        crs_id:Int
+        subject_desc:String
+        subject_full_m:Int
+        subject_pass_m:Int
+        subject_theory_m:Int
+        subject_practical_m:Int
+        subject_type:String
+     }
+
+    
     input signinConsultancyInput{
         cemail: String!
         cpassword: String!
@@ -214,12 +254,45 @@ const consultancyQueryTypesAndInputs = `
         descount:[admitStudentDes]
      }
 
+     input updateAdmitStudentInput {
+        bill_id: Int!
+        bill_amt:Int!
+        dis_amt:Int!
+        net_amt:Int!
+        amount_paid:Int!
+        due_amt:Int!
+        std_id:Int!
+        descount:[admitStudentDes]
+     }
+
      input admitStudentDes {
         id:Int!
         descount:Int!
      }
 
+     input stdFeeDecInput {
+        serial:Int
+        fee_id:Int!
+        fee_discount_per:Int!
+        std_id:Int!
+     }
+
+
+    input courseSubjectInput {
+        subject_id:Int
+        subject_code:String
+        crs_id:Int
+        subject_desc:String
+        subject_full_m:Int
+        subject_pass_m:Int
+        subject_theory_m:Int
+        subject_practical_m:Int
+        subject_type:String
+    }
+
 `
+
+
 
 const consultancyQuery = `
     getConsultancy:Consultancy
@@ -248,6 +321,12 @@ const consultancyQuery = `
 
     getSchoolFeeByCrsId(std_id:Int!):[schoolStudentFee]
 
+    getStudentFee(std_id:Int!):[studentFee]
+    getStudentFeeBill(std_id:Int!):[studentBill]
+
+    getStudentFeeDes(std_id:Int!):[studentFeeSec]
+
+    getSubByCourseId(crs_id:Int!):[courseSubject]
 
 `
 
@@ -283,7 +362,19 @@ const consultancyMutation = `
     deleteSchoolFees(fee_id:Int!):String!
 
     admitStudent(data:admitStudentInput):String!
+
+    updateAdmitStudent(data:updateAdmitStudentInput):String!
+
+    createStudentFeeDes(data:stdFeeDecInput):String!
+    updateStudentFeeDes(data:stdFeeDecInput):String!
+    deleteStudentFeeDes(serial:Int!):String!
+
+    createCourseSub(data:courseSubjectInput):String!
+    updateCourseSub(data:courseSubjectInput):String!
+    deleteeCourseSub(subject_id:Int!):String!
 `
+
+
 
 const consultancyResolvers = {
 
@@ -571,7 +662,6 @@ const consultancyResolvers = {
         throw new AuthenticationError("invalid access !!")
     },
 
-
     admitStudent: async (_, { data }, { userId, role }) => {
         if (userId) {
             const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
@@ -594,22 +684,183 @@ const consultancyResolvers = {
             const stdBill = await prisma.jmkfeemstr.findMany({ where: { crs_id: std.crs_id } })
             for (let index = 0; index < stdBill.length; index++) {
                 const desc = data.descount.find(item => item.id === stdBill[index].fee_id)
-                await prisma.jmkstdbilldet.create({
-                    data: {
-                        bill_id: bill.bill_id,
-                        fee_id: stdBill[index].fee_id,
-                        fee_amount: stdBill[index].fee_amount,
-                        fee_dis: desc.descount,
-                        net_fee: stdBill[index].fee_amount - Math.round((stdBill[index].fee_amount / 100) * desc.descount)
-                    }
-                })
+                if (desc) {
+                    await prisma.jmkstdbilldet.create({
+                        data: {
+                            bill_id: bill.bill_id,
+                            fee_id: stdBill[index].fee_id,
+                            fee_amount: stdBill[index].fee_amount,
+                            fee_dis: desc.descount,
+                            net_fee: stdBill[index].fee_amount - Math.round((stdBill[index].fee_amount / 100) * desc.descount)
+                        }
+                    })
+                }
+
             }
             if (!bill) throw new AuthenticationError("invalid !!")
             return "success"
         }
         throw new AuthenticationError("invalid access !!")
     },
+
+    updateAdmitStudent: async (_, { data }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy");
+            if (!consultancy) throw new AuthenticationError("invalid credentials");
+            const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: data.std_id } })
+            if (!std) throw new AuthenticationError("invalid !!")
+            const bill = await prisma.jmkstdbillmstr.update({
+                data: {
+                    bill_amt: data.bill_amt,
+                    dis_amt: data.dis_amt,
+                    net_amt: data.net_amt,
+                    amount_paid: data.amount_paid,
+                    due_amt: data.due_amt,
+                    std_id: data.std_id,
+                },
+                where: { bill_id: data.bill_id }
+            })
+
+            await prisma.jmkstdbilldet.deleteMany({ where: { bill_id: bill.bill_id } })
+            const stdBill = await prisma.jmkfeemstr.findMany({ where: { crs_id: std.crs_id } })
+            for (let index = 0; index < stdBill.length; index++) {
+                const desc = data.descount.find(item => item.id === stdBill[index].fee_id)
+                if (desc) {
+                    await prisma.jmkstdbilldet.create({
+                        data: {
+                            bill_id: bill.bill_id,
+                            fee_id: stdBill[index].fee_id,
+                            fee_amount: stdBill[index].fee_amount,
+                            fee_dis: desc.descount,
+                            net_fee: stdBill[index].fee_amount - Math.round((stdBill[index].fee_amount / 100) * desc.descount)
+                        },
+                    })
+                }
+
+            }
+            if (!bill) throw new AuthenticationError("invalid !!")
+            return "success"
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    createStudentFeeDes: async (_, { data }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const dec = await prisma.jmkstdfeediscount.create({
+                    data: {
+                        ...data,
+                    },
+                })
+                if (!dec) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    updateStudentFeeDes: async (_, { data }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const dec = await prisma.jmkstdfeediscount.update({
+                    data: {
+                        ...data,
+                    },
+                    where: { serial: data.serial }
+                })
+                if (!dec) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    deleteStudentFeeDes: async (_, { serial }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const dec = await prisma.jmkstdfeediscount.delete({
+                    where: { serial: serial }
+                })
+                if (!dec) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    createCourseSub: async (_, { data }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id } })
+                if (!crs) throw new AuthenticationError("invalid course id")
+                const oldSub = await prisma.jmksubjectmaster.findFirst({ where: { crs_id: data.crs_id, subject_code: data.subject_code } })
+                if (oldSub) throw new AuthenticationError("Alreay exist")
+                const sub = await prisma.jmksubjectmaster.create({
+                    data: {
+                        ...data,
+                    },
+                })
+                if (!sub) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    updateCourseSub: async (_, { data }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id } })
+                if (!crs) throw new AuthenticationError("invalid course id")
+                const sub = await prisma.jmksubjectmaster.update({
+                    data: {
+                        ...data,
+                    },
+                    where: { subject_id: data.subject_id }
+                })
+                if (!sub) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    deleteeCourseSub: async (_, { subject_id }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const sub = await prisma.jmksubjectmaster.delete({
+                    where: { subject_id: subject_id }
+                })
+                if (!sub) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
 }
+
 
 const consultancyResolversQuery = {
 
@@ -879,6 +1130,57 @@ const consultancyResolversQuery = {
         }
         throw new AuthenticationError("invalid credentials !")
     },
+
+    getStudentFeeBill: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid credentials")
+        if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
+            const bill = await prisma.jmkstdbillmstr.findMany({ where: { std_id: args.std_id } })
+            if (!bill) throw new AuthenticationError("Data not found !!")
+            return bill;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
+
+
+    getStudentFee: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid credentials")
+        if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
+            const bill = await prisma.jmkstdbillmstr.findMany({ where: { std_id: args.std_id } })
+            const fee = await prisma.jmkstdbilldet.findMany({ where: { bill_id: bill[0].bill_id } })
+            if (!fee) throw new AuthenticationError("Data not found !!")
+            return fee;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
+
+    getStudentFeeDes: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid credentials")
+        if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
+            const dec = await prisma.jmkstdfeediscount.findMany({ where: { std_id: args.std_id } })
+            if (!dec) throw new AuthenticationError("Data not found !!")
+            return dec;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
+
+    getSubByCourseId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
+            const sub = await prisma.jmksubjectmaster.findMany({ where: { crs_id: args.crs_id } })
+            if (!sub) throw new AuthenticationError("Data not found !!")
+            return sub;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
+
 
 }
 

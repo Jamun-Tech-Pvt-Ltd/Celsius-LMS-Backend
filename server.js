@@ -7,6 +7,11 @@ import express from 'express'
 import typeDefs from './typeDefs.js'
 import resolvers from './resolvers.js'
 import jwt from 'jsonwebtoken'
+import { PrismaClient } from '@prisma/client'
+import logger from './utils/logger.js'
+
+const prisma = new PrismaClient()
+
 const port = process.env.PORT || 8080
 
 const cors = {
@@ -42,8 +47,10 @@ async function startServer() {
   await server.start()
 
   const app = express()
-
+  app.use(express.json())
   app.use(graphqlUploadExpress())
+
+  app.use(logger)
 
   server.applyMiddleware({ app })
 

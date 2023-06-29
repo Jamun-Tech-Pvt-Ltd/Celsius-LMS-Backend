@@ -223,6 +223,7 @@ const adminQueryTypesAndInputs = `
       crsmain_type: String
      }
 
+
      type followUpStudent{
       std_name:String
       std_phone:String
@@ -231,6 +232,7 @@ const adminQueryTypesAndInputs = `
       program:String
       schcol:String
      }
+
 
      type AdminType{
       usr_id:Int!
@@ -421,7 +423,9 @@ const adminQuery = `
     getUserLog:[logInfo]
     getPaymentInfo:[PaymentInfo]
 
+
     getFolloUpStudent:[followUpStudent]
+
 
 `
 
@@ -1714,6 +1718,7 @@ const adminResolversQuery = {
     }
     return paymentInfos
   },
+
   getFolloUpStudent: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
@@ -1726,6 +1731,7 @@ const adminResolversQuery = {
     }
     return 'No record Found'
   },
+
 }
 
 export {
