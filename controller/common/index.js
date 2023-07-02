@@ -57,6 +57,7 @@ input createCourseInput {
         crs_duration: String
         crs_rate: String
         crs_ins: String!
+        crs_code:String
         crs_type: String!
         crs_nxt_st_date:Date
         crs_image:String
