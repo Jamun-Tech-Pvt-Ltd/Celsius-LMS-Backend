@@ -230,6 +230,9 @@ const adminQueryTypesAndInputs = `
       stdfeedbk:String
       program:String
       schcol:String
+      follow_up:Boolean
+      srno:Int
+
      }
 
      type AdminType{
@@ -459,6 +462,7 @@ const adminMutation = `
     registerNewEventUser(data:createNewEventUser!):String
     
     updatePaymentStatus(pay_id:Int!): String
+    updateFollowUpStatus(srno:Int!):String
 
 `
 
@@ -1075,6 +1079,32 @@ const adminResolvers = {
       },
       where: {
         pay_id,
+      },
+    })
+
+    return 'success'
+  },
+  updateFollowUpStatus: async (_, { srno }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+
+    const followUpDetail = await prisma.jmkstdmktg.findFirst({
+      where: {
+        srno,
+      },
+    })
+
+    if (!followUpDetail) throw new ApolloError('No such followup info exist')
+    await prisma.jmkstdmktg.update({
+      data: {
+        follow_up: !followUpDetail.follow_up,
+      },
+      where: {
+        srno,
       },
     })
 
