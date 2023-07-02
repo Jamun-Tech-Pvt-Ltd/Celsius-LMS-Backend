@@ -1761,7 +1761,6 @@ const adminResolversQuery = {
     }
     return 'No record Found'
   },
-
 }
 
 export {
