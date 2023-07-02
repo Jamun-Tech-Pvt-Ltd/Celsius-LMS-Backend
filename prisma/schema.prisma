@@ -513,13 +513,14 @@ model jmkfeemstr {
 }
 
 model jmkstdmktg {
-  srno        Int     @id @default(autoincrement())
-  std_name    String? @db.VarChar(200)
-  std_phone   String? @db.VarChar(15)
-  std_address String? @db.VarChar(200)
-  stdfeedbk   String? @db.VarChar(100)
-  program     String? @db.VarChar(100)
-  schcol      String? @db.VarChar(200)
+  srno        Int      @id @default(autoincrement())
+  std_name    String?  @db.VarChar(200)
+  std_phone   String?  @db.VarChar(15)
+  std_address String?  @db.VarChar(200)
+  stdfeedbk   String?  @db.VarChar(100)
+  program     String?  @db.VarChar(100)
+  schcol      String?  @db.VarChar(200)
+  follow_up   Boolean? @default(false)
 }
 
 model jmkeventreg {
@@ -561,18 +562,6 @@ model jmktstdpayinfo {
   crs_id         Int?
 }
 
-model jmkstdfeediscount {
-  serial           Int  @id @default(autoincrement())
-  fee_id           Int?
-  fee_discount_per Int?
-  std_id           Int?
-}
-
-model jmkloginfo {
-  log_id   Int     @id @default(autoincrement())
-  log_desc String? @db.VarChar(200)
-}
-
 model jmkemployer {
   employer_id          Int       @id @default(autoincrement())
   employer_name        String?   @db.VarChar(200)
@@ -587,6 +576,18 @@ model jmkemployer {
   employer_contact_no1 String?   @db.VarChar(20)
   employer_contact_no2 String?   @db.VarChar(20)
   employer_password    String?   @db.VarChar(100)
+}
+
+model jmkloginfo {
+  log_id   Int     @id @default(autoincrement())
+  log_desc String? @db.VarChar(200)
+}
+
+model jmkstdfeediscount {
+  serial           Int  @id @default(autoincrement())
+  fee_id           Int?
+  fee_discount_per Int?
+  std_id           Int?
 }
 
 model jmksubjectmaster {
