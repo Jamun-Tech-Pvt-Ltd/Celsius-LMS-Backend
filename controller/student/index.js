@@ -518,6 +518,7 @@ const studentResolvers = {
         payment_date: new Date(data.payment_date),
         pay_amount: parseInt(data.pay_amount),
         transaction_id: data.transaction_id,
+        crs_id: user.crs_id,
       },
     })
     return 'success'
