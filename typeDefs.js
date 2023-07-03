@@ -7,6 +7,7 @@ import { adminMutation, adminQuery, adminQueryTypesAndInputs } from './controlle
 import { studentMutation, studentQuery, studentQueryTypesAndInputs } from './controller/student/index.js';
 import { commonMutation, commonQuery, commonQueryTypesAndInputs } from './controller/common/index.js';
 import { jamuntekMutation, jamuntekQuery, jamuntekQueryTypesAndInputs } from './controller/jamuntek/index.js';
+import { employerMutation, employerQuery, employerQueryTypesAndInputs } from './controller/employer/index.js';
 
 
 const typeDefs = gql`
@@ -21,6 +22,7 @@ const typeDefs = gql`
    ${studentQueryTypesAndInputs}
    ${commonQueryTypesAndInputs}
    ${jamuntekQueryTypesAndInputs}
+   ${employerQueryTypesAndInputs}
 
 
    type Query {
@@ -32,6 +34,7 @@ const typeDefs = gql`
       ${studentQuery}
       ${commonQuery}
       ${jamuntekQuery}
+      ${employerQuery}
    }
 
    type Mutation {
@@ -43,6 +46,7 @@ const typeDefs = gql`
       ${studentMutation}
       ${commonMutation}
       ${jamuntekMutation}
+      ${employerMutation}
    }
 `
 
