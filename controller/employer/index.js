@@ -1,6 +1,7 @@
 import { ApolloError, AuthenticationError, ForbiddenError } from "apollo-server-express";
 import prisma from "../../database.js";
 import jwt from 'jsonwebtoken';
+import { ROLES } from "../../utils/helper.js";
 
 const employerQueryTypesAndInputs = `
 
@@ -41,6 +42,7 @@ const employerQueryTypesAndInputs = `
         employer_contact_no2: String
         employer_password: String
     }
+
 `;
 
 const employerQuery = `
@@ -50,6 +52,8 @@ const employerQuery = `
 const employerMutation = `
     signInEmployer(data:signinEmployerUserInput!):employerLoginCredentials
     signUpEmployer(data: signUpEmployerUserInput!): String
+    
+    updateEmployer(data: signUpEmployerUserInput!): String
 
 `;
 
@@ -79,7 +83,7 @@ const employerMutationResolver = {
         if (!employer) return new AuthenticationError('Invalid Email');
         const isMatch = data.employer_password === employer.employer_password
         if (!isMatch) return new AuthenticationError('Invalid Password');
-        const token = jwt.sign({ userId: employer.employer_id }, process.env.JWT_SECRET_KEY);
+        const token = jwt.sign({ userId: employer.employer_id, role: ROLES[4] }, process.env.JWT_SECRET_KEY);
         return { token, employer_name: employer.employer_name }
 
     },
@@ -106,6 +110,19 @@ const employerMutationResolver = {
             console.log(error);
             return new ApolloError("Something went wrong");
         }
+    },
+    updateEmployer: async (_, { data }, { userId }) => {
+        if (!userId) return new ApolloError("You do not have permission to access this");
+
+        const updatedEmployer = await prisma.jmkemployer.update({
+            where: {
+                employer_id: userId
+            },
+            data: { ...data }
+        });
+        if (!updatedEmployer) return new ApolloError("Employer could not be updated");
+        return "success";
+
     }
 
 };
