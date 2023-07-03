@@ -14,6 +14,7 @@ import forgotPasswordHTML from '../../utils/forgotPassword.js'
 
 const studentQueryTypesAndInputs = `
     input SigninInput{
+      cid:Int!
         email: String!
         password: String!
     }
@@ -29,6 +30,7 @@ const studentQueryTypesAndInputs = `
         std_remark:String
         crs_id:Int!,
         crs_ecp_st_d:Date!
+        cid:Int!
     }
 
     input UpdateUserInput {
@@ -280,6 +282,8 @@ const studentResolvers = {
     if (!user) throw new AuthenticationError('invalid user credentials')
     const isMatch = userSignIn.password == user.std_password
     if (!isMatch) throw new AuthenticationError('invalid user credentials')
+    if (user.cid !== userSignIn.cid)
+      throw new AuthenticationError('invalid organization selected')
     if (!user.std_verifyed)
       throw new ApolloError('You are not permitted to log in')
     const token = jwt.sign(
@@ -303,7 +307,7 @@ const studentResolvers = {
     if (!course) throw new AuthenticationError('invalid course')
     if (role === ROLES[2]) {
       const newUser = await prisma.jmkstdinfo.create({
-        data: { ...userNew, cid: userId },
+        data: { ...userNew },
       })
       await prisma.jmkstdcrsinfo.create({
         data: {
