@@ -70,6 +70,11 @@ input createCourseInput {
         crs_type: String!
         crs_nxt_st_date : Date
      }
+
+    type ConsultancyInfo {
+      serial: Int!
+      oname:String!
+    } 
   
      type PublicCourseType {
         crs_type: String!
@@ -91,6 +96,7 @@ input createCourseInput {
 const commonQuery = `
     getAllCourseList:[Course!]!
     getCourseById(crs_id:Int!):Course!
+    getAllConsultancyInfo:[ConsultancyInfo]
 `
 
 const commonMutation = `
@@ -283,6 +289,16 @@ const commonResolversQuery = {
     })
     if (!course) throw new ApolloError('Data Not Found')
     return course
+  },
+  getAllConsultancyInfo: async (_args, { userId, role }) => {
+    const consultancyInfo = await prisma.jmkconsulinfo.findMany({
+      select: {
+        serial: true,
+        oname: true,
+      },
+    })
+    if (!consultancyInfo) throw new ApolloError('No data Found')
+    return consultancyInfo
   },
 }
 
