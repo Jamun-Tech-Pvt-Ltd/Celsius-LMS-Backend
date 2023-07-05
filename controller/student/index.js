@@ -306,6 +306,7 @@ const studentResolvers = {
     })
     if (!course) throw new AuthenticationError('invalid course')
     if (role === ROLES[2]) {
+      console.log({ ...userNew })
       const newUser = await prisma.jmkstdinfo.create({
         data: { ...userNew },
       })
