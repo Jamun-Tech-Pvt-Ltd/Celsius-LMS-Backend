@@ -25,6 +25,10 @@ const courseQueryTypesAndInputs = `
       crsmain_type:String! 
     }
 
+    type StuentCourse{
+      crs_id:Int!
+      crs_name:String!
+    }
 
 
 
@@ -62,6 +66,7 @@ const courseQuery = `
   getAllCourseType:[CourseType]
   getCourseTitleByType(crsmain_type:String!):[Course]
   getAllUpcommingCourse:[UpcommingCourse]
+  getStudentCourse:[StuentCourse]
 
   
 `
@@ -88,6 +93,16 @@ const courseQueryResolver = {
     })
     if (!course) throw new AuthenticationError('No such course')
     return course
+  },
+  getStudentCourse: async (_, {}) => {
+    const studentCourse = await prisma.jmkcrsinfo.findMany({
+      select: {
+        crs_id: true,
+        crs_name: true,
+      },
+    })
+    if (!studentCourse) throw new AuthenticationError('No such course')
+    return studentCourse
   },
   getAllCourseContentByCourseId: async (_, { crsmain_id }) => {
     const content = await prisma.jmkcrsdet.findMany({
