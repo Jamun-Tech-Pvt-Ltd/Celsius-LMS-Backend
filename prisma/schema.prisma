@@ -358,8 +358,8 @@ model jmkconsuluserinfo {
 model jmkcrsdet {
   crsdet_id        Int        @id @default(autoincrement())
   crsmain_id       Int
-  crsdet_title     String?    @db.VarChar(60)
-  crsdet_sub_title String?    @db.VarChar(200)
+  crsdet_title     String?    @db.VarChar(1000)
+  crsdet_sub_title String?    @db.VarChar(1000)
   jmkcrsmain       jmkcrsmain @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade)
 
   @@index([crsmain_id], map: "jmkcrsdet_crsmain_id_fkey")
