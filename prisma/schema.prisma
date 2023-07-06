@@ -602,6 +602,21 @@ model jmksubjectmaster {
   subject_type        String? @db.VarChar(20)
 }
 
+model jmkcrsproject {
+  proj_id       Int     @id @default(autoincrement())
+  crs_id        Int?
+  proj_title    String? @db.VarChar(100)
+  proj_desc     String? @db.VarChar(2000)
+  proj_git_link String? @db.VarChar(200)
+}
+
+model jmkstdproj {
+  serial        Int     @id @default(autoincrement())
+  proj_id       Int?
+  std_id        Int?
+  proj_git_link String? @db.VarChar(200)
+}
+
 enum jmkcrsmain_cramain_del_mod {
   Remote
   Physical
