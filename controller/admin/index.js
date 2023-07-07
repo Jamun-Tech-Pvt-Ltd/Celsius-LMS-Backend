@@ -41,6 +41,23 @@ const adminQueryTypesAndInputs = `
         std_birth_dt: Date!
         std_verifyed: Boolean!
      }
+
+     input projectInput{
+      proj_id:Int
+      crs_id:Int!
+      proj_title:String!
+      proj_desc:String!
+      proj_git_link:String!
+     }
+
+     type projectInfo{
+      proj_id:Int!
+      crs_id:Int!
+      proj_title:String!
+      proj_desc:String!
+      proj_git_link:String!
+      project_course_title:String
+     }
   
      input updateStudentCourseFromAdminInput {
         serial : Int!
@@ -426,6 +443,9 @@ const adminQuery = `
     getUserLog:[logInfo]
     getPaymentInfo:[PaymentInfo]
 
+    getProjectInfo:[projectInfo]
+    getProjectInfoById(proj_id:Int!):projectInfo
+
 
     getFolloUpStudent:[followUpStudent]
 
@@ -458,6 +478,11 @@ const adminMutation = `
     createNewEvent(data:createNewEventInput):String!
     updateSelectedEvent(data:updateEventInput):String!
     deleteEventById(eventId:Int!):String!
+
+    createNewProject(data:projectInput):String!
+    updateSelectedProject(data:projectInput):String!
+    deleteProjectById(proj_id:Int!):String!
+  
 
     addUpcomingCourse(data:upcomingCourseInput):String!
     updateSelectedUpcomingCourse(data:updateUpcomingCourseInput):String!
@@ -1114,6 +1139,73 @@ const adminResolvers = {
 
     return 'success'
   },
+  createNewProject: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    const title = await prisma.jmkcrsproject.findFirst({
+      where: {
+        proj_title: data.proj_title,
+        crs_id: data.crs_id,
+      },
+    })
+
+    if (title) throw new ApolloError('Title Already Exists')
+    try {
+      await prisma.jmkcrsproject.create({
+        data: {
+          ...data,
+        },
+      })
+      return 'success'
+    } catch (error) {
+      console.log(error)
+    }
+  },
+  updateSelectedProject: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    try {
+      await prisma.jmkcrsproject.update({
+        data: {
+          ...data,
+        },
+        where: {
+          proj_id: data.proj_id,
+        },
+      })
+      return 'success'
+    } catch (error) {
+      throw new ApolloError('Something went Wrong')
+    }
+  },
+  deleteProjectById: async (_, { proj_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    const project = await prisma.jmkcrsproject.findFirst({
+      where: {
+        proj_id: proj_id,
+      },
+    })
+    if (project) {
+      await prisma.jmkcrsproject.delete({
+        where: {
+          proj_id: proj_id,
+        },
+      })
+      return 'success'
+    }
+
+    throw new ApolloError('No such project exist')
+  },
 }
 
 const adminResolversQuery = {
@@ -1756,10 +1848,55 @@ const adminResolversQuery = {
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
     const folloUpStudent = await prisma.jmkstdmktg.findMany({})
-    if (folloUpStudent) {
-      return folloUpStudent
+    if (!folloUpStudent) {
+      return 'No record Found'
     }
-    return 'No record Found'
+    return folloUpStudent
+  },
+
+  getProjectInfo: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const courseProjects = await prisma.jmkcrsproject.findMany({})
+    const projectDetail = []
+    for (let i in courseProjects) {
+      const title = await prisma.jmkcrsinfo.findFirst({
+        where: {
+          crs_id: courseProjects[i].crs_id,
+        },
+        select: {
+          crs_name: true,
+        },
+      })
+      projectDetail.push({
+        ...courseProjects[i],
+        project_course_title: title.crs_name,
+      })
+    }
+
+    if (!courseProjects) {
+      return 'No projects data found'
+    }
+    return projectDetail
+  },
+  getProjectInfoById: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const project = await prisma.jmkcrsproject.findFirst({
+      where: {
+        proj_id: args.proj_id,
+      },
+    })
+    if (project) {
+      return project
+    }
+    throw new ApolloError('No such project')
   },
 }
 
