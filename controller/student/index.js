@@ -284,8 +284,7 @@ const studentResolvers = {
     if (!isMatch) throw new AuthenticationError('invalid user credentials')
     if (user.cid !== userSignIn.cid)
       throw new AuthenticationError('invalid organization selected')
-    if (!user.std_verifyed)
-      throw new ApolloError('You are not permitted to log in')
+
     const token = jwt.sign(
       { userId: user.std_id, role: ROLES[0] },
       process.env.JWT_SECRET_KEY

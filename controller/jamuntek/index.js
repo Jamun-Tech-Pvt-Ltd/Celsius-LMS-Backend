@@ -83,7 +83,7 @@ const jamuntekResolvers = {
     businessForm: async (_, { data }) => {
         const businessForm = await prisma.jmkcontactb.create({ data })
         if (!businessForm) throw new ApolloError('Something wrong !!')
-        // await sendMail(businessForm.bemail, 'Your Bussiness Form Has Been Received', contackFormHTML)
+        await sendMail(businessForm.bemail, 'Your Bussiness Form Has Been Received', contackFormHTML)
         return 'Success'
     },
 
