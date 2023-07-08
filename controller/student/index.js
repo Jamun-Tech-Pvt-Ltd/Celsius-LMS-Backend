@@ -30,7 +30,7 @@ const studentQueryTypesAndInputs = `
         std_remark:String
         crs_id:Int!,
         crs_ecp_st_d:Date!
-        cid:Int!
+        cid:Int
     }
 
     input UpdateUserInput {
@@ -305,9 +305,10 @@ const studentResolvers = {
     })
     if (!course) throw new AuthenticationError('invalid course')
     if (role === ROLES[2]) {
-      console.log({ ...userNew })
       const newUser = await prisma.jmkstdinfo.create({
-        data: { ...userNew },
+        data: {
+          ...userNew, cid: userId
+        },
       })
       await prisma.jmkstdcrsinfo.create({
         data: {
