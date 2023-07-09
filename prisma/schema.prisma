@@ -608,6 +608,7 @@ model jmkcrsproject {
   proj_title    String? @db.VarChar(100)
   proj_desc     String? @db.VarChar(2000)
   proj_git_link String? @db.VarChar(200)
+  submited Boolean? @default(false)
 }
 
 model jmkparent {

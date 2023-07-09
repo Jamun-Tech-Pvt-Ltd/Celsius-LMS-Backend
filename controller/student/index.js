@@ -49,6 +49,11 @@ const studentQueryTypesAndInputs = `
         grv_rate: String!
      }
 
+     input studentProjectInput{
+      proj_id:Int!
+      proj_git_link:String!
+     }
+
     input forgotPPEmailCheckInput {
         std_email: String!
     }
@@ -120,6 +125,15 @@ const studentQueryTypesAndInputs = `
         question: String!
         rtans: String!
         std_ans: String
+     }
+
+     type studentCourseProject{
+      proj_id: Int!
+      crs_id: Int!
+      proj_title:String!
+      proj_desc: String!
+      proj_git_link:String!
+      submited:Boolean
      }
      
 
@@ -245,6 +259,10 @@ const studentQuery = `
     loadQuestion: String!
     loadTest: String!
 
+    
+    getProjectByStudentSelectedCourse:[studentCourseProject]
+    getProjectByStudentSelectedCourseById(proj_id:Int!):studentCourseProject
+
 
 `
 
@@ -269,7 +287,7 @@ const studentMutation = `
     studentReview(data:studentReviewInput):String
 
     addStudentPayInfo(data:addStudentPaymentInput): String!
-    
+    submitProject(data:studentProjectInput):String!
     
 
 `
@@ -732,6 +750,31 @@ const studentResolvers = {
     //
     return 'success'
   },
+  submitProject: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    const project = await prisma.jmkcrsproject.findFirst({
+      where: { proj_id: data.proj_id },
+    })
+    if (project) {
+      await prisma.jmkstdproj.create({
+        data: { ...data, std_id: user.std_id, proj_sub_date: new Date() },
+      })
+      await prisma.jmkcrsproject.update({
+        data: {
+          submited: true,
+        },
+        where: {
+          proj_id: data.proj_id,
+        },
+      })
+      return 'success'
+    }
+    return 'No such project found '
+  },
 }
 
 const studentResolversQuery = {
@@ -1075,6 +1118,43 @@ const studentResolversQuery = {
       return 'success'
     }
     throw new ForbiddenError('Bad request !!')
+  },
+
+  getProjectByStudentSelectedCourse: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    const projects = await prisma.jmkcrsproject.findMany({
+      where: {
+        crs_id: user.crs_id,
+      },
+    })
+    if (projects) {
+      return projects
+    }
+    return ApolloError('No Data Found')
+  },
+  getProjectByStudentSelectedCourseById: async (
+    _,
+    { proj_id },
+    { userId, role }
+  ) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    const project = await prisma.jmkcrsproject.findUnique({
+      where: {
+        proj_id: proj_id,
+      },
+    })
+    if (project) {
+      return project
+    }
+    return ApolloError('No Data Found')
   },
 }
 
