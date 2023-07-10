@@ -145,6 +145,16 @@ const adminQueryTypesAndInputs = `
          proj_desc:String
          proj_tech_used:String
      }
+
+     type EventReg{
+      reg_id:Int
+      reg_name:String
+      reg_date:Date
+      event_name: String
+      reg_email:String
+      reg_phone:String
+     }
+
      type devExpDet{
         company_name:String
         exp_desc:String
@@ -448,6 +458,7 @@ const adminQuery = `
 
 
     getFolloUpStudent:[followUpStudent]
+    getAllEventRegister:[EventReg]
 
 
 `
@@ -1897,6 +1908,32 @@ const adminResolversQuery = {
       return project
     }
     throw new ApolloError('No such project')
+  },
+  getAllEventRegister: async (_, { args }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const events = await prisma.jmkeventreg.findMany({})
+    const registeredEvents = []
+    if (events) {
+      for (let event in events) {
+        const name = await prisma.jmkevents.findFirst({
+          where: {
+            events_id: events[event].event_id,
+          },
+          select: {
+            event_title: true,
+          },
+        })
+        registeredEvents.push({
+          ...events[event],
+          event_name: name.event_title,
+        })
+      }
+    }
+    return registeredEvents
   },
 }
 
