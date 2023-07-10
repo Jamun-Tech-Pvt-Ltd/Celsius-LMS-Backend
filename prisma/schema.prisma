@@ -341,7 +341,7 @@ model jmkconsulinfo {
   cpassword String?   @db.VarChar(20)
   creg_date DateTime? @default(now())
   acc_type  String?
-  oname     String?   @db.VarChar(20)
+  oname     String?   @db.VarChar(200)
 }
 
 model jmkconsuluserinfo {
@@ -603,12 +603,12 @@ model jmksubjectmaster {
 }
 
 model jmkcrsproject {
-  proj_id       Int     @id @default(autoincrement())
+  proj_id       Int      @id @default(autoincrement())
   crs_id        Int?
-  proj_title    String? @db.VarChar(100)
-  proj_desc     String? @db.VarChar(2000)
-  proj_git_link String? @db.VarChar(200)
-  submited Boolean? @default(false)
+  proj_title    String?  @db.VarChar(100)
+  proj_desc     String?  @db.VarChar(2000)
+  proj_git_link String?  @db.VarChar(200)
+  submited      Boolean? @default(false)
 }
 
 model jmkparent {
@@ -621,10 +621,18 @@ model jmkparent {
 }
 
 model jmkstdproj {
-  serial        Int     @id @default(autoincrement())
+  serial        Int       @id @default(autoincrement())
   proj_id       Int?
   std_id        Int?
-  proj_git_link String? @db.VarChar(200)
+  proj_git_link String?   @db.VarChar(200)
+  proj_sub_date DateTime? @db.Date
+}
+
+model jmkstdattendancelog {
+  serial     Int       @id @default(autoincrement())
+  std_id     Int?
+  logdate    DateTime? @db.DateTime(0)
+  logoutdate DateTime? @db.DateTime(0)
 }
 
 enum jmkcrsmain_cramain_del_mod {
