@@ -316,6 +316,7 @@ const consultancyQuery = `
     getConsultancyUsers:[ConsultancyUser]
     getConsultancyUser(serial:Int!):ConsultancyUser
     getConsultancyStudents:[ConsultancyStudent]
+    getConsultancyStudentsByCrsId(crs_id:Int!):[ConsultancyStudent]
     getConsultancyStudent(std_id:Int!):ConsultancyStudent
     getConsultancyFaqs:[ConsultancyFaq]
     getConsultancyFaq(serial:Int!):ConsultancyFaq
@@ -1016,6 +1017,23 @@ const consultancyResolversQuery = {
         if (role === ROLES[2]) {
             let students = [];
             const student = await prisma.jmkstdinfo.findMany({ where: { cid: userId } })
+            for (let index = 0; index < student.length; index++) {
+                const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student[index].crs_id } })
+                if (course) {
+                    students.push({ ...student[index], crs_type: course.crs_type, crs_name: course.crs_name })
+                }
+            }
+            return students;
+        }
+    },
+
+    getConsultancyStudentsByCrsId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            let students = [];
+            const student = await prisma.jmkstdinfo.findMany({ where: { cid: userId, crs_id: args.crs_id } })
             for (let index = 0; index < student.length; index++) {
                 const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student[index].crs_id } })
                 if (course) {
