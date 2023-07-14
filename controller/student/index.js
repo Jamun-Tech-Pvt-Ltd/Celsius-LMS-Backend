@@ -28,9 +28,9 @@ const studentQueryTypesAndInputs = `
         std_password: String!
         std_birth_dt: Date
         std_remark:String
-        crs_id:Int!,
+        crsmain_id:Int!
         crs_ecp_st_d:Date!
-        cid:Int!
+        cid:Int
     }
 
     input UpdateUserInput {
@@ -316,20 +316,19 @@ const studentResolvers = {
     })
     if (user)
       throw new AuthenticationError('user already exist with that email')
-    const course = await prisma.jmkcrsinfo.findFirst({
+    const course = await prisma.jmkcrsmain.findFirst({
       where: {
-        crs_id: userNew.crs_id,
+        crsmain_id: userNew.crsmain_id,
       },
     })
     if (!course) throw new AuthenticationError('invalid course')
     if (role === ROLES[2]) {
-      console.log({ ...userNew })
       const newUser = await prisma.jmkstdinfo.create({
         data: { ...userNew },
       })
       await prisma.jmkstdcrsinfo.create({
         data: {
-          crs_id: userNew.crs_id,
+          crsmain_id: userNew.crsmain_id,
           crs_start_dt: userNew.crs_ecp_st_d,
           std_id: newUser.std_id,
         },

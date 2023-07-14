@@ -261,7 +261,11 @@ const commonResolversQuery = {
       })
       if (!admin) throw new AuthenticationError('invalid admin credentials')
       if (admin.usr_role === 'admin') {
-        const courses = await prisma.jmkcrsinfo.findMany()
+        const courses = await prisma.jmkcrsinfo.findMany({
+          where: {
+            cid: null,
+          },
+        })
         if (!courses) throw new ApolloError('Courses not found !!')
         return courses
       }

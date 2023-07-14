@@ -41,6 +41,7 @@ model jmkstdinfo {
   std_birth_dt      DateTime?      @db.Date
   std_high_ql       String?        @db.VarChar(40)
   crs_id            Int?
+  crsmain_id        Int?
   std_status        Int?
   std_paidup        Int?
   std_due           Int?
@@ -55,6 +56,7 @@ model jmkstdinfo {
   cid               Int?
   jmkgrvinfo        jmkgrvinfo[]
   jmkcrsinfo        jmkcrsinfo?    @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
+  jmkcrsmain        jmkcrsmain?    @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsmain_crsmain_id_fk")
   jmkstdreview      jmkstdreview[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
@@ -341,7 +343,7 @@ model jmkconsulinfo {
   cpassword String?   @db.VarChar(20)
   creg_date DateTime? @default(now())
   acc_type  String?
-  oname     String?   @db.VarChar(20)
+  oname     String?   @db.VarChar(200)
 }
 
 model jmkconsuluserinfo {
@@ -385,6 +387,7 @@ model jmkcrsmain {
   crsmain_type     String?
   crsmain_img_key  String?                     @db.VarChar(1000)
   jmkcrsdet        jmkcrsdet[]
+  jmkstdinfo       jmkstdinfo[]
 }
 
 model jmkconsulfaq {
@@ -603,19 +606,36 @@ model jmksubjectmaster {
 }
 
 model jmkcrsproject {
-  proj_id       Int     @id @default(autoincrement())
+  proj_id       Int      @id @default(autoincrement())
   crs_id        Int?
-  proj_title    String? @db.VarChar(100)
-  proj_desc     String? @db.VarChar(2000)
-  proj_git_link String? @db.VarChar(200)
-  submited Boolean? @default(false)
+  proj_title    String?  @db.VarChar(100)
+  proj_desc     String?  @db.VarChar(2000)
+  proj_git_link String?  @db.VarChar(200)
+  submited      Boolean? @default(false)
 }
 
 model jmkstdproj {
-  serial        Int     @id @default(autoincrement())
+  serial        Int       @id @default(autoincrement())
   proj_id       Int?
   std_id        Int?
-  proj_git_link String? @db.VarChar(200)
+  proj_git_link String?   @db.VarChar(200)
+  proj_sub_date DateTime? @db.Date
+}
+
+model jmkparent {
+  parent_id       Int     @id @default(autoincrement())
+  fparent_name    String? @db.VarChar(200)
+  mparent_name    String? @db.VarChar(200)
+  fparent_contact String? @db.VarChar(20)
+  mparent_contact String? @db.VarChar(20)
+  std_id          Int?
+}
+
+model jmkstdattendancelog {
+  serial     Int       @id @default(autoincrement())
+  std_id     Int?
+  logdate    DateTime? @db.DateTime(0)
+  logoutdate DateTime? @db.DateTime(0)
 }
 
 enum jmkcrsmain_cramain_del_mod {
