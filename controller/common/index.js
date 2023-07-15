@@ -17,7 +17,7 @@ input createCourseInput {
     crs_cat: String
     crs_con: String
     crs_ins: String!
-    crs_code:String!
+    crs_code:String
     crs_type: String!
     crs_nxt_st_date: Date!
     crs_image: Upload

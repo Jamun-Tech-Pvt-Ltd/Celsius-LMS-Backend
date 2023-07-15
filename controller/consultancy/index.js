@@ -155,6 +155,15 @@ const consultancyQueryTypesAndInputs = `
         subject_type:String
      }
 
+     type studentParent {
+        parent_id:Int
+        fparent_name:String
+        mparent_name:String
+        fparent_contact:String
+        mparent_contact:String
+        std_id:Int!
+    }
+
     
     input signinConsultancyInput{
         cemail: String!
@@ -290,6 +299,14 @@ const consultancyQueryTypesAndInputs = `
         subject_type:String
     }
 
+    input studentParentInput {
+        fparent_name:String
+        mparent_name:String
+        fparent_contact:String
+        mparent_contact:String
+        std_id:Int!
+    }
+
 `
 
 
@@ -299,6 +316,7 @@ const consultancyQuery = `
     getConsultancyUsers:[ConsultancyUser]
     getConsultancyUser(serial:Int!):ConsultancyUser
     getConsultancyStudents:[ConsultancyStudent]
+    getConsultancyStudentsByCrsId(crs_id:Int!):[ConsultancyStudent]
     getConsultancyStudent(std_id:Int!):ConsultancyStudent
     getConsultancyFaqs:[ConsultancyFaq]
     getConsultancyFaq(serial:Int!):ConsultancyFaq
@@ -328,6 +346,7 @@ const consultancyQuery = `
 
     getSubByCourseId(crs_id:Int!):[courseSubject]
 
+    getStudentParent(std_id:Int!):studentParent
 `
 
 
@@ -372,6 +391,9 @@ const consultancyMutation = `
     createCourseSub(data:courseSubjectInput):String!
     updateCourseSub(data:courseSubjectInput):String!
     deleteeCourseSub(subject_id:Int!):String!
+
+    createAndUpdateStudentParent(data:studentParentInput):String!
+    deleteeStudentParent(parent_id:Int!):String!
 `
 
 
@@ -386,7 +408,7 @@ const consultancyResolvers = {
         })
         if (!newConsultancy) throw new AuthenticationError("Something went wrong !")
         const token = jwt.sign({ userId: newConsultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY)
-        await sendMail(trainer.tr_email, 'Successfully Register ', registerrHTML)
+        await sendMail(newConsultancy.cemail, 'Successfully Register ', registerrHTML)
         return { token };
     },
 
@@ -859,6 +881,56 @@ const consultancyResolvers = {
         }
         throw new AuthenticationError("invalid access !!")
     },
+
+    createAndUpdateStudentParent: async (_, { data }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: data.std_id, cid: userId } })
+                if (!std) throw new AuthenticationError("invalid student")
+                const oldParent = await prisma.jmkparent.findFirst({ where: { std_id: data.std_id } })
+                if (oldParent) {
+                    // update 
+                    const parent = await prisma.jmkparent.update({
+                        data: {
+                            ...data,
+                        },
+                        where: { parent_id: oldParent.parent_id }
+                    })
+                    if (!parent) throw new AuthenticationError("invalid !!")
+                    return "success"
+                }
+                // create
+                const parent = await prisma.jmkparent.create({
+                    data: {
+                        ...data,
+                    },
+                })
+                if (!parent) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
+
+    deleteeStudentParent: async (_, { parent_id }, { userId, role }) => {
+        if (userId) {
+            const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+            if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
+                if (!consultancy) throw new AuthenticationError("invalid credentials")
+                const parent = await prisma.jmkparent.delete({
+                    where: { parent_id: parent_id }
+                })
+                if (!parent) throw new AuthenticationError("invalid !!")
+                return "success"
+            }
+            throw new AuthenticationError("invalid access !!")
+        }
+        throw new AuthenticationError("invalid access !!")
+    },
 }
 
 
@@ -945,6 +1017,23 @@ const consultancyResolversQuery = {
         if (role === ROLES[2]) {
             let students = [];
             const student = await prisma.jmkstdinfo.findMany({ where: { cid: userId } })
+            for (let index = 0; index < student.length; index++) {
+                const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student[index].crs_id } })
+                if (course) {
+                    students.push({ ...student[index], crs_type: course.crs_type, crs_name: course.crs_name })
+                }
+            }
+            return students;
+        }
+    },
+
+    getConsultancyStudentsByCrsId: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2]) {
+            let students = [];
+            const student = await prisma.jmkstdinfo.findMany({ where: { cid: userId, crs_id: args.crs_id } })
             for (let index = 0; index < student.length; index++) {
                 const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student[index].crs_id } })
                 if (course) {
@@ -1181,6 +1270,17 @@ const consultancyResolversQuery = {
         throw new AuthenticationError("invalid credentials !")
     },
 
+    getStudentParent: async (_, args, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token');
+        const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
+        if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
+        if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
+            const parent = await prisma.jmkparent.findFirst({ where: { std_id: args.std_id } })
+            if (!parent) throw new AuthenticationError("Data not found !!")
+            return parent;
+        }
+        throw new AuthenticationError("invalid credentials !")
+    },
 
 }
 
