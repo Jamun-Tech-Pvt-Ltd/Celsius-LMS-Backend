@@ -41,6 +41,7 @@ model jmkstdinfo {
   std_birth_dt      DateTime?      @db.Date
   std_high_ql       String?        @db.VarChar(40)
   crs_id            Int?
+  crsmain_id        Int?
   std_status        Int?
   std_paidup        Int?
   std_due           Int?
@@ -55,6 +56,7 @@ model jmkstdinfo {
   cid               Int?
   jmkgrvinfo        jmkgrvinfo[]
   jmkcrsinfo        jmkcrsinfo?    @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
+  jmkcrsmain        jmkcrsmain?    @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsmain_crsmain_id_fk")
   jmkstdreview      jmkstdreview[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
@@ -385,6 +387,7 @@ model jmkcrsmain {
   crsmain_type     String?
   crsmain_img_key  String?                     @db.VarChar(1000)
   jmkcrsdet        jmkcrsdet[]
+  jmkstdinfo       jmkstdinfo[]
 }
 
 model jmkconsulfaq {
@@ -609,6 +612,7 @@ model jmkcrsproject {
   proj_desc     String?  @db.VarChar(2000)
   proj_git_link String?  @db.VarChar(200)
   submited      Boolean? @default(false)
+
 }
 
 model jmkparent {
@@ -627,6 +631,17 @@ model jmkstdproj {
   proj_git_link String?   @db.VarChar(200)
   proj_sub_date DateTime? @db.Date
 }
+
+
+model jmkparent {
+  parent_id       Int     @id @default(autoincrement())
+  fparent_name    String? @db.VarChar(200)
+  mparent_name    String? @db.VarChar(200)
+  fparent_contact String? @db.VarChar(20)
+  mparent_contact String? @db.VarChar(20)
+  std_id          Int?
+}
+
 
 model jmkstdattendancelog {
   serial     Int       @id @default(autoincrement())

@@ -272,6 +272,7 @@ const adminQueryTypesAndInputs = `
       usr_mname:String
       usr_lname:String
       usr_img_url:String
+      usr_password:String
      }
      type PaymentInfo{
       pay_id: Int!
@@ -1240,7 +1241,7 @@ const adminResolversQuery = {
       const student = await prisma.jmkstdinfo.findMany()
       for (let index = 0; index < student.length; index++) {
         const course = await prisma.jmkcrsinfo.findFirst({
-          where: { crs_id: student[index].crs_id },
+          where: { crs_id: student[index].crs_id, cid: null },
         })
         if (course) {
           students.push({
