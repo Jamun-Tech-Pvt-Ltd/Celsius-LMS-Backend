@@ -942,7 +942,7 @@ const consultancyResolversQuery = {
         if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
 
         const courses = await prisma.jmkcrsinfo.count({ where: { cid: userId } })
-        let students = await prisma.jmkstdinfo.count({ where: { cid: userId } })
+        let students = await prisma.jmkstdinfo.findMany({ where: { cid: userId } })
         if (students[0]) {
             students = students.filter(async (std) => {
                 const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: std.crs_id, cid: userId } })
@@ -963,7 +963,7 @@ const consultancyResolversQuery = {
             },
             {
                 name: 'Students',
-                count: students,
+                count: students.length,
                 link: '/students'
             },
             {
