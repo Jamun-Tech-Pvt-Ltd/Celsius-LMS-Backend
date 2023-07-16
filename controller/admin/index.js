@@ -102,6 +102,7 @@ const adminQueryTypesAndInputs = `
         std_password: String!
         std_high_ql: String
         crs_id: String!
+        crsmain_id:Int
         std_status: String
         std_paidup: String
         std_due: String
@@ -1240,15 +1241,17 @@ const adminResolversQuery = {
       let students = []
       const student = await prisma.jmkstdinfo.findMany()
       for (let index = 0; index < student.length; index++) {
-        const course = await prisma.jmkcrsinfo.findFirst({
-          where: { crs_id: student[index].crs_id, cid: null },
-        })
-        if (course) {
-          students.push({
-            ...student[index],
-            crs_type: course.crs_type,
-            crs_name: course.crs_name,
+        if (student[index].crsmain_id) {
+          const course = await prisma.jmkcrsmain.findFirst({
+            where: { crsmain_id: student[index].crsmain_id },
           })
+          if (course) {
+            students.push({
+              ...student[index],
+              crs_type: course.crsmain_type,
+              crs_name: course.crsmain_title,
+            })
+          }
         }
       }
       return students

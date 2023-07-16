@@ -96,9 +96,9 @@ const courseQueryResolver = {
   },
   getStudentCourse: async (_, {}) => {
     const studentCourse = await prisma.jmkcrsinfo.findMany({
-        where:{
-            cid:null,
-        },
+      where: {
+        cid: null,
+      },
       select: {
         crs_id: true,
         crs_name: true,
