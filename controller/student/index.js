@@ -29,6 +29,7 @@ const studentQueryTypesAndInputs = `
         std_birth_dt: Date
         std_remark:String
         crsmain_id:Int
+        crs_id:Int
         crs_ecp_st_d:Date!
         cid:Int
     }
