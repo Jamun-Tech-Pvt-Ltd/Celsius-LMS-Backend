@@ -360,9 +360,9 @@ const studentResolvers = {
       { userId: newUser.std_id, role: ROLES[0] },
       process.env.JWT_SECRET_KEY
     )
-    // await sendMail(newUser.std_email, 'Successfully Register ', registerrHTML)
-    // await sendMail('riwaz@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
-    // await sendMail('jenish@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
+    await sendMail(newUser.std_email, 'Successfully Register ', registerrHTML)
+    await sendMail('riwaz@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
+    await sendMail('jenish@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
     return { token }
   },
 
