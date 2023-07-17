@@ -9,6 +9,7 @@ import { sendMail } from '../../utils/mailHandler.js'
 import registerrHTML from '../../utils/signup.js'
 import { ROLES } from '../../utils/helper.js'
 import { uploadImgToAWS } from '../../utils/imageHandler.js'
+import { EmailValidate } from "../../utils/EmailValidation.js";
 
 const trainerQueryTypesAndInputs = `
     input signinTrainerInput{
@@ -253,6 +254,7 @@ const trainerResolvers = {
   },
 
   signupTrainer: async (_, { data }) => {
+    EmailValidate(data.tr_email);
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_email: data.tr_email },
     })

@@ -11,6 +11,7 @@ import { sendMail } from '../../utils/mailHandler.js'
 import registerrHTML from '../../utils/signup.js'
 import newUserSignupNotification from '../../utils/newUsersignup.js'
 import forgotPasswordHTML from '../../utils/forgotPassword.js'
+import { EmailValidate } from "../../utils/EmailValidation.js";
 
 const studentQueryTypesAndInputs = `
     input SigninInput{
@@ -312,6 +313,7 @@ const studentResolvers = {
   },
 
   signupUser: async (_, { userNew }, { userId, role }) => {
+    EmailValidate(userNew.std_email);
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userNew.std_email },
     })

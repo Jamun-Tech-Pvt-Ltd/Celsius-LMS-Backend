@@ -4,6 +4,7 @@ import { ApolloError, AuthenticationError, ForbiddenError } from 'apollo-server-
 import { ROLES } from "../../utils/helper.js";
 import { uploadImgToAWS, deleteImgToAWS } from '../../utils/imageHandler.js'
 import { compareDates } from "../../utils/DateHelper.js";
+import { EmailValidate } from "../../utils/EmailValidation.js";
 
 const developerQueryTypesAndInputs = `
     type Developer {
@@ -500,6 +501,8 @@ const developerMutationResolver = {
     },
 
     signupDeveloper: async (_, { data }) => {
+
+        EmailValidate(data.developer_email);
         const dev = await prisma.jmkdevinfo.findFirst({
             where: { developer_email: data.developer_email },
         })
