@@ -312,7 +312,7 @@ const studentResolvers = {
   },
 
   signupUser: async (_, { userNew }, { userId, role }) => {
-    // this logic issues for multiple pannels changed
+    // this logic use on multiple pannels
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userNew.std_email },
     })
