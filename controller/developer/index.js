@@ -505,20 +505,68 @@ const developerMutationResolver = {
         })
         if (dev)
             throw new AuthenticationError('developer already exist with that email')
-        let file
-        if (data.developer_resume) {
-            file = await uploadImgToAWS(data.developer_resume, 'developer_resume/')
-            if (!file.data) throw new ApolloError('Someting went wrong !')
-        }
+        // let file
+        // if (data.developer_resume) {
+        //     file = await uploadImgToAWS(data.developer_resume, 'developer_resume/')
+        //     if (!file.data) throw new ApolloError('Someting went wrong !')
+        // }
         const newDev = await prisma.jmkdevinfo.create({
             data: {
                 ...data,
-                developer_resume: file?.data?.Location ?? '',
-                developer_resume_key: file?.data?.key ?? '',
+                // developer_resume: file?.data?.Location ?? '',
+                // developer_resume_key: file?.data?.key ?? '',
+                developer_resume: '',
+                developer_resume_key: '',
             },
         })
         if (!newDev) throw new AuthenticationError('Invalid input')
-        return 'success'
+        const currentDate = new Date();
+        const createTechStack = async (techStackId, techStackExp) => {
+            try {
+                await prisma.jmkdevtechdet.create({
+                    data: {
+                        techstk_id: parseInt(techStackId),
+                        tech_stack_exp: techStackExp,
+                        tech_last_used: currentDate,
+                        developer_id: newDev.developer_id,
+                    },
+                });
+            } catch (e) {
+                throw new ApolloError(e.message);
+            }
+        };
+
+        const createCompanyExperience = async (companyName, projectDescription, startDate) => {
+            try {
+                await prisma.jmkdevexp.create({
+                    data: {
+                        company_name: companyName,
+                        exp_desc: projectDescription,
+                        exp_start_date: startDate,
+                        developer_id: newDev.developer_id,
+                    },
+                });
+            } catch (error) {
+                throw new ApolloError(error.message);
+            }
+        };
+
+        if (data.developer_tech1 != null) {
+            await createTechStack(data.developer_tech1, data.developer_tech1_exp);
+        }
+
+        if (data.developer_tech2 != null) {
+            await createTechStack(data.developer_tech2, data.developer_tech2_exp);
+        }
+
+        if (data.developer_tech3 != null) {
+            await createTechStack(data.developer_tech3, data.developer_tech3_exp);
+        }
+
+        if (data.developer_company1) {
+            await createCompanyExperience(data.developer_company1, data.developer_company1_project, data.developer_company1_start);
+        }
+        return 'success';
     },
 
     updateDeveloper: async (_, { data }, { userId }) => {
