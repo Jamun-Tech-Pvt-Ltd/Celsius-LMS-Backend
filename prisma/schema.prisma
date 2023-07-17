@@ -633,16 +633,6 @@ model jmkstdproj {
 }
 
 
-model jmkparent {
-  parent_id       Int     @id @default(autoincrement())
-  fparent_name    String? @db.VarChar(200)
-  mparent_name    String? @db.VarChar(200)
-  fparent_contact String? @db.VarChar(20)
-  mparent_contact String? @db.VarChar(20)
-  std_id          Int?
-}
-
-
 model jmkstdattendancelog {
   serial     Int       @id @default(autoincrement())
   std_id     Int?
