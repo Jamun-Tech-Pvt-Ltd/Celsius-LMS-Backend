@@ -101,7 +101,7 @@ const adminQueryTypesAndInputs = `
         crs_name: String!
         std_password: String!
         std_high_ql: String
-        crs_id: String!
+        crs_id: String
         crsmain_id:Int
         std_status: String
         std_paidup: String
