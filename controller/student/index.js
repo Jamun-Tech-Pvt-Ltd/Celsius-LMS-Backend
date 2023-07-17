@@ -28,7 +28,8 @@ const studentQueryTypesAndInputs = `
         std_password: String!
         std_birth_dt: Date
         std_remark:String
-        crsmain_id:Int!
+        crsmain_id:Int
+        crs_id:Int
         crs_ecp_st_d:Date!
         cid:Int
     }
@@ -311,6 +312,7 @@ const studentResolvers = {
   },
 
   signupUser: async (_, { userNew }, { userId, role }) => {
+    // this logic use on multiple pannels
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userNew.std_email },
     })
@@ -328,13 +330,15 @@ const studentResolvers = {
           ...userNew, cid: userId
         },
       })
-      await prisma.jmkstdcrsinfo.create({
-        data: {
-          crsmain_id: userNew.crsmain_id,
-          crs_start_dt: userNew.crs_ecp_st_d,
-          std_id: newUser.std_id,
-        },
-      })
+      if (userNew.crs_id) {
+        await prisma.jmkstdcrsinfo.create({
+          data: {
+            crs_id: userNew.crs_id,
+            crs_start_dt: userNew.crs_ecp_st_d,
+            std_id: newUser.std_id,
+          },
+        })
+      }
       const token = jwt.sign(
         { userId: newUser.std_id, role: ROLES[0] },
         process.env.JWT_SECRET_KEY

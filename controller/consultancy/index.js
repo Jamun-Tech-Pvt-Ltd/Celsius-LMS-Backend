@@ -942,7 +942,14 @@ const consultancyResolversQuery = {
         if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
 
         const courses = await prisma.jmkcrsinfo.count({ where: { cid: userId } })
-        const students = await prisma.jmkstdinfo.count({ where: { cid: userId } })
+        const students = await prisma.jmkstdinfo.findMany({ where: { cid: userId } })
+        let stdCount = [];
+        for (let index = 0; index < students.length; index++) {
+            const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: students[index].crs_id, cid: userId } })
+            if (crs) {
+                stdCount.push(students[index])
+            }
+        }
         const developers = await prisma.jmkdevinfo.count({ where: { cid: userId } })
         const users = await prisma.jmkconsuluserinfo.count({ where: { cid: userId } })
         const faqs = await prisma.jmkconsulfaq.count({ where: { cid: userId } })
@@ -955,7 +962,7 @@ const consultancyResolversQuery = {
             },
             {
                 name: 'Students',
-                count: students,
+                count: stdCount.length,
                 link: '/students'
             },
             {
@@ -1018,7 +1025,7 @@ const consultancyResolversQuery = {
             let students = [];
             const student = await prisma.jmkstdinfo.findMany({ where: { cid: userId } })
             for (let index = 0; index < student.length; index++) {
-                const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student[index].crs_id } })
+                const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student[index].crs_id, cid: userId } })
                 if (course) {
                     students.push({ ...student[index], crs_type: course.crs_type, crs_name: course.crs_name })
                 }
