@@ -316,29 +316,32 @@ const studentResolvers = {
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userNew.std_email },
     })
-    if (user)
-      throw new AuthenticationError('user already exist with that email')
-    const course = await prisma.jmkcrsmain.findFirst({
-      where: {
-        crsmain_id: userNew.crsmain_id,
-      },
-    })
-    if (!course) throw new AuthenticationError('invalid course')
+    if (user) throw new AuthenticationError('user already exist with that email');
+
     if (role === ROLES[2]) {
+
+      const course = await prisma.jmkcrsinfo.findFirst({
+        where: {
+          crs_id: userNew.crs_id,
+          cid: userId
+        },
+      })
+      if (!course) throw new AuthenticationError('invalid course')
+
       const newUser = await prisma.jmkstdinfo.create({
         data: {
           ...userNew, cid: userId
         },
       })
-      if (userNew.crs_id) {
-        await prisma.jmkstdcrsinfo.create({
-          data: {
-            crs_id: userNew.crs_id,
-            crs_start_dt: userNew.crs_ecp_st_d,
-            std_id: newUser.std_id,
-          },
-        })
-      }
+
+      await prisma.jmkstdcrsinfo.create({
+        data: {
+          crs_id: userNew.crs_id,
+          crs_start_dt: userNew.crs_ecp_st_d,
+          std_id: newUser.std_id,
+        },
+      })
+      
       const token = jwt.sign(
         { userId: newUser.std_id, role: ROLES[0] },
         process.env.JWT_SECRET_KEY
@@ -346,16 +349,27 @@ const studentResolvers = {
       return { token }
     }
 
+
+    const course = await prisma.jmkcrsmain.findFirst({
+      where: {
+        crsmain_id: userNew.crsmain_id,
+      },
+    })
+    if (!course) throw new AuthenticationError('invalid course')
+
     const newUser = await prisma.jmkstdinfo.create({
       data: { ...userNew },
     })
-    await prisma.jmkstdcrsinfo.create({
-      data: {
-        crs_id: userNew.crs_id,
-        crs_start_dt: userNew.crs_ecp_st_d,
-        std_id: newUser.std_id,
-      },
-    })
+
+    if (userNew.crs_id) {
+      await prisma.jmkstdcrsinfo.create({
+        data: {
+          crs_id: userNew.crs_id,
+          crs_start_dt: userNew.crs_ecp_st_d,
+          std_id: newUser.std_id,
+        },
+      })
+    }
     const token = jwt.sign(
       { userId: newUser.std_id, role: ROLES[0] },
       process.env.JWT_SECRET_KEY

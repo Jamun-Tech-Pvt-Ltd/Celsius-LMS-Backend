@@ -1061,6 +1061,7 @@ const consultancyResolversQuery = {
             const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student.crs_id } })
             const join_courses = []
             const joinCourses = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id } })
+            console.log(joinCourses);
             for (let index = 0; index < joinCourses.length; index++) {
                 const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: joinCourses[index].crs_id } })
                 join_courses.push({ ...joinCourses[index], crs_name: course.crs_name, crs_rate: course.crs_rate })
