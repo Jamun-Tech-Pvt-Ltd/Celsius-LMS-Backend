@@ -312,6 +312,7 @@ const studentResolvers = {
   },
 
   signupUser: async (_, { userNew }, { userId, role }) => {
+    // this logic issues for multiple pannels changed
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userNew.std_email },
     })
@@ -329,13 +330,15 @@ const studentResolvers = {
           ...userNew, cid: userId
         },
       })
-      await prisma.jmkstdcrsinfo.create({
-        data: {
-          crsmain_id: userNew.crsmain_id,
-          crs_start_dt: userNew.crs_ecp_st_d,
-          std_id: newUser.std_id,
-        },
-      })
+      if (userNew.crs_id) {
+        await prisma.jmkstdcrsinfo.create({
+          data: {
+            crs_id: userNew.crs_id,
+            crs_start_dt: userNew.crs_ecp_st_d,
+            std_id: newUser.std_id,
+          },
+        })
+      }
       const token = jwt.sign(
         { userId: newUser.std_id, role: ROLES[0] },
         process.env.JWT_SECRET_KEY

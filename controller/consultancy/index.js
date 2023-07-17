@@ -1058,20 +1058,15 @@ const consultancyResolversQuery = {
         if (role === ROLES[2]) {
             const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: args.std_id, cid: userId } })
             if (!student) throw new AuthenticationError("invalid access")
-            const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student.crs_id, cid: userId } })
-            if (course && consultancy.acc_type === 'Consultancy') {
-                const join_courses = []
-                const joinCourses = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id } })
-                console.log(joinCourses);
-                for (let index = 0; index < joinCourses.length; index++) {
-                    const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: joinCourses[index].crs_id } })
-                    join_courses.push({ ...joinCourses[index], crs_name: course.crs_name, crs_rate: course.crs_rate })
-                }
-                const mergestudent = { ...student, crs_type: course.crs_type, crs_name: course.crs_name, join_courses }
-                return mergestudent;
+            const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student.crs_id } })
+            const join_courses = []
+            const joinCourses = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id } })
+            for (let index = 0; index < joinCourses.length; index++) {
+                const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: joinCourses[index].crs_id } })
+                join_courses.push({ ...joinCourses[index], crs_name: course.crs_name, crs_rate: course.crs_rate })
             }
-            if (course && consultancy.acc_type !== 'Consultancy') {
-                const mergestudent = { ...student, crs_type: course.crs_type, crs_name: course.crs_name }
+            if (course) {
+                const mergestudent = { ...student, crs_type: course.crs_type, crs_name: course.crs_name, join_courses }
                 return mergestudent;
             }
         }
