@@ -109,6 +109,19 @@ const developerQueryTypesAndInputs = `
         developer_password: String
     }
 
+    input techStackDetail{
+        techstk_id:Int!
+        techstk_name:String
+        techstk_desc: String
+    }
+
+    input createTechStack{
+        techstk_name:String
+        techstk_desc: String
+    }
+    input deleteTechStack{
+        techstk_id:Int!
+    }
     input signupDevInput {
         developer_fname: String!
         developer_mname: String
@@ -212,6 +225,11 @@ const developerQueryTypesAndInputs = `
     input UpdateResumeAWS{
         developer_resume: Upload!
     }
+
+    input EmailVerification{
+        token: String
+    }
+  
     `;
 
 const developerQuery = `
@@ -230,6 +248,7 @@ const developerQuery = `
     getJobRecommendationById(consulreqmnts_id: Int!):JobRecommendation
 
     getTechStackList: [techStack]
+    getTechStackById(techstk_id: Int!): techStack
 
     getDeveloperExperienceList:[developerExperience]
     getDeveloperExperienceById(exp_id: Int!):developerExperience
@@ -246,7 +265,6 @@ const developerMutation = `
     signupDeveloper(data:signupDevInput!):String
     updateDeveloper(data:DeveloperDetails!):String
 
-    
     createExperience(data:ExperienceDetails!):String
     updateExperience(data:UpdateExperienceDetails!): String
     deleteExperience(data:deleteExpInput!): String
@@ -260,9 +278,14 @@ const developerMutation = `
     deleteWorkExperience(data:DeleteWorkExperience!):String
 
     updateResumeDetails(data:UpdateResumeAWS!):String
+
+    updateTechStack(data:techStackDetail!):String
+    addTechStack(data:createTechStack!):String
+    deleteTechStack(data:deleteTechStack!):String
+
+    emailVerify(data:EmailVerification!):String
     `;
 
-// updateResume(data:UpdateResumeDetails!):String
 
 
 
@@ -420,6 +443,14 @@ const developerQueryResolvers = {
         const techStackList = await prisma.jmktechstk.findMany();
         return techStackList;
     },
+    getTechStackById: async (_, args, { userId }) => {
+        const techStack = await prisma.jmktechstk.findFirst({
+            where: {
+                techstk_id: args.techstk_id
+            }
+        });
+        return techStack;
+    },
     getDeveloperExperienceList: async (_, args, { userId }) => {
         if (!userId) return new AuthenticationError("Login to continue");
         const developerExperienceList = await prisma.jmkdevexp.findMany({
@@ -500,6 +531,7 @@ const developerMutationResolver = {
     },
 
     signupDeveloper: async (_, { data }) => {
+
         const dev = await prisma.jmkdevinfo.findFirst({
             where: { developer_email: data.developer_email },
         })
@@ -706,8 +738,6 @@ const developerMutationResolver = {
         //Comparing Start and End dates
         compareDates(data.exp_start_date, data.exp_end_date);
 
-
-
         const newWorkExperience = await prisma.jmkdevexp.update({
             where: {
                 exp_id: exp_id,
@@ -787,8 +817,92 @@ const developerMutationResolver = {
             return new ApolloError(error.message)
         }
 
-    }
+    },
+    updateTechStack: async (_, { data }, { userId, role }) => {
+        const { techstk_id, ...udpatedData } = data
+        if (!userId) throw new ForbiddenError('invalid token')
+        // const admin = await prisma.jmkuserinfo.findFirst({
+        //     where: { usr_id: userId, usr_role: role },
+        // })
+        // if (!admin) throw new AuthenticationError('invalid admin')
 
+        // const existingTechStack = await prisma.jmktechstk.findFirst(
+        //     {
+        //         where: {
+        //             techstk_name: udpatedData.techstk_name
+        //         }
+        //     }
+        // );
+
+        // if (existingTechStack) return new ApolloError("Tech Stack already exists");
+        console.log(udpatedData);
+        const updatedTechStack = await prisma.jmktechstk.update({
+            where: {
+                techstk_id: techstk_id
+            },
+            data: {
+                ...udpatedData,
+            }
+        });
+
+        if (!updatedTechStack) return new ApolloError("Cannot find the tech stack");
+        return "success";
+
+
+    },
+    addTechStack: async (_, { data }, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token')
+        const admin = await prisma.jmkuserinfo.findFirst({
+            where: { usr_id: userId, usr_role: role },
+        });
+        if (!admin) throw new AuthenticationError('invalid admin')
+        const existingTechStack = await prisma.jmktechstk.findFirst(
+            {
+                where: {
+                    techstk_name: data.techstk_name
+                }
+            }
+        );
+        if (existingTechStack) return new ApolloError("Tech Stack already exists");
+
+        const createdTechStack = await prisma.jmktechstk.create({
+            data: {
+                ...data,
+            }
+        });
+        if (!createdTechStack) return new ApolloError("Cannot find the tech stack");
+        return "success";
+
+    },
+    deleteTechStack: async (_, { data }, { userId, role }) => {
+        if (!userId) throw new ForbiddenError('invalid token')
+
+
+        const techStack = await prisma.jmktechstk.findFirst(
+            {
+                where: {
+                    techstk_id: data.techstk_id
+                }
+            }
+        );
+
+        if (!techStack) return new ApolloError('Invalid ID');
+
+
+        const deleteTechStack = await prisma.jmktechstk.delete(
+            {
+                where: {
+                    techstk_id: data.techstk_id
+                }
+            }
+        );
+        if (!deleteTechStack) throw new ApolloError('Something went wrong!');
+        return "success";
+    },
+    emailVerify: async (_, { data }) => {
+
+        return data.token;
+    }
 
 
 
