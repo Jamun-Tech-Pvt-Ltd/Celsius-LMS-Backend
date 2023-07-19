@@ -543,7 +543,8 @@ const adminResolvers = {
     })
     const token = jwt.sign(
       { userId: newAdmin.usr_id, role: data.usr_role },
-      process.env.JWT_SECRET_KEY
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1d" }
     )
     await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
     await sendMail(
