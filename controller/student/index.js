@@ -218,6 +218,7 @@ const studentQueryTypesAndInputs = `
         serial: Int!
         content: String!
         content_date: Date!
+        content_title:String!
      }
 
      type Video {
@@ -316,21 +317,20 @@ const studentResolvers = {
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userNew.std_email },
     })
-    if (user) throw new AuthenticationError('user already exist with that email');
+    if (user)
+      throw new AuthenticationError('user already exist with that email')
 
     if (role === ROLES[2]) {
-
-      const course = await prisma.jmkcrsinfo.findFirst({
+      const course = await prisma.jmkcrsmain.findFirst({
         where: {
-          crs_id: userNew.crs_id,
-          cid: userId
+          crsmain_id: userNew.crsmain_id,
         },
       })
       if (!course) throw new AuthenticationError('invalid course')
 
       const newUser = await prisma.jmkstdinfo.create({
         data: {
-          ...userNew, cid: userId
+          ...userNew,
         },
       })
 
@@ -341,14 +341,13 @@ const studentResolvers = {
           std_id: newUser.std_id,
         },
       })
-      
+
       const token = jwt.sign(
         { userId: newUser.std_id, role: ROLES[0] },
         process.env.JWT_SECRET_KEY
       )
       return { token }
     }
-
 
     const course = await prisma.jmkcrsmain.findFirst({
       where: {
@@ -358,7 +357,7 @@ const studentResolvers = {
     if (!course) throw new AuthenticationError('invalid course')
 
     const newUser = await prisma.jmkstdinfo.create({
-      data: { ...userNew },
+      data: { ...userNew, std_join_dt: new Date() },
     })
 
     if (userNew.crs_id) {
@@ -375,8 +374,16 @@ const studentResolvers = {
       process.env.JWT_SECRET_KEY
     )
     await sendMail(newUser.std_email, 'Successfully Register ', registerrHTML)
-    await sendMail('riwaz@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
-    await sendMail('jenish@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
+    await sendMail(
+      'riwaz@jamuntek.com',
+      'New User Singup Notification',
+      newUserSignupNotification(newUser, course.crs_name)
+    )
+    await sendMail(
+      'jenish@jamuntek.com',
+      'New User Singup Notification',
+      newUserSignupNotification(newUser, course.crs_name)
+    )
     return { token }
   },
 

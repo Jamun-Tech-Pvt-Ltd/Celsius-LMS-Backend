@@ -40,6 +40,7 @@ const adminQueryTypesAndInputs = `
         std_join_dt: Date!
         std_birth_dt: Date!
         std_verifyed: Boolean!
+        crs_id:Int!
      }
 
      input projectInput{
@@ -103,6 +104,7 @@ const adminQueryTypesAndInputs = `
         std_high_ql: String
         crs_id: String
         crsmain_id:Int
+        crsmain_title:String
         std_status: String
         std_paidup: String
         std_due: String
@@ -1268,6 +1270,14 @@ const adminResolversQuery = {
       const student = await prisma.jmkstdinfo.findFirst({
         where: { std_id: args.std_id },
       })
+      const mainCourse = await prisma.jmkcrsmain.findFirst({
+        where: { crsmain_id: student.crsmain_id },
+        select: {
+          crsmain_id: true,
+          crsmain_title: true,
+        },
+      })
+
       const course = await prisma.jmkcrsinfo.findFirst({
         where: { crs_id: student.crs_id },
       })
@@ -1290,6 +1300,8 @@ const adminResolversQuery = {
           ...student,
           crs_type: course.crs_type,
           crs_name: course.crs_name,
+          crsmain_title: mainCourse.crsmain_title,
+          crsmain_id: mainCourse.crsmain_id,
           join_courses,
         }
         return mergestudent
