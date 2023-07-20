@@ -40,7 +40,7 @@ model jmkstdinfo {
   std_join_dt       DateTime?      @db.Date
   std_birth_dt      DateTime?      @db.Date
   std_high_ql       String?        @db.VarChar(40)
-  crs_id            Int?           @default(28)
+  crs_id            Int?
   std_status        Int?
   std_paidup        Int?
   std_due           Int?
@@ -253,11 +253,10 @@ model jmkcrstest {
 }
 
 model jmkcrscontents {
-  serial        Int       @id @default(autoincrement())
-  crs_id        Int?
-  content       String?   @db.VarChar(2000)
-  content_date  DateTime? @db.Date
-  content_title String?   @db.VarChar(200)
+  serial       Int       @id @default(autoincrement())
+  crs_id       Int?
+  content      String?   @db.VarChar(2000)
+  content_date DateTime? @db.Date
 }
 
 model jmktrcrsinfo {
