@@ -7,6 +7,7 @@ import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
 import { sendMail } from '../../utils/mailHandler.js'
 import registerrHTML from '../../utils/signup.js'
+import emailVerificationHTML from '../../utils/EmailVerification.js'
 import { ROLES } from '../../utils/helper.js'
 import { uploadImgToAWS } from '../../utils/imageHandler.js'
 
@@ -66,6 +67,10 @@ const trainerQueryTypesAndInputs = `
         serial: Int!
      }
 
+     input emailVerifyTrainer{
+      token: String!
+     }
+
      input updateQuestionInput {
         ques_id: Int!
         question: String
@@ -91,12 +96,14 @@ const trainerQueryTypesAndInputs = `
         crs_id: Int!
         content: String!
         content_date: Date
-     }
-  
-     input updateCourseContentInput {
+        content_title:String
+      }
+      
+      input updateCourseContentInput {
         serial: Int!
         content: String!
         content_date: Date
+        content_title:String
      }
   
      input deleteCourseContentInput {
@@ -233,9 +240,40 @@ const trainerMutation = `
 
     addQuestion(data:addQuestionInput!):String!
     updateQuestion(data:updateQuestionInput!):String!
+
+    trainerEmailVerify(data: emailVerifyTrainer!): String!
 `
 
 const trainerResolvers = {
+  trainerEmailVerify: async (_, { data }) => {
+    const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY);
+    console.log(decodedToken);
+    if (!decodedToken) throw new AuthenticationError("The token is not valid");
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: decodedToken.userId }
+    });
+    if (!trainer) throw new AuthenticationError("Invalid Token");
+
+    const updateStatus = await prisma.jmktrinfo.update({
+      where: {
+        tr_id: trainer.tr_id
+      },
+      data: {
+        tr_verifyed: true
+      }
+    })
+    if (!updateStatus) throw new AuthenticationError("Could not verify your email")
+    return "Email Verification Complete";
+
+
+
+
+    // const generatedToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIzLCJyb2xlIjoidHJhaW5lciIsImlhdCI6MTY5MDAwMTI3NX0.jnArqzd6dCS8vhIMKU8CEm4v-uGdkP1988Vlvq9Vxp8';
+    // await sendMail("py.suhant@gmail.com", 'Successfully Register ', emailVerificationHTML(generatedToken))
+    // return "mail sent";
+
+  },
+
   signinTrainer: async (_, { data }) => {
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_email: data.email },
@@ -272,10 +310,12 @@ const trainerResolvers = {
       },
     })
     const token = jwt.sign(
-      { userId: newTrainer.tr_id, role: ROLES[1] },
+      { userId: newTrainer.tr_id, purpose: "Trainer Verification" },
       process.env.JWT_SECRET_KEY
     )
-    await sendMail(data.tr_email, 'Successfully Register ', registerrHTML)
+    // await sendMail(data.tr_email, 'Successfully Register ', registerrHTML)
+
+    await sendMail(newTrainer.tr_email, 'Successfully Register ', emailVerificationHTML(token))
     return { token }
   },
 
@@ -453,6 +493,7 @@ const trainerResolvers = {
       const updateCourseContent = await prisma.jmkcrscontents.update({
         data: {
           content: data.content,
+          content_title: data.content_title,
           content_date: data.content_date,
         },
         where: {
