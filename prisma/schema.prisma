@@ -257,6 +257,7 @@ model jmkcrscontents {
   crs_id       Int?
   content      String?   @db.VarChar(2000)
   content_date DateTime? @db.Date
+  content_title String? @db.VarChar(2000)
 }
 
 model jmktrcrsinfo {

@@ -114,6 +114,12 @@ const developerQueryTypesAndInputs = `
     }
 
     input techStackDetail{
+      techstk_id:Int!
+      techstk_name:String
+      techstk_desc: String
+  }
+
+    input techStackDetail{
         techstk_id:Int!
         techstk_name:String
         techstk_desc: String
@@ -151,6 +157,8 @@ const developerQueryTypesAndInputs = `
         developer_company2_project: String
         developer_type: String!
      }
+
+     
 
     input DeveloperDetails{
         developer_fname: String
@@ -247,6 +255,7 @@ const developerQuery = `
     getConsultancyRecommendation:[JobRecommendation]
     getJobRecommendationById(consulreqmnts_id: Int!):JobRecommendation
 
+    getTechStackById(techstk_id: Int!): techStack
     getTechStackList: [techStack]
 
     getDeveloperExperienceList:[developerExperience]
@@ -273,6 +282,10 @@ const developerMutation = `
     updateWorkExperience(data:UpdateWorkExperience!):String
     AddWorkExperience(data:AddWorkExperience!):String
     deleteWorkExperience(data:DeleteWorkExperience!):String
+
+    updateTechStack(data:techStackDetail!):String
+    addTechStack(data:createTechStack!):String
+    deleteTechStack(data:deleteTechStack!):String
 
     updateResumeDetails(data:UpdateResumeAWS!):String
 
@@ -434,6 +447,14 @@ const developerQueryResolvers = {
   getTechStackList: async (_) => {
     const techStackList = await prisma.jmktechstk.findMany()
     return techStackList
+  },
+  getTechStackById: async (_, args, { userId }) => {
+    const techStack = await prisma.jmktechstk.findFirst({
+      where: {
+        techstk_id: args.techstk_id,
+      },
+    })
+    return techStack
   },
   getDeveloperExperienceList: async (_, args, { userId }) => {
     if (!userId) return new AuthenticationError('Login to continue')

@@ -98,6 +98,9 @@ const studentQueryTypesAndInputs = `
         pay_amount: Int!
         transaction_id: String!
      }
+     input studentEmailVerify{
+      token: String!
+     }
 
 
      type Feedback {
@@ -218,6 +221,7 @@ const studentQueryTypesAndInputs = `
         serial: Int!
         content: String!
         content_date: Date!
+        content_title:String!
      }
 
      type Video {
@@ -289,11 +293,37 @@ const studentMutation = `
 
     addStudentPayInfo(data:addStudentPaymentInput): String!
     submitProject(data:studentProjectInput):String!
+
+    studentEmailVerify(data:studentEmailVerify!):String!
     
 
 `
 
 const studentResolvers = {
+  studentEmailVerify: async (_, { data }) => {
+    const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY)
+
+    if (!decodedToken) throw new AuthenticationError('The token is not valid')
+    const student = await prisma.jmkstdinfo.findFirst({
+      where: {
+        std_id: decodedToken.userId,
+      },
+    })
+    if (!student) throw new AuthenticationError('Invalid Token')
+
+    const updateStatus = await prisma.jmkstdinfo.update({
+      where: {
+        std_id: student.std_id,
+      },
+      data: {
+        std_verifyed: true,
+      },
+    })
+
+    if (!updateStatus)
+      throw new AuthenticationError('Could not verify your email')
+    return 'Email Verification Completed'
+  },
   signinUser: async (_, { userSignIn }) => {
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userSignIn.email },
@@ -301,6 +331,8 @@ const studentResolvers = {
     if (!user) throw new AuthenticationError('invalid user credentials')
     const isMatch = userSignIn.password == user.std_password
     if (!isMatch) throw new AuthenticationError('invalid user credentials')
+    if (!user.std_verifyed)
+      throw new AuthenticationError('Email not verified. Please check the mail')
     if (user.cid !== userSignIn.cid)
       throw new AuthenticationError('invalid organization selected')
 
@@ -316,21 +348,20 @@ const studentResolvers = {
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userNew.std_email },
     })
-    if (user) throw new AuthenticationError('user already exist with that email');
+    if (user)
+      throw new AuthenticationError('user already exist with that email')
 
     if (role === ROLES[2]) {
-
-      const course = await prisma.jmkcrsinfo.findFirst({
+      const course = await prisma.jmkcrsmain.findFirst({
         where: {
-          crs_id: userNew.crs_id,
-          cid: userId
+          crsmain_id: userNew.crsmain_id,
         },
       })
       if (!course) throw new AuthenticationError('invalid course')
 
       const newUser = await prisma.jmkstdinfo.create({
         data: {
-          ...userNew, cid: userId
+          ...userNew,
         },
       })
 
@@ -341,14 +372,18 @@ const studentResolvers = {
           std_id: newUser.std_id,
         },
       })
-      
+
       const token = jwt.sign(
         { userId: newUser.std_id, role: ROLES[0] },
         process.env.JWT_SECRET_KEY
       )
+      // await sendMail(
+      //   newUser.std_email,
+      //   'Registration Completed',
+      //   studentMailVerificationHTML(token)
+      // )
       return { token }
     }
-
 
     const course = await prisma.jmkcrsmain.findFirst({
       where: {
@@ -358,7 +393,7 @@ const studentResolvers = {
     if (!course) throw new AuthenticationError('invalid course')
 
     const newUser = await prisma.jmkstdinfo.create({
-      data: { ...userNew },
+      data: { ...userNew, std_join_dt: new Date() },
     })
 
     if (userNew.crs_id) {
@@ -374,9 +409,21 @@ const studentResolvers = {
       { userId: newUser.std_id, role: ROLES[0] },
       process.env.JWT_SECRET_KEY
     )
-    await sendMail(newUser.std_email, 'Successfully Register ', registerrHTML)
-    await sendMail('riwaz@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
-    await sendMail('jenish@jamuntek.com', 'New User Singup Notification', newUserSignupNotification(newUser, course.crs_name))
+    await sendMail(
+      newUser.std_email,
+      'Successfully Register ',
+      registerrHTML(token, userNew.std_fname)
+    )
+    await sendMail(
+      'riwaz@jamuntek.com',
+      'New User Singup Notification',
+      newUserSignupNotification(newUser, course.crs_name)
+    )
+    await sendMail(
+      'jenish@jamuntek.com',
+      'New User Singup Notification',
+      newUserSignupNotification(newUser, course.crs_name)
+    )
     return { token }
   },
 
@@ -868,7 +915,7 @@ const studentResolversQuery = {
         where: { std_id: userId },
       })
       if (!user) throw new AuthenticationError('invalid user credentials')
-      const stdcourse = await prisma.jmkstdcrsinfo.findMany({
+      const stdcourse = await prisma.jmkstdinfo.findMany({
         where: { std_id: userId },
       })
       const userCourse = []
