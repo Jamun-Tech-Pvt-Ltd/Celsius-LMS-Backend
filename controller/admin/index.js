@@ -544,7 +544,7 @@ const adminResolvers = {
     const token = jwt.sign(
       { userId: newAdmin.usr_id, role: data.usr_role },
       process.env.JWT_SECRET_KEY,
-      { expiresIn: "1d" }
+      { expiresIn: '1d' }
     )
     await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
     await sendMail(
@@ -587,6 +587,12 @@ const adminResolvers = {
           ...data,
         },
         where: { std_id: data.std_id },
+      })
+      await prisma.jmkstdcrsinfo.create({
+        data: {
+          crs_id: data.crs_id,
+          std_id: data.std_id,
+        },
       })
       if (!student) throw new AuthenticationError('Error')
       return 'success'
