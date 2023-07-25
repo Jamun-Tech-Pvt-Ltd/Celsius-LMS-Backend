@@ -427,7 +427,7 @@ const consultancyResolvers = {
             data: { ...data }
         })
         if (!newConsultancy) throw new AuthenticationError("Something went wrong !")
-        const token = jwt.sign({ userId: newConsultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY, { expiresIn: "1d" })
+        const token = jwt.sign({ userId: newConsultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY, { expiresIn: "7d" })
         await sendMail(newConsultancy.cemail, 'Successfully Register ', registerrHTML)
         return { token };
     },
@@ -437,7 +437,7 @@ const consultancyResolvers = {
         if (!consultancy) throw new AuthenticationError("invalid credentials")
         const isMatch = data.cpassword == consultancy.cpassword;
         if (!isMatch) throw new AuthenticationError("invalid credentials")
-        const token = jwt.sign({ userId: consultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY, { expiresIn: 60 })
+        const token = jwt.sign({ userId: consultancy.serial, role: ROLES[2] }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' })
         return { token };
     },
 
