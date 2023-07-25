@@ -321,9 +321,10 @@ const studentResolvers = {
       throw new AuthenticationError('user already exist with that email')
 
     if (role === ROLES[2]) {
-      const course = await prisma.jmkcrsmain.findFirst({
+      const course = await prisma.jmkcrsinfo.findFirst({
         where: {
-          crsmain_id: userNew.crsmain_id,
+          crs_id: userNew.crs_id,
+          cid: userId
         },
       })
       if (!course) throw new AuthenticationError('invalid course')
@@ -331,6 +332,7 @@ const studentResolvers = {
       const newUser = await prisma.jmkstdinfo.create({
         data: {
           ...userNew,
+          cid: userId
         },
       })
 

@@ -197,8 +197,8 @@ model jmkquesans {
   ans4       String? @db.VarChar(100)
   rtans      String? @db.VarChar(100)
   mod_id     Int?
-  crsmain_id Int?
   testlbl    Int?
+  crsmain_id Int?
 }
 
 model jmkstdtestset {
@@ -284,10 +284,10 @@ model jmkuserinfo {
   usr_password String? @db.VarChar(20)
   usr_role     String? @default("admin") @db.VarChar(20)
   usr_fname    String? @db.VarChar(20)
-  usr_img_key  String? @db.VarChar(100)
-  usr_img_url  String? @db.VarChar(100)
-  usr_lname    String? @db.VarChar(20)
   usr_mname    String? @db.VarChar(20)
+  usr_lname    String? @db.VarChar(20)
+  usr_img_url  String? @db.VarChar(100)
+  usr_img_key  String? @db.VarChar(100)
 }
 
 model jmkdevinfo {
@@ -312,8 +312,8 @@ model jmkdevinfo {
   developer_company2_end       DateTime? @db.Date
   developer_company1_project   String?   @db.VarChar(200)
   developer_company2_project   String?   @db.VarChar(200)
-  developer_resume             String?   @db.VarChar(200)
   developer_resume_key         String?   @db.VarChar(200)
+  developer_resume             String?   @db.VarChar(200)
   developer_password           String?   @db.VarChar(16)
   developer_type               String?   @db.VarChar(50)
   cid                          Int?
@@ -406,8 +406,8 @@ model jmkdevprojdet {
   proj_desc       String?   @db.VarChar(2000)
   proj_techs_used String?   @db.VarChar(100)
   proj_type       String?   @db.VarChar(20)
-  proj_end_dt     DateTime? @db.Date
   proj_strt_dt    DateTime? @db.Date
+  proj_end_dt     DateTime? @db.Date
 }
 
 model jmkdevtechdet {
@@ -494,10 +494,10 @@ model jmkevents {
   event_organizer String?   @db.VarChar(100)
   event_time      String?   @db.VarChar(10)
   event_loc       String?   @db.VarChar(100)
-  event_hour      Int?
-  event_img_key   String?   @db.VarChar(100)
-  event_img_url   String?   @db.VarChar(100)
   event_title     String?   @db.VarChar(100)
+  event_img_url   String?   @db.VarChar(100)
+  event_img_key   String?   @db.VarChar(100)
+  event_hour      Int?
   event_type      String?   @db.VarChar(50)
 }
 
@@ -638,6 +638,34 @@ model jmkstdattendancelog {
   std_id     Int?
   logdate    DateTime? @db.DateTime(0)
   logoutdate DateTime? @db.DateTime(0)
+}
+
+model jmkstdtermsub {
+  serial         Int  @id @default(autoincrement())
+  std_id         Int?
+  termdet_id     Int?
+  subject_id     Int?
+  marks_obtained Int?
+}
+
+model jmktermdet {
+  termdet_id Int       @id @default(autoincrement())
+  term_id    Int?
+  crs_id     Int?
+  start_date DateTime? @db.Date
+  end_date   DateTime? @db.Date
+}
+
+model jmktermmstr {
+  term_id   Int     @id @default(autoincrement())
+  term_code String? @db.VarChar(20)
+  term_desc String? @db.VarChar(100)
+}
+
+model jmktermsubject {
+  serial     Int  @id @default(autoincrement())
+  subject_id Int?
+  termdet_id Int?
 }
 
 enum jmkcrsmain_cramain_del_mod {
