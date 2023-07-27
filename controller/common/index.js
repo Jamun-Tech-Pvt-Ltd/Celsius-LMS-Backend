@@ -12,11 +12,11 @@ const commonQueryTypesAndInputs = `
 input createCourseInput {
     crs_name: String!
     crs_desc: String!
-    crs_duration: Int!
-    crs_rate: Int!
+    crs_duration: Int
+    crs_rate: Int
     crs_cat: String
     crs_con: String
-    crs_ins: String!
+    crs_ins: String
     crs_code:String
     crs_type: String!
     crs_nxt_st_date: Date!
@@ -56,9 +56,9 @@ input createCourseInput {
         crs_con_id: String
         crs_duration: String
         crs_rate: String
-        crs_ins: String!
+        crs_ins: String
         crs_code:String
-        crs_type: String!
+        crs_type: String
         crs_nxt_st_date:Date
         crs_image:String
         crs_code: String
@@ -100,7 +100,7 @@ const commonQuery = `
 `
 
 const commonMutation = `
-    createCourse(data:createCourseInput!):Course
+createCourse(data:createCourseInput!):Course
     updateCourse(data:updateCourseInput!):String!
     deleteCourse(data:deleteCourseInput):String
     

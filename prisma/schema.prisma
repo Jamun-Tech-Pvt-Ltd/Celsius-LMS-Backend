@@ -11,13 +11,13 @@ model jmkcrsinfo {
   crs_id          Int          @id @default(autoincrement())
   crs_name        String       @db.VarChar(200)
   crs_desc        String       @db.VarChar(1000)
-  crs_duration    Int
-  crs_rate        Int
+  crs_duration    Int?
+  crs_rate        Int?
   crs_cat         String?      @db.VarChar(1000)
   crs_cat_id      String?      @db.VarChar(1000)
   crs_con         String?      @db.VarChar(1000)
   crs_con_id      String?      @db.VarChar(1000)
-  crs_ins         String       @db.VarChar(200)
+  crs_ins         String?      @db.VarChar(200)
   crs_type        String       @db.VarChar(200)
   crs_nxt_st_date DateTime?    @db.Date
   crs_image       String?      @db.VarChar(1000)
@@ -186,6 +186,7 @@ model jmkstdcrsinfo {
   amt_due           Int?
   crs_complete      Boolean?  @default(false)
   crs_complete_date DateTime? @db.Date
+  crsmain_id        Int?
 }
 
 model jmkquesans {
@@ -253,11 +254,11 @@ model jmkcrstest {
 }
 
 model jmkcrscontents {
-  serial       Int       @id @default(autoincrement())
-  crs_id       Int?
-  content      String?   @db.VarChar(2000)
-  content_date DateTime? @db.Date
-  content_title String? @db.VarChar(2000)
+  serial        Int       @id @default(autoincrement())
+  crs_id        Int?
+  content       String?   @db.VarChar(2000)
+  content_date  DateTime? @db.Date
+  content_title String?   @db.VarChar(2000)
 }
 
 model jmktrcrsinfo {
@@ -319,6 +320,7 @@ model jmkdevinfo {
   cid                          Int?
   developer_prof_summary       String?   @db.VarChar(1000)
   developer_reg_date           DateTime? @default(dbgenerated("(curdate())")) @db.Date
+  dev_verified                 Boolean   @default(false)
 }
 
 model jmkcrsmodule {
