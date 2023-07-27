@@ -315,7 +315,7 @@ const trainerResolvers = {
     )
     // await sendMail(data.tr_email, 'Successfully Register ', registerrHTML)
 
-    await sendMail(newTrainer.tr_email, 'Successfully Register ', emailVerificationHTML(token))
+    await sendMail(newTrainer.tr_email, 'Successfully Register ', emailVerificationHTML(token, `${newTrainer.tr_fname} ${newTrainer.tr_lname}`, "TrainerVerification"))
     return { token }
   },
 
