@@ -40,7 +40,14 @@ const adminQueryTypesAndInputs = `
         std_join_dt: Date!
         std_birth_dt: Date!
         std_verifyed: Boolean!
-        crs_id:Int!
+        crs_id:Int
+        std_add_house_no:String
+        std_add_street:String
+        std_add_city:String
+        std_add_ward_no:Int
+        std_add_distrcit:String
+        std_add_province:String
+        std_add_zone:String
      }
 
      input projectInput{

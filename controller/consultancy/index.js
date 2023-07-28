@@ -51,6 +51,13 @@ const consultancyQueryTypesAndInputs = `
         std_paidup: String
         std_due: String
         std_verifyed: Boolean!
+        std_add_house_no:String
+        std_add_street:String
+        std_add_city:String
+        std_add_ward_no:Int
+        std_add_distrcit:String
+        std_add_province:String
+        std_add_zone:String
         join_courses: [UserCourse]
      }
 
@@ -161,6 +168,9 @@ const consultancyQueryTypesAndInputs = `
         mparent_name:String
         fparent_contact:String
         mparent_contact:String
+        foccupation:String
+        moccupation:String
+        no_of_children:Int
         std_id:Int!
     }
 
@@ -323,6 +333,9 @@ const consultancyQueryTypesAndInputs = `
         mparent_name:String
         fparent_contact:String
         mparent_contact:String
+        foccupation:String
+        moccupation:String
+        no_of_children:Int
         std_id:Int!
     }
 
@@ -998,11 +1011,12 @@ const consultancyResolvers = {
             const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
             if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
                 if (!consultancy) throw new AuthenticationError("invalid credentials")
-                const oldTerm = await prisma.jmktermmstr.findFirst({ where: { term_code: data.term_code } })
+                const oldTerm = await prisma.jmktermmstr.findFirst({ where: { term_code: data.term_code, cid: userId } })
                 if (oldTerm) throw new AuthenticationError("Alreay exist")
                 const term = await prisma.jmktermmstr.create({
                     data: {
                         ...data,
+                        cid: userId
                     },
                 })
                 if (!term) throw new AuthenticationError("invalid !!")
@@ -1019,11 +1033,12 @@ const consultancyResolvers = {
             const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
             if (!consultancy) throw new AuthenticationError("invalid credentials")
             if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
-                const oldTerm = await prisma.jmktermmstr.findFirst({ where: { term_id: data.term_id } })
+                const oldTerm = await prisma.jmktermmstr.findFirst({ where: { term_id: data.term_id, cid: userId } })
                 if (!oldTerm) throw new AuthenticationError("invalid id !")
                 const term = await prisma.jmktermmstr.update({
                     data: {
                         ...data,
+                        cid: userId
                     },
                     where: {
                         term_id: data.term_id
@@ -1043,7 +1058,7 @@ const consultancyResolvers = {
             const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
             if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
                 if (!consultancy) throw new AuthenticationError("invalid credentials")
-                const term = await prisma.jmktermmstr.delete({ where: { term_id: term_id } })
+                const term = await prisma.jmktermmstr.delete({ where: { term_id: term_id, cid: userId } })
                 if (!term) throw new AuthenticationError("invalid !!")
                 return "deleted"
             }
@@ -1058,7 +1073,7 @@ const consultancyResolvers = {
             const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
             if (role === ROLES[2] && consultancy.acc_type !== "Consultancy") {
                 if (!consultancy) throw new AuthenticationError("invalid credentials")
-                const oldTerm = await prisma.jmktermdet.findFirst({ where: { term_id: data.term_code, crs_id: data.crs_id } })
+                const oldTerm = await prisma.jmktermdet.findFirst({ where: { term_id: data.term_id, crs_id: data.crs_id } })
                 if (oldTerm) throw new AuthenticationError("Alreay assign")
                 const termCrs = await prisma.jmktermdet.create({
                     data: {
@@ -1297,7 +1312,6 @@ const consultancyResolversQuery = {
             const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: student.crs_id } })
             const join_courses = []
             const joinCourses = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id } })
-            console.log(joinCourses);
             for (let index = 0; index < joinCourses.length; index++) {
                 const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: joinCourses[index].crs_id } })
                 join_courses.push({ ...joinCourses[index], crs_name: course.crs_name, crs_rate: course.crs_rate })
@@ -1530,7 +1544,7 @@ const consultancyResolversQuery = {
         const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
         if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
         if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
-            const terms = await prisma.jmktermmstr.findMany()
+            const terms = await prisma.jmktermmstr.findMany({ where: { cid: userId } })
             if (!terms[0]) throw new AuthenticationError("Data not found !!")
             return terms;
         }
@@ -1542,7 +1556,7 @@ const consultancyResolversQuery = {
         const consultancy = await prisma.jmkconsulinfo.findFirst({ where: { serial: userId } })
         if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
         if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
-            const term = await prisma.jmktermmstr.findFirst({ where: { term_id: args.term_id } })
+            const term = await prisma.jmktermmstr.findFirst({ where: { term_id: args.term_id, cid: userId } })
             if (!term) throw new AuthenticationError("Data not found !!")
             return term;
         }
