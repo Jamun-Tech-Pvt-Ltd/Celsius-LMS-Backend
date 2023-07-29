@@ -69,16 +69,16 @@ const studentQueryTypesAndInputs = `
      }
   
      input addNewCourseInput {
-        crs_id: ID!
+        crsmain_id: ID!
         crs_start_dt: Date!
      }
   
      input removeCourseFromUserInput   {
-        crs_id: ID!
+        crsmain_id: ID!
      }
   
      input changeActiveCourseInput {
-        crs_id: ID!
+        crsmain_id: ID!
      }
   
      input studentVideoNoteUpdateInput {
@@ -143,8 +143,10 @@ const studentQueryTypesAndInputs = `
 
      type UserCourse {
         serial : ID!
-        crs_id: ID!
+        crs_id: ID
+        crsmain_title:String!
         crs_start_dt: Date
+        crsmain_id:ID!
         std_id: ID!
         crs_name: String!
         discount: Int
@@ -396,10 +398,10 @@ const studentResolvers = {
       data: { ...userNew, std_join_dt: new Date() },
     })
 
-    if (userNew.crs_id) {
+    if (userNew.crsmain_id) {
       await prisma.jmkstdcrsinfo.create({
         data: {
-          crs_id: userNew.crs_id,
+          crsmain_id: userNew.crsmain_id,
           crs_start_dt: userNew.crs_ecp_st_d,
           std_id: newUser.std_id,
         },
@@ -575,18 +577,18 @@ const studentResolvers = {
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
     })
-    const course = await prisma.jmkcrsinfo.findFirst({
-      where: { crs_id: parseInt(data.crs_id) },
+    const course = await prisma.jmkcrsmain.findFirst({
+      where: { crsmain_id: parseInt(data.crsmain_id) },
     })
     const userCourse = await prisma.jmkstdcrsinfo.findFirst({
-      where: { std_id: userId, crs_id: parseInt(data.crs_id) },
+      where: { std_id: userId, crsmain_id: parseInt(data.crsmain_id) },
     })
     if (!user) throw new AuthenticationError('invalid user')
     if (!course) throw new ApolloError('Bad Request')
     if (userCourse) throw new ApolloError('you already have this course')
     await prisma.jmkstdcrsinfo.create({
       data: {
-        crs_id: parseInt(data.crs_id),
+        crsmain_id: parseInt(data.crsmain_id),
         crs_start_dt: data.crs_start_dt,
         std_id: userId,
       },
@@ -617,26 +619,23 @@ const studentResolvers = {
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
     })
-    const course = await prisma.jmkcrsinfo.findFirst({
-      where: { crs_id: parseInt(data.crs_id) },
-    })
+
     if (!user) throw new AuthenticationError('invalid user')
-    if (!course) throw new ApolloError('Bad Request')
     const userCourse = await prisma.jmkstdcrsinfo.findFirst({
       where: {
         std_id: userId,
-        crs_id: parseInt(data.crs_id),
+        crsmain_id: parseInt(data.crsmain_id),
       },
     })
-    if (parseInt(data.crs_id) === user.crs_id)
+    if (parseInt(userCourse.crs_id) === user.crs_id)
       throw new ApolloError('Already selected')
     if (!userCourse.std_crs_verirfy)
       throw new ApolloError(
-        'your are not permited to use this course, wait for admin to approve or cantact our support !'
+        'your are not permited to use this course, wait for admin to approve or contact our support !'
       )
     const updateUser = await prisma.jmkstdinfo.update({
       data: {
-        crs_id: parseInt(data.crs_id),
+        crs_id: parseInt(userCourse.crs_id),
       },
       where: { std_id: userId },
     })
@@ -649,12 +648,12 @@ const studentResolvers = {
       where: { std_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user')
-    if (!data.crs_id) throw new AuthenticationError('course id required')
+    if (!data.crsmain_id) throw new AuthenticationError('course id required')
     if (user.crs_id === parseInt(data.crs_id))
       throw new AuthenticationError("Can't delete active course")
     const checkCourse = await prisma.jmkstdcrsinfo.findFirst({
       where: {
-        crs_id: parseInt(data.crs_id),
+        crsmain_id: parseInt(data.crsmain_id),
         std_id: userId,
       },
     })
@@ -896,13 +895,16 @@ const studentResolversQuery = {
   },
 
   courseList: async () => {
-    const course = await prisma.jmkcrsinfo.findMany()
+    const course = await prisma.jmkcrsmain.findMany()
     const filter = course.reduce((all, course) => {
-      all[course.crs_type] = [...(all[course.crs_type] || []), { ...course }]
+      all[course.crsmain_type] = [
+        ...(all[course.crsmain_type] || []),
+        { ...course },
+      ]
       return all
     }, {})
     const newObj = Object.entries(filter).map((item) => ({
-      crs_type: item[0],
+      crsmain_type: item[0],
       courses: [...item[1]],
     }))
     return newObj
@@ -915,15 +917,15 @@ const studentResolversQuery = {
         where: { std_id: userId },
       })
       if (!user) throw new AuthenticationError('invalid user credentials')
-      const stdcourse = await prisma.jmkstdinfo.findMany({
+      const stdcourse = await prisma.jmkstdcrsinfo.findMany({
         where: { std_id: userId },
       })
       const userCourse = []
       for (let index = 0; index < stdcourse.length; index++) {
-        const course = await prisma.jmkcrsinfo.findFirst({
-          where: { crs_id: stdcourse[index].crs_id },
+        const course = await prisma.jmkcrsmain.findFirst({
+          where: { crsmain_id: stdcourse[index].crsmain_id },
         })
-        userCourse.push({ ...stdcourse[index], crs_name: course.crs_name })
+        userCourse.push({ ...stdcourse[index], crs_name: course.crsmain_title })
       }
       return userCourse
     }
