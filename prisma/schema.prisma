@@ -40,7 +40,7 @@ model jmkstdinfo {
   std_join_dt       DateTime?      @default(dbgenerated("(curdate())")) @db.Date
   std_birth_dt      DateTime?      @db.Date
   std_high_ql       String?        @db.VarChar(40)
-  crs_id            Int?
+  crs_id            Int?           @default(28)
   std_status        Int?
   std_paidup        Int?
   std_due           Int?
@@ -267,6 +267,7 @@ model jmkcrscontents {
   content       String?   @db.VarChar(2000)
   content_date  DateTime? @db.Date
   content_title String?   @db.VarChar(2000)
+  vid_id        Int?
 }
 
 model jmktrcrsinfo {
@@ -329,6 +330,13 @@ model jmkdevinfo {
   developer_prof_summary       String?   @db.VarChar(1000)
   developer_reg_date           DateTime? @default(dbgenerated("(curdate())")) @db.Date
   dev_verified                 Boolean   @default(false)
+  developer_add_house_no       String?   @db.VarChar(20)
+  developer_add_street         String?   @db.VarChar(50)
+  developer_add_city           String?   @db.VarChar(50)
+  developer_add_ward_no        Int?
+  developer_add_district       String?   @db.VarChar(50)
+  developer_add_province       String?   @db.VarChar(100)
+  developer_add_zone           String?   @db.VarChar(100)
 }
 
 model jmkcrsmodule {
@@ -689,6 +697,13 @@ model jmktkt {
   tkt_sub    String?   @db.VarChar(50)
   tkt_detail String?   @db.VarChar(500)
   tkt_status String?   @db.VarChar(20)
+}
+
+model jmkcrsassignment {
+  ass_id    Int     @id @default(autoincrement())
+  crs_id    Int?
+  ass_title String? @db.VarChar(100)
+  ass_desc  String? @db.VarChar(1000)
 }
 
 enum jmkcrsmain_cramain_del_mod {
