@@ -40,7 +40,6 @@ const adminQueryTypesAndInputs = `
         std_join_dt: Date!
         std_birth_dt: Date!
         std_verifyed: Boolean!
-
         crs_id:Int
         std_add_house_no:String
         std_add_street:String
@@ -202,7 +201,7 @@ const adminQueryTypesAndInputs = `
       crsmain_type:String
       cramain_del_mod:String
      }
-
+     
      type staticCourseDetails{
       crsdet_id:Int!
       crsdet_title:String
