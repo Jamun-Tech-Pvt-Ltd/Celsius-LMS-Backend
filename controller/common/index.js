@@ -69,6 +69,7 @@ input createCourseInput {
         crsmain_id:ID!
         crsmain_title: String!
         crsmain_type: String!
+        crs_nxt_st_date : Date
      }
 
     type ConsultancyInfo {

@@ -29,6 +29,13 @@ const studentQueryTypesAndInputs = `
         std_birth_dt: Date
         std_remark:String
         crsmain_id:Int
+        std_add_house_no:String
+        std_add_street:String
+        std_add_city:String
+        std_add_ward_no:Int
+        std_add_distrcit:String
+        std_add_province:String
+        std_add_zone:String
         crs_id:Int
         crs_ecp_st_d:Date!
         cid:Int
@@ -354,9 +361,10 @@ const studentResolvers = {
       throw new AuthenticationError('user already exist with that email')
 
     if (role === ROLES[2]) {
-      const course = await prisma.jmkcrsmain.findFirst({
+      const course = await prisma.jmkcrsinfo.findFirst({
         where: {
-          crsmain_id: userNew.crsmain_id,
+          crs_id: userNew.crs_id,
+          cid: userId
         },
       })
       if (!course) throw new AuthenticationError('invalid course')
@@ -364,6 +372,7 @@ const studentResolvers = {
       const newUser = await prisma.jmkstdinfo.create({
         data: {
           ...userNew,
+          cid: userId
         },
       })
 
