@@ -697,6 +697,7 @@ model jmktkt {
   tkt_sub    String?   @db.VarChar(50)
   tkt_detail String?   @db.VarChar(500)
   tkt_status String?   @db.VarChar(20)
+  cid       Int?
 }
 
 model jmkcrsassignment {
