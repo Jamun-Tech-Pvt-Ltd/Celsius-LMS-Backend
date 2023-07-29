@@ -66,9 +66,9 @@ input createCourseInput {
 
     type PublicCourse {
         crs_id: ID!
-        crs_name: String!
-        crs_type: String!
-        crs_nxt_st_date : Date
+        crsmain_id:ID!
+        crsmain_title: String!
+        crsmain_type: String!
      }
 
     type ConsultancyInfo {
@@ -77,7 +77,7 @@ input createCourseInput {
     } 
   
      type PublicCourseType {
-        crs_type: String!
+        crsmain_type: String!
         courses:[PublicCourse]
      }
   
