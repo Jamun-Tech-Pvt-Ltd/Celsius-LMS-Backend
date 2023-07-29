@@ -68,6 +68,7 @@ const adminQueryTypesAndInputs = `
      }
   
      input updateStudentCourseFromAdminInput {
+      crs_id:Int!
         serial : Int!
         discount: Int
         amt_paid: Int
@@ -105,11 +106,10 @@ const adminQueryTypesAndInputs = `
         std_mobile: String!
         std_join_dt: Date
         std_birth_dt: Date
-        crs_type: String!
-        crs_name: String!
+        crs_type: String
+        crs_name: String
         std_password: String!
         std_high_ql: String
-        crs_id: String
         crsmain_id:Int
         crsmain_title:String
         std_status: String
@@ -201,7 +201,7 @@ const adminQueryTypesAndInputs = `
       crsmain_type:String
       cramain_del_mod:String
      }
-
+     
      type staticCourseDetails{
       crsdet_id:Int!
       crsdet_title:String
@@ -1284,42 +1284,38 @@ const adminResolversQuery = {
       const student = await prisma.jmkstdinfo.findFirst({
         where: { std_id: args.std_id },
       })
-      const mainCourse = await prisma.jmkcrsmain.findFirst({
-        where: { crsmain_id: student.crsmain_id },
-        select: {
-          crsmain_id: true,
-          crsmain_title: true,
-        },
-      })
+      // const mainCourse = await prisma.jmkcrsmain.findFirst({
+      //   where: { crsmain_id: student.crsmain_id },
+      //   select: {
+      //     crsmain_id: true,
+      //     crsmain_title: true,
+      //   },
+      // })
 
-      const course = await prisma.jmkcrsinfo.findFirst({
-        where: { crs_id: student.crs_id },
-      })
+      // const course = await prisma.jmkcrsinfo.findFirst({
+      //   where: { crs_id: student.crs_id },
+      // })
       const join_courses = []
       const joinCourses = await prisma.jmkstdcrsinfo.findMany({
         where: { std_id: student.std_id },
       })
       for (let index = 0; index < joinCourses.length; index++) {
-        const course = await prisma.jmkcrsinfo.findFirst({
-          where: { crs_id: joinCourses[index].crs_id },
+        const course = await prisma.jmkcrsmain.findFirst({
+          where: { crsmain_id: joinCourses[index].crsmain_id },
         })
         join_courses.push({
           ...joinCourses[index],
-          crs_name: course.crs_name,
-          crs_rate: course.crs_rate,
+          crsmain_title: course.crsmain_title,
+          crs_rate: course.crsmain_rate,
+          crs_type: course.crsmain_type,
         })
       }
-      if (course) {
-        const mergestudent = {
-          ...student,
-          crs_type: course.crs_type,
-          crs_name: course.crs_name,
-          crsmain_title: mainCourse.crsmain_title,
-          crsmain_id: mainCourse.crsmain_id,
-          join_courses,
-        }
-        return mergestudent
+
+      const mergestudent = {
+        ...student,
+        join_courses,
       }
+      return mergestudent
     }
     throw new AuthenticationError('invalid access')
   },
@@ -1578,7 +1574,15 @@ const adminResolversQuery = {
         where: { serial: args.serial },
       })
       if (!course) throw new ApolloError('crs not fund !!')
-      return course
+      const selectedCourse = await prisma.jmkcrsmain.findFirst({
+        where: {
+          crsmain_id: course.crsmain_id,
+        },
+        select: {
+          crsmain_title: true,
+        },
+      })
+      return { ...course, ...selectedCourse }
     }
     if (role === ROLES[2]) {
       const consultancy = await prisma.jmkconsulinfo.findFirst({
