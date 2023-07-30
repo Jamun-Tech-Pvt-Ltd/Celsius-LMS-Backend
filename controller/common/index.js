@@ -11,7 +11,7 @@ const commonQueryTypesAndInputs = `
 
 input createCourseInput {
     crs_name: String!
-    crs_desc: String!
+    crs_desc: String
     crs_duration: Int
     crs_rate: Int
     crs_cat: String
@@ -19,7 +19,7 @@ input createCourseInput {
     crs_ins: String
     crs_code:String
     crs_type: String!
-    crs_nxt_st_date: Date!
+    crs_nxt_st_date: Date
     crs_image: Upload
  }
 
@@ -49,7 +49,7 @@ input createCourseInput {
     type Course {
         crs_id: ID!
         crs_name: String!
-        crs_desc: String!
+        crs_desc: String
         crs_cat: String
         crs_con: String
         crs_cat_id: String
@@ -58,7 +58,7 @@ input createCourseInput {
         crs_rate: String
         crs_ins: String
         crs_code:String
-        crs_type: String
+        crs_type: String!
         crs_nxt_st_date:Date
         crs_image:String
         crs_code: String
@@ -66,8 +66,9 @@ input createCourseInput {
 
     type PublicCourse {
         crs_id: ID!
-        crs_name: String!
-        crs_type: String!
+        crsmain_id:ID!
+        crsmain_title: String!
+        crsmain_type: String!
         crs_nxt_st_date : Date
      }
 
@@ -77,7 +78,7 @@ input createCourseInput {
     } 
   
      type PublicCourseType {
-        crs_type: String!
+        crsmain_type: String!
         courses:[PublicCourse]
      }
   
@@ -100,7 +101,7 @@ const commonQuery = `
 `
 
 const commonMutation = `
-createCourse(data:createCourseInput!):Course
+    createCourse(data:createCourseInput!):Course
     updateCourse(data:updateCourseInput!):String!
     deleteCourse(data:deleteCourseInput):String
     
