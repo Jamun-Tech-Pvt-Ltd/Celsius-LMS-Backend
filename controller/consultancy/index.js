@@ -375,6 +375,7 @@ const consultancyQueryTypesAndInputs = `
     }
 
     input assignTermSubInput{
+        serial:Int
         termdet_id:Int!
         subject_id:Int!
     }
@@ -512,7 +513,6 @@ const consultancyMutation = `
     assignTermSub(data:assignTermSubInput):String!
     updateAssignTermSub(data:assignTermSubInput):String!
     deleteAssignTermSub(serial:Int!):String!
-
 
     createTicket(data:ticketInput):String!
     updateTicket(data:ticketInput):String!
@@ -1778,7 +1778,7 @@ const consultancyResolversQuery = {
         if (!consultancy) throw new AuthenticationError("invalid consultancy credentials")
         if (role === ROLES[2] && consultancy.acc_type !== 'Consultancy') {
             const termsCrs = await prisma.jmktermsubject.findFirst({ where: { serial: args.serial } })
-            if (!termsCrs[0]) throw new AuthenticationError("Data not found !!")
+            if (!termsCrs) throw new AuthenticationError("Data not found !!")
             return termsCrs;
         }
         throw new AuthenticationError("invalid credentials !")

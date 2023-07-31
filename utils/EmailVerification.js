@@ -348,7 +348,7 @@ const emailVerificationHTML = (token, name, endpoint) => `
 																		</p>
 																		<p
 																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
-																			We're happy you signed up for Jamun. To start exploring the LMS. please comfirm the email address
+																			We're happy you signed up for Jamun. To start exploring the Dashboard. please comfirm the email address
 																		</p>
 																		
 																	</div>
