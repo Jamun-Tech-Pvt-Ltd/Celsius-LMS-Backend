@@ -1326,10 +1326,7 @@ const adminResolversQuery = {
           })
         }
         join_courses.push({
-          ...joinCourses[index],
-          crsmain_title: '',
-          crs_rate: '',
-          crs_type: '',
+          ...joinCourses[index]
         })
       }
 
