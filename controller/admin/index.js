@@ -1314,14 +1314,22 @@ const adminResolversQuery = {
         where: { std_id: student.std_id },
       })
       for (let index = 0; index < joinCourses.length; index++) {
-        const course = await prisma.jmkcrsmain.findFirst({
-          where: { crsmain_id: joinCourses[index].crsmain_id },
-        })
+        if (joinCourses[index].crsmain_id) {
+          const course = await prisma.jmkcrsmain.findFirst({
+            where: { crsmain_id: joinCourses[index].crsmain_id },
+          })
+          join_courses.push({
+            ...joinCourses[index],
+            crsmain_title: course.crsmain_title,
+            crs_rate: course.crsmain_rate,
+            crs_type: course.crsmain_type,
+          })
+        }
         join_courses.push({
           ...joinCourses[index],
-          crsmain_title: course.crsmain_title,
-          crs_rate: course.crsmain_rate,
-          crs_type: course.crsmain_type,
+          crsmain_title: '',
+          crs_rate: '',
+          crs_type: '',
         })
       }
 
