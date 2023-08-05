@@ -297,7 +297,7 @@ const signupHTML = (token, name) => `
 															<td class="pad" style="text-align:center;width:100%;">
 																<h1
 																	style="margin: 0; color: #101010; direction: ltr; font-family: Arial, Helvetica Neue, Helvetica, sans-serif; font-size: 27px; font-weight: normal; letter-spacing: normal; line-height: 120%; text-align: center; margin-top: 0; margin-bottom: 0;">
-																	<strong>Jamun Tech </strong>
+																	<strong>Welcome to Jamun Tek<br /> #1 e-Learning Platform </strong>
 																</h1>
 															</td>
 														</tr>
@@ -346,7 +346,7 @@ const signupHTML = (token, name) => `
 																		</p>
 																		<p
 																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
-																			We're happy you signed up for Jamun. To start exploring the LMS. please comfirm the email address
+																			Thank you for registering with Jamun Tek. Before you start exploring our LMS, please confirm your email address
 																		</p>
 																		
 																	</div>
@@ -364,12 +364,12 @@ const signupHTML = (token, name) => `
 															<td class="pad">
 																<div align="center" class="alignment">
 																	<!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://student.jamuntek.com/" style="height:44px;width:221px;v-text-anchor:middle;" arcsize="10%" strokeweight="0.75pt" strokecolor="#101" fillcolor="#101"><w:anchorlock/><v:textbox inset="0px,0px,0px,0px"><center style="color:#ffffff; font-family:Arial, sans-serif; font-size:16px"><![endif]--><a
-																	href="https://student.jamuntek.com/welcomeVerification?token=${token}"
+																	href="${process.env.CLIENT_URL}welcomeVerification?token=${token}"
 																		style="text-decoration:none;display:inline-block;color:#ffffff;background-color:#101;border-radius:4px;width:auto;border-top:1px solid #101;font-weight:undefined;border-right:1px solid #101;border-bottom:1px solid #101;border-left:1px solid #101;padding-top:5px;padding-bottom:5px;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:16px;text-align:center;mso-border-alt:none;word-break:keep-all;"
 																		target="_blank"><span
 																			style="padding-left:20px;padding-right:20px;font-size:16px;display:inline-block;letter-spacing:normal;"><span
 																				dir="ltr"
-																				style="word-break: break-word; line-height: 32px;">Verify Mail</span></span></a><!--[if mso]></center></v:textbox></v:roundrect><![endif]-->
+																				style="word-break: break-word; line-height: 32px;">Verify Email</span></span></a><!--[if mso]></center></v:textbox></v:roundrect><![endif]-->
 																</div>
 															</td>
 														</tr>
@@ -387,7 +387,6 @@ const signupHTML = (token, name) => `
 
 																		<p
 																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
-																			Welcome to Jamun Tech
 																		</p>
 																		
 																	</div>
@@ -496,7 +495,7 @@ const signupHTML = (token, name) => `
 																						title="twitter"
 																						width="32" /></a></td>
 																			<td style="padding:0 2px 0 2px;"><a
-																					href="https://twitter.com/JamunTech"
+																					href="https://www.linkedin.com/company/jamuntek/?originalSubdomain=np"
 																					target="_blank"><img alt="Linkedin"
 																						height="32"
 																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/linkedin2x.png"
@@ -547,7 +546,7 @@ const signupHTML = (token, name) => `
 																			</div>
 																			<div class="menu-links">
 																				<!--[if mso]><table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style=""><tr style="text-align:center;"><![endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><![endif]--><a
-																					href="https://www.jamuntek.com/contact"
+																					href="https://www.jamuntek.com/#contact"
 																					style="mso-hide:false;padding-top:5px;padding-bottom:5px;padding-left:15px;padding-right:15px;display:inline-block;color:#101010;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:14px;text-decoration:none;letter-spacing:normal;"
 																					target="_self">Help</a><!--[if mso]></td><![endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><![endif]--><a
 																					href="https://student.jamuntek.com/"

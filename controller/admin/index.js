@@ -108,6 +108,7 @@ const adminQueryTypesAndInputs = `
         std_birth_dt: Date
         crs_type: String
         crs_name: String
+        oname:String
         std_password: String!
         std_high_ql: String
         crsmain_id:Int
@@ -428,6 +429,12 @@ const adminQueryTypesAndInputs = `
       reg_phone:String
      }
 
+     input contactInfoUpdate{
+      serial:Int!
+      email_address:String!
+      contact_number:String!
+     }
+
 
 
 `
@@ -514,6 +521,8 @@ const adminMutation = `
     
     updatePaymentStatus(pay_id:Int!): String
     updateFollowUpStatus(srno:Int!):String
+
+    updateContactInfo(data:contactInfoUpdate):String
 
 `
 
@@ -835,7 +844,36 @@ const adminResolvers = {
 
     throw new AuthenticationError('invalid access !!')
   },
+  updateContactInfo: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin')
+    if (admin.usr_role === 'admin') {
+      if (data) {
+        const contactinfo = await prisma.contactinfo.findFirst({
+          where: {
+            serial: data.serial,
+          },
+        })
+        if (!contactinfo) throw ApolloError('No such contact Info')
+        await prisma.contactinfo.update({
+          data: {
+            email_address: data.email_address,
+            contact_number: data.contact_number,
+          },
+          where: {
+            serial: data.serial,
+          },
+        })
 
+        return 'success'
+      }
+    }
+
+    throw new AuthenticationError('invalid access !!')
+  },
   deleteUpcomingCourseById: async (_, { serial }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
@@ -1261,11 +1299,20 @@ const adminResolversQuery = {
           const course = await prisma.jmkcrsmain.findFirst({
             where: { crsmain_id: student[index].crsmain_id },
           })
+          const organization = await prisma.jmkconsulinfo.findFirst({
+            where: {
+              serial: student.cid,
+            },
+            select: {
+              oname: true,
+            },
+          })
           if (course) {
             students.push({
               ...student[index],
               crs_type: course.crsmain_type,
               crs_name: course.crsmain_title,
+              oname: organization.oname,
             })
           }
         }

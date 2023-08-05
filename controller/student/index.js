@@ -187,6 +187,8 @@ const studentQueryTypesAndInputs = `
         crs_complete: Boolean
         crs_complete_date: Date
         std_password: String!
+        c_id:ID
+        acc_type:String
         std_mobile: String!
         std_join_dt: Date
         std_birth_dt: Date
@@ -364,7 +366,7 @@ const studentResolvers = {
       const course = await prisma.jmkcrsinfo.findFirst({
         where: {
           crs_id: userNew.crs_id,
-          cid: userId
+          cid: userId,
         },
       })
       if (!course) throw new AuthenticationError('invalid course')
@@ -372,7 +374,7 @@ const studentResolvers = {
       const newUser = await prisma.jmkstdinfo.create({
         data: {
           ...userNew,
-          cid: userId
+          cid: userId,
         },
       })
 
@@ -857,12 +859,17 @@ const studentResolversQuery = {
       const user = await prisma.jmkstdinfo.findFirst({
         where: { std_id: userId },
       })
+      const organization = await prisma.jmkconsulinfo.findFirst({
+        where: {
+          serial: user.cid,
+        },
+      })
       if (!user) throw new AuthenticationError('invalid user credentials')
       const feedback = await prisma.jmkgrvinfo.findMany({
         where: { std_id: userId },
       })
       if (!feedback[0]) return user
-      return { ...user, feedback }
+      return { ...user, feedback, acc_type: organization.acc_type }
     }
     throw new ForbiddenError('Bad request !!')
   },
