@@ -149,12 +149,12 @@ const studentQueryTypesAndInputs = `
      
 
      type UserCourse {
-        serial : ID!
+        serial : ID
         crs_id: ID
-        crsmain_title:String!
+        crsmain_title:String
         crs_start_dt: Date
-        crsmain_id:ID!
-        std_id: ID!
+        crsmain_id:ID
+        std_id: ID
         crs_name: String!
         discount: Int
         amt_paid: Int

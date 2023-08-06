@@ -8,6 +8,8 @@ import {
 import { ROLES } from '../../utils/helper.js'
 import { uploadImgToAWS, deleteImgToAWS } from '../../utils/imageHandler.js'
 import { compareDates } from '../../utils/DateHelper.js'
+import { sendMail } from '../../utils/mailHandler.js'
+import emailVerificationHTML from '../../utils/EmailVerification.js'
 
 const developerQueryTypesAndInputs = `
     type Developer {
@@ -23,19 +25,43 @@ const developerQueryTypesAndInputs = `
         developer_prof_summary: String
     }
 
-    type DeveloperUser{
-        developer_id: Int!
-        developer_fname: String
-        developer_mname: String
-        developer_lname: String
-        developer_email: String
-        developer_phone: String
-        developer_country: String
-        developer_password: String
-        developer_type: String
-        developer_prof_summary: String
-        developer_resume: String
-        developer_resume_key: String
+    type DeveloperUser {
+      developer_id: Int!
+      developer_fname: String
+      developer_mname: String
+      developer_lname: String
+      developer_high_qualification: String
+      developer_tech1: String
+      developer_tech2: String
+      developer_tech3: String
+      developer_email: String
+      developer_phone: String
+      developer_country: String
+      developer_tech1_exp: String
+      developer_tech2_exp: String
+      developer_tech3_exp: String
+      developer_company1: String
+      developer_company1_start: String
+      developer_company2: String
+      developer_company2_start: String
+      developer_company2_end: String
+      developer_company1_project: String
+      developer_company2_project: String
+      developer_resume_key: String
+      developer_resume: String
+      developer_password: String
+      developer_type: String
+      cid: Int
+      developer_prof_summary: String
+      developer_reg_date: String
+      dev_verified: Boolean
+      developer_add_house_no: String
+      developer_add_street: String
+      developer_add_city: String
+      developer_add_ward_no: Int
+      developer_add_district: String
+      developer_add_province: String
+      developer_add_zone: String
     }
     type Dashboard{
         experience: Int!
@@ -100,8 +126,7 @@ const developerQueryTypesAndInputs = `
 
     type loginInCredentials{
         token: String
-        developer_fname: String
-        developer_lname:String
+        acc_type: String
     }
 
     type Resume{
@@ -170,6 +195,13 @@ const developerQueryTypesAndInputs = `
         developer_password: String
         developer_type: String
         developer_prof_summary: String
+        developer_add_house_no: String
+        developer_add_street: String
+        developer_add_city: String
+        developer_add_ward_no: Int
+        developer_add_district: String
+        developer_add_province: String
+        developer_add_zone: String
     }
     input ExperienceDetails{
         tech_stack: String
@@ -237,6 +269,10 @@ const developerQueryTypesAndInputs = `
     input UpdateResumeAWS{
         developer_resume: Upload!
     }
+    
+    input emailVerifyDev{
+      token: String!
+     }
 
 `
 
@@ -290,6 +326,7 @@ const developerMutation = `
     updateResumeDetails(data:UpdateResumeAWS!):String
 
 
+    developerEmailVerify(data: emailVerifyDev!): String!
 `
 
 const developerQueryResolvers = {
@@ -371,7 +408,7 @@ const developerQueryResolvers = {
   },
 
   getProjectById: async (_, args, { userId, role }) => {
-    // if (!userId) throw new ForbiddenError('invalid token');
+    if (!userId) throw new ForbiddenError('invalid token');
     if (!args.serial) throw new ForbiddenError('serial is required !')
     const project = await prisma.jmkdevprojdet.findFirst({
       where: {
@@ -384,7 +421,7 @@ const developerQueryResolvers = {
     return project
   },
   getDeveloperProjectList: async (_, args, { userId, role }) => {
-    // if (!userId) throw new ForbiddenError('user need to login');
+    if (!userId) throw new ForbiddenError('user need to login');
     const projectList = await prisma.jmkdevprojdet.findMany({
       where: {
         developer_id: args.userId,
@@ -403,7 +440,7 @@ const developerQueryResolvers = {
     return projectList
   },
   getConsultancyRecommendation: async (_, args, { userId }) => {
-    // if (!userId) return new AuthenticationError("Login to continue");
+    if (!userId) return new AuthenticationError("Login to continue");
     const techStackList = await prisma.jmkdevtechdet.findMany({
       where: {
         developer_id: userId,
@@ -513,24 +550,75 @@ const developerQueryResolvers = {
 }
 
 const developerMutationResolver = {
+  developerEmailVerify: async (_, { data }) => {
+    const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY);
+    console.log(decodedToken);
+    if (!decodedToken) throw new AuthenticationError("The token is not valid");
+    const developer = await prisma.jmkdevinfo.findFirst({
+      where: { developer_id: decodedToken.userId }
+    });
+    if (!developer) throw new AuthenticationError("Invalid Token");
+
+    const updateStatus = await prisma.jmkdevinfo.update({
+      where: {
+        developer_id: developer.developer_id
+      },
+      data: {
+        dev_verified: true
+      }
+    })
+    if (!updateStatus) throw new AuthenticationError("Could not verify your email")
+    return "Email Verification Complete";
+
+
+
+
+    // const generatedToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIzLCJyb2xlIjoidHJhaW5lciIsImlhdCI6MTY5MDAwMTI3NX0.jnArqzd6dCS8vhIMKU8CEm4v-uGdkP1988Vlvq9Vxp8';
+    // await sendMail("py.suhant@gmail.com", 'Successfully Register ', emailVerificationHTML(generatedToken))
+    // return "mail sent";
+
+  },
   signinDeveloper: async (_, { data }) => {
     const developer = await prisma.jmkdevinfo.findFirst({
       where: {
         developer_email: data.developer_email,
       },
-    })
-    if (!developer) throw AuthenticationError('Invalid email')
-    const isMatch = data.developer_password == developer.developer_password
-    if (!isMatch) throw new AuthenticationError('Invalid Password')
+    });
+
+    if (!developer) {
+      throw new AuthenticationError("Invalid email");
+    }
+
+    if (!developer.dev_verified) {
+      throw new AuthenticationError("Please verify your email");
+    }
+
+    const isMatch = data.developer_password === developer.developer_password;
+    if (!isMatch) {
+      throw new AuthenticationError("Invalid Password");
+    }
+
+    let acc_type = "Consultancy";
+    if (developer.cid) {
+      const consultinfo = await prisma.jmkconsulinfo.findFirst({
+        where: {
+          serial: developer.cid,
+        },
+      });
+      if (consultinfo) {
+        acc_type = consultinfo.acc_type;
+      }
+    }
+
     const token = jwt.sign(
       { userId: developer.developer_id, role: ROLES[3] },
       process.env.JWT_SECRET_KEY
-    )
+    );
+
     return {
       token,
-      developer_fname: developer.developer_fname,
-      developer_lname: developer.developer_lname,
-    }
+      acc_type,
+    };
   },
 
   signupDeveloper: async (_, { data }) => {
@@ -608,10 +696,18 @@ const developerMutationResolver = {
         data.developer_company1_start
       )
     }
+    const token = jwt.sign(
+      { userId: newDev.developer_id, role: ROLES[3] },
+      process.env.JWT_SECRET_KEY
+    )
+    await sendMail(newDev.developer_email, 'Successfully Register ', emailVerificationHTML(token, `${newDev.developer_fname} ${newDev.developer_lname}`, "developerVerification"))
+
     return 'success'
   },
 
   updateDeveloper: async (_, { data }, { userId }) => {
+
+    // console.log(data)
     const updatedDeveloper = await prisma.jmkdevinfo.update({
       where: { developer_id: userId },
       data: { ...data },

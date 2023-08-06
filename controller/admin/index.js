@@ -185,6 +185,13 @@ const adminQueryTypesAndInputs = `
         developer_country: String!
         developer_email: String!
         developer_password: String!
+        developer_add_house_no: String
+        developer_add_street: String
+        developer_add_city: String
+        developer_add_ward_no: Int
+        developer_add_district: String
+        developer_add_province: String
+        developer_add_zone: String
         dev_tech_det:[devTechDet]
         dev_proj_det:[devProjDet]
         dev_exp_det:[devExpDet]
@@ -345,6 +352,13 @@ const adminQueryTypesAndInputs = `
         developer_password: String
         developer_type: String
         developer_country: String
+        developer_add_house_no: String
+        developer_add_street: String
+        developer_add_city: String
+        developer_add_ward_no: Int
+        developer_add_district: String
+        developer_add_province: String
+        developer_add_zone: String
      }
   
      input updateTrainerFromDashboard {
@@ -1347,14 +1361,19 @@ const adminResolversQuery = {
         where: { std_id: student.std_id },
       })
       for (let index = 0; index < joinCourses.length; index++) {
-        const course = await prisma.jmkcrsmain.findFirst({
-          where: { crsmain_id: joinCourses[index].crsmain_id },
-        })
+        if (joinCourses[index].crsmain_id) {
+          const course = await prisma.jmkcrsmain.findFirst({
+            where: { crsmain_id: joinCourses[index].crsmain_id },
+          })
+          join_courses.push({
+            ...joinCourses[index],
+            crsmain_title: course.crsmain_title,
+            crs_rate: course.crsmain_rate,
+            crs_type: course.crsmain_type,
+          })
+        }
         join_courses.push({
-          ...joinCourses[index],
-          crsmain_title: course.crsmain_title,
-          crs_rate: course.crsmain_rate,
-          crs_type: course.crsmain_type,
+          ...joinCourses[index]
         })
       }
 
