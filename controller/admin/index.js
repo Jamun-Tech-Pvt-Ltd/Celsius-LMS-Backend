@@ -1315,7 +1315,7 @@ const adminResolversQuery = {
           })
           const organization = await prisma.jmkconsulinfo.findFirst({
             where: {
-              serial: student.cid,
+              serial: student[index].cid,
             },
             select: {
               oname: true,
