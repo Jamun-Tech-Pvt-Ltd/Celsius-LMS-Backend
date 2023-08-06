@@ -81,6 +81,12 @@ input createCourseInput {
         crsmain_type: String!
         courses:[PublicCourse]
      }
+
+     type ContactInfoType{
+      serial:Int!
+      email_address:String!
+      contact_number:String!
+     }
   
      type Question {
         ques_id: ID!
@@ -98,6 +104,7 @@ const commonQuery = `
     getAllCourseList:[Course!]!
     getCourseById(crs_id:Int!):Course!
     getAllConsultancyInfo:[ConsultancyInfo]
+    getContactInfo:[ContactInfoType!]
 `
 
 const commonMutation = `
@@ -254,6 +261,10 @@ const commonResolvers = {
 }
 
 const commonResolversQuery = {
+  getContactInfo: async () => {
+    const info = await prisma.contactinfo.findMany({})
+    return info
+  },
   getAllCourseList: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === 'admin') {
