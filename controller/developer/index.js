@@ -132,6 +132,35 @@ const developerQueryTypesAndInputs = `
     type Resume{
         resume:Upload
     }
+
+    type TermDetail{
+      termdet_id: Int
+      term_id:Int
+      term_code: String
+      crs_id: Int
+      start_date: Date
+      end_date: Date
+    }
+
+    type subjectDetail{
+      subject_id: Int
+      subject_code: String
+      subject_full_m: Int
+      subject_pass_m: Int
+    }
+    type courseDetail{
+      crs_id: Int
+      crs_name: String
+    }
+    type StudentTermSubject{
+      serial: Int
+      std_id: Int
+      student_name: String
+      subject_name: String
+      termdet_id: Int
+      subject_id: Int
+      marks_obtained:Int
+    }
     
     input signinDeveloperUserInput{
         developer_email: String
@@ -265,6 +294,11 @@ const developerQueryTypesAndInputs = `
         exp_id: Int
     }
 
+    input searchTest{
+      termdet_id:Int
+      subject_id: Int
+    }
+
 
     input UpdateResumeAWS{
         developer_resume: Upload!
@@ -274,6 +308,12 @@ const developerQueryTypesAndInputs = `
       token: String!
      }
 
+     input StudentTermSubjectInput {
+      serial: Int!
+      std_id: Int!
+      subject_id: Int!
+      marks_obtained: Int!
+    }
 `
 
 const developerQuery = `
@@ -298,6 +338,13 @@ const developerQuery = `
     getDeveloperExperienceById(exp_id: Int!):developerExperience
 
     getDeveloperTestDetailList:[DeveloperTestDetail]
+
+    getTestDetail(data:searchTest): String
+
+    getCourseList:[courseDetail]
+    getTermList(crs_id: Int):[TermDetail]
+    getSubjectList(crs_id: Int):[subjectDetail]
+    getStudentTermSubjectList(data:searchTest):[StudentTermSubject]
 
 
 `
@@ -325,8 +372,9 @@ const developerMutation = `
 
     updateResumeDetails(data:UpdateResumeAWS!):String
 
-
     developerEmailVerify(data: emailVerifyDev!): String!
+
+    updateStudentMarks(data: [StudentTermSubjectInput!]!): Boolean
 `
 
 const developerQueryResolvers = {
@@ -547,12 +595,77 @@ const developerQueryResolvers = {
 
     return testDetailList
   },
+
+  getCourseList: async (_, args, { userId }) => {
+    const courseDetail = await prisma.jmkcrsinfo.findMany();
+    return courseDetail;
+
+  },
+  getTermList: async (_, args, { userId }) => {
+    const termDetail = await prisma.jmktermdet.findMany({ where: { crs_id: args.crs_id } });
+    // Use map to create an array of promises that resolve to updated elements
+    const updatedTermDetail = await Promise.all(termDetail.map(async (element) => {
+      const value = await prisma.jmktermmstr.findFirstOrThrow({
+        where: {
+          term_id: element.term_id
+        }
+      });
+      element.term_code = value.term_code;
+      return element; // Return the updated element
+    }));
+
+    return updatedTermDetail;
+  },
+
+  getSubjectList: async (_, args, { userId }) => {
+    if (!userId) throw new AuthenticationError("Please login to continue")
+
+    const subjectDetail = await prisma.jmksubjectmaster.findMany({
+      where: {
+        crs_id: args.crs_id
+      }
+    });
+    return subjectDetail;
+
+  },
+
+  getStudentTermSubjectList: async (_, args, { userId }) => {
+    const stdtermsub = await prisma.jmkstdtermsub.findMany({
+      where: {
+        subject_id: args.data.subject_id,
+        termdet_id: args.data.termdet_id
+      }
+    });
+
+    const updatedValue = await Promise.all(
+      stdtermsub.map(async (element) => {
+        const StudentName = await prisma.jmkstdinfo.findFirst({
+          where: {
+            std_id: element.std_id
+          }
+        });
+        const subjectCode = await prisma.jmksubjectmaster.findFirst({
+          where: {
+            subject_id: element.subject_id
+          }
+        })
+        element.subject_name = subjectCode.subject_code;
+        element.student_name = `${StudentName.std_fname} ${StudentName.std_lname}`
+
+        return element;
+      })
+    )
+
+
+    console.log(updatedValue);
+    return updatedValue;
+  },
+
 }
 
 const developerMutationResolver = {
   developerEmailVerify: async (_, { data }) => {
     const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY);
-    console.log(decodedToken);
     if (!decodedToken) throw new AuthenticationError("The token is not valid");
     const developer = await prisma.jmkdevinfo.findFirst({
       where: { developer_id: decodedToken.userId }
@@ -569,9 +682,6 @@ const developerMutationResolver = {
     })
     if (!updateStatus) throw new AuthenticationError("Could not verify your email")
     return "Email Verification Complete";
-
-
-
 
     // const generatedToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIzLCJyb2xlIjoidHJhaW5lciIsImlhdCI6MTY5MDAwMTI3NX0.jnArqzd6dCS8vhIMKU8CEm4v-uGdkP1988Vlvq9Vxp8';
     // await sendMail("py.suhant@gmail.com", 'Successfully Register ', emailVerificationHTML(generatedToken))
@@ -644,12 +754,18 @@ const developerMutationResolver = {
     if (!newDev) throw new AuthenticationError('Invalid input')
     const currentDate = new Date()
     const createTechStack = async (techStackId, techStackExp) => {
+      const techStack = await prisma.jmktechstk.findFirst({
+        where: {
+          techstk_id: parseInt(techStackId)
+        }
+      })
       try {
         await prisma.jmkdevtechdet.create({
           data: {
             techstk_id: parseInt(techStackId),
             tech_stack_exp: techStackExp,
             tech_last_used: currentDate,
+            tech_stack: techStack.techstk_name,
             developer_id: newDev.developer_id,
           },
         })
@@ -707,7 +823,6 @@ const developerMutationResolver = {
 
   updateDeveloper: async (_, { data }, { userId }) => {
 
-    // console.log(data)
     const updatedDeveloper = await prisma.jmkdevinfo.update({
       where: { developer_id: userId },
       data: { ...data },
@@ -730,11 +845,18 @@ const developerMutationResolver = {
     })
     if (exisitingTechStack) return new ApolloError('Tech stack already exists')
 
+    const techStackName = await prisma.jmktechstk.findFirst({
+      where: {
+        techstk_id: data.techstk_id,
+      }
+    })
+
     const newExperience = await prisma.jmkdevtechdet.create({
       data: {
         techstk_id: data.techstk_id,
         tech_stack_exp: data.tech_stack_exp,
         tech_last_used: techLastUsed,
+        tech_stack: techStackName.techstk_name,
         developer_id: userId,
       },
     })
@@ -990,6 +1112,26 @@ const developerMutationResolver = {
     if (!deleteTechStack) throw new ApolloError('Something went wrong!')
     return 'success'
   },
+  updateStudentMarks: async (_, args, { userId }) => {
+
+
+
+    const marksList = args.data
+
+    marksList.forEach(async (element) => {
+      console.log(element);
+      await prisma.jmkstdtermsub.update({
+        where: {
+          serial: element.serial
+        },
+        data: {
+          marks_obtained: element.marks_obtained,
+        }
+      })
+    });
+
+    return true;
+  }
 }
 
 export {
