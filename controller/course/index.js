@@ -11,7 +11,9 @@ const courseQueryTypesAndInputs = `
         crsmain_duration: Int!
         crsmain_rate: Int!
         crsmain_img_url: String!     
-        crsmain_type:String! 
+        crsmain_type:String!
+        cramain_seo_title:String
+        cramain_seo_desc:String
     }
     type UpcommingCourse{
       start_date:Date
@@ -29,8 +31,6 @@ const courseQueryTypesAndInputs = `
       crs_id:Int!
       crs_name:String!
     }
-
-
 
     type CourseContent{
         crsdet_id: Int!
@@ -50,32 +50,31 @@ const courseQueryTypesAndInputs = `
         crsmain_rate: Int!
         crsmain_img_url: String! 
         crsmain_type:String!
-}
+        cramain_seo_title:String
+        cramain_seo_desc:String
+    }
 
-input CourseContentInput {
-    crsdet_title: String!
-    crsmain_id:Int!
-    crsdet_sub_title:String
-} 
+    input CourseContentInput {
+        crsdet_title: String!
+        crsmain_id:Int!
+        crsdet_sub_title:String
+    } 
 `
 
 const courseQuery = `
   getMainCourses: [Course]
-  getMainCourseById(crsmain_id: Int!): Course
+  getMainCourseById(crsmain_title: String!): Course
   getAllCourseContentByCourseId(crsmain_id:Int!):[CourseContent]
   getAllCourseType:[CourseType]
   getCourseTitleByType(crsmain_type:String!):[Course]
   getAllUpcommingCourse:[UpcommingCourse]
-  getStudentCourse:[StuentCourse]
-
-  
+  getStudentCourse:[StuentCourse]  
 `
 
 const courseMutation = `
     addMainCourse(data:addCourseInput!):Course
     updateMainCourse(crsmain_id:Int!,data:addCourseInput!):Course
     deleteMainCourse(crsmain_id:Int!):Boolean
-
     addDetails(data:CourseContentInput):CourseContent
     updateDetails(crsdet_id:Int!,data:CourseContentInput):CourseContent
     deleteDetails(crsdet_id:Int!):Boolean
@@ -87,14 +86,14 @@ const courseQueryResolver = {
     if (!courses) throw new AuthenticationError('No course listed')
     return courses
   },
-  getMainCourseById: async (_, { crsmain_id }) => {
-    const course = await prisma.jmkcrsmain.findUnique({
-      where: { crsmain_id },
+  getMainCourseById: async (_, { crsmain_title }) => {
+    const course = await prisma.jmkcrsmain.findFirst({
+      where: { crsmain_title },
     })
     if (!course) throw new AuthenticationError('No such course')
     return course
   },
-  getStudentCourse: async (_, {}) => {
+  getStudentCourse: async (_, { }) => {
     const studentCourse = await prisma.jmkcrsinfo.findMany({
       where: {
         cid: null,
