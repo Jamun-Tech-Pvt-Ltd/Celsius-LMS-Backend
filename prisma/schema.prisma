@@ -715,13 +715,6 @@ model contactinfo {
   contact_number String
 }
 
-model jmkaccounts {
-  account_id   Int     @id @default(autoincrement())
-  account_name String? @db.VarChar(20)
-  account_desc String? @db.VarChar(200)
-  cid          Int?
-}
-
 model jmkblog {
   blog_id                Int      @id @default(autoincrement())
   blog_slug              String
