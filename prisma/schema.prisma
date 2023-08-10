@@ -396,18 +396,20 @@ model jmkcrsupcom {
 }
 
 model jmkcrsmain {
-  crsmain_id       Int                         @id @default(autoincrement())
-  crsmain_overview String?                     @db.Text
-  crsmain_duration Int?
-  cramain_del_mod  jmkcrsmain_cramain_del_mod?
-  crsmain_img_url  String?                     @db.VarChar(255)
-  crsmain_rate     Int?
-  crsmain_desc     String?                     @db.Text
-  crsmain_title    String?                     @db.VarChar(100)
-  crsmain_type     String?
-  crsmain_img_key  String?                     @db.VarChar(1000)
-  jmkcrsdet        jmkcrsdet[]
-  jmkstdinfo       jmkstdinfo[]
+  crsmain_id        Int                         @id @default(autoincrement())
+  crsmain_overview  String?                     @db.Text
+  crsmain_duration  Int?
+  cramain_del_mod   jmkcrsmain_cramain_del_mod?
+  crsmain_img_url   String?                     @db.VarChar(255)
+  crsmain_rate      Int?
+  crsmain_desc      String?                     @db.Text
+  crsmain_title     String?                     @db.VarChar(100)
+  crsmain_type      String?
+  crsmain_img_key   String?                     @db.VarChar(1000)
+  cramain_seo_desc  String?                     @db.VarChar(100)
+  cramain_seo_title String?                     @db.VarChar(50)
+  jmkcrsdet         jmkcrsdet[]
+  jmkstdinfo        jmkstdinfo[]
 }
 
 model jmkconsulfaq {
@@ -730,13 +732,6 @@ model jmkblog {
   author                 String
   created_by             Int
   status                 Boolean  @default(false)
-}
-
-model jmkaccounts {
-  account_id   Int     @id @default(autoincrement())
-  account_name String? @db.VarChar(20)
-  account_desc String? @db.VarChar(200)
-  cid          Int?
 }
 
 model jmkstdreceipt {

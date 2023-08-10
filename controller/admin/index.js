@@ -208,6 +208,8 @@ const adminQueryTypesAndInputs = `
       crsmain_title:String
       crsmain_type:String
       cramain_del_mod:String
+      cramain_seo_title:String
+      cramain_seo_desc:String
      }
      
      type staticCourseDetails{
@@ -362,6 +364,8 @@ const adminQueryTypesAndInputs = `
       crsmain_title:String
       crsmain_type:String
       cramain_del_mod:String
+      cramain_seo_title:String
+      cramain_seo_desc:String
      }
      input updateStaticCourseInput{
       crsmain_id:Int!
@@ -374,6 +378,8 @@ const adminQueryTypesAndInputs = `
       crsmain_title:String
       crsmain_type:String
       cramain_del_mod:String
+      cramain_seo_title:String
+      cramain_seo_desc:String
      }
 
 
