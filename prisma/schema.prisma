@@ -396,18 +396,20 @@ model jmkcrsupcom {
 }
 
 model jmkcrsmain {
-  crsmain_id       Int                         @id @default(autoincrement())
-  crsmain_overview String?                     @db.Text
-  crsmain_duration Int?
-  cramain_del_mod  jmkcrsmain_cramain_del_mod?
-  crsmain_img_url  String?                     @db.VarChar(255)
-  crsmain_rate     Int?
-  crsmain_desc     String?                     @db.Text
-  crsmain_title    String?                     @db.VarChar(100)
-  crsmain_type     String?
-  crsmain_img_key  String?                     @db.VarChar(1000)
-  jmkcrsdet        jmkcrsdet[]
-  jmkstdinfo       jmkstdinfo[]
+  crsmain_id        Int                         @id @default(autoincrement())
+  crsmain_overview  String?                     @db.Text
+  crsmain_duration  Int?
+  cramain_del_mod   jmkcrsmain_cramain_del_mod?
+  crsmain_img_url   String?                     @db.VarChar(255)
+  crsmain_rate      Int?
+  crsmain_desc      String?                     @db.Text
+  crsmain_title     String?                     @db.VarChar(100)
+  crsmain_type      String?
+  crsmain_img_key   String?                     @db.VarChar(1000)
+  cramain_seo_desc  String?                     @db.VarChar(100)
+  cramain_seo_title String?                     @db.VarChar(50)
+  jmkcrsdet         jmkcrsdet[]
+  jmkstdinfo        jmkstdinfo[]
 }
 
 model jmkconsulfaq {
@@ -707,10 +709,44 @@ model jmktkt {
   cid        Int?
 }
 
-model contactinfo{
-  serial Int @id @default(autoincrement())
-  email_address String
+model contactinfo {
+  serial         Int    @id @default(autoincrement())
+  email_address  String
   contact_number String
+}
+
+model jmkblog {
+  blog_id                Int      @id @default(autoincrement())
+  blog_slug              String
+  blog_type              String
+  blog_heading           String
+  blog_short_description String
+  blog_description       String   @db.LongText
+  blog_image             String?  @db.VarChar(1000)
+  blog_image_key         String?  @db.VarChar(1000)
+  blog_meta_title        String
+  blog_meta_description  String
+  blog_meta_keyword      String
+  created_at             DateTime @default(now())
+  updated_at             DateTime @db.Date
+  author                 String
+  created_by             Int
+  status                 Boolean  @default(false)
+}
+
+model jmkaccounts {
+  account_id   Int     @id @default(autoincrement())
+  account_name String? @db.VarChar(20)
+  account_desc String? @db.VarChar(200)
+  cid          Int?
+}
+
+model jmkstdreceipt {
+  receipt_no     Int       @id @default(autoincrement())
+  receipt_date   DateTime? @db.Date
+  std_id         Int?
+  receipt_amount Int?
+  receipt_desc   String?   @db.VarChar(100)
 }
 
 enum jmkcrsmain_cramain_del_mod {
