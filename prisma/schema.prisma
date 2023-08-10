@@ -663,13 +663,6 @@ model jmkstdattendancelog {
   logoutdate DateTime? @db.DateTime(0)
 }
 
-model jmkcrsassignment {
-  ass_id    Int     @id @default(autoincrement())
-  crs_id    Int?
-  ass_title String? @db.VarChar(100)
-  ass_desc  String? @db.VarChar(1000)
-}
-
 model jmkstdtermsub {
   serial         Int  @id @default(autoincrement())
   std_id         Int?
@@ -707,6 +700,14 @@ model jmktkt {
   tkt_detail String?   @db.VarChar(500)
   tkt_status String?   @db.VarChar(20)
   cid        Int?
+}
+
+
+model jmkcrsassignment {
+  ass_id    Int     @id @default(autoincrement())
+  crs_id    Int?
+  ass_title String? @db.VarChar(100)
+  ass_desc  String? @db.VarChar(1000)
 }
 
 model contactinfo {

@@ -11,15 +11,15 @@ const commonQueryTypesAndInputs = `
 
 input createCourseInput {
     crs_name: String!
-    crs_desc: String!
-    crs_duration: Int!
-    crs_rate: Int!
+    crs_desc: String
+    crs_duration: Int
+    crs_rate: Int
     crs_cat: String
     crs_con: String
-    crs_ins: String!
+    crs_ins: String
     crs_code:String
     crs_type: String!
-    crs_nxt_st_date: Date!
+    crs_nxt_st_date: Date
     crs_image: Upload
  }
 
@@ -49,14 +49,14 @@ input createCourseInput {
     type Course {
         crs_id: ID!
         crs_name: String!
-        crs_desc: String!
+        crs_desc: String
         crs_cat: String
         crs_con: String
         crs_cat_id: String
         crs_con_id: String
         crs_duration: String
         crs_rate: String
-        crs_ins: String!
+        crs_ins: String
         crs_code:String
         crs_type: String!
         crs_nxt_st_date:Date
