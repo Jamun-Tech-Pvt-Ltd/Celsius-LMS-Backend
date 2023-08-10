@@ -737,18 +737,18 @@ const developerMutationResolver = {
     })
     if (dev)
       throw new AuthenticationError('developer already exist with that email')
-    // let file
-    // if (data.developer_resume) {
-    //     file = await uploadImgToAWS(data.developer_resume, 'developer_resume/')
-    //     if (!file.data) throw new ApolloError('Someting went wrong !')
-    // }
+    let file
+    if (data.developer_resume) {
+      file = await uploadImgToAWS(data.developer_resume, 'developer_resume/')
+      if (!file.data) throw new ApolloError('Someting went wrong !')
+    }
     const newDev = await prisma.jmkdevinfo.create({
       data: {
         ...data,
-        // developer_resume: file?.data?.Location ?? '',
-        // developer_resume_key: file?.data?.key ?? '',
-        developer_resume: '',
-        developer_resume_key: '',
+        developer_resume: file?.data?.Location ?? '',
+        developer_resume_key: file?.data?.key ?? '',
+        // developer_resume: '',
+        // developer_resume_key: '',
       },
     })
     if (!newDev) throw new AuthenticationError('Invalid input')
