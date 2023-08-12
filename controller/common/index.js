@@ -97,6 +97,29 @@ input createCourseInput {
         ans3: String!
         ans4: String!
      }
+     type JmkALlBlog{
+      blog_type:String
+      blog_slug:String
+      blog_heading:String
+      blog_image_key:String
+      author:String
+      blog_id:String
+      blog_short_description:String
+  }
+
+  type JmkBlog{
+      blog_type:String
+      blog_heading:String
+      blog_image_key:String
+      author:String
+      blog_id:String
+      blog_short_description:String
+      blog_description:String
+      blog_image:String
+      blog_meta_description:String
+      blog_meta_keyword:String
+      created_at:Date
+  }
 
 `
 
@@ -105,6 +128,8 @@ const commonQuery = `
     getCourseById(crs_id:Int!):Course!
     getAllConsultancyInfo:[ConsultancyInfo]
     getContactInfo:[ContactInfoType!]
+    getAllActiveBlogs:[JmkALlBlog]
+    getBlogBySlug(blog_slug:String!):JmkBlog!
 `
 
 const commonMutation = `
@@ -315,6 +340,21 @@ const commonResolversQuery = {
     })
     if (!consultancyInfo) throw new ApolloError('No data Found')
     return consultancyInfo
+  },
+  getAllActiveBlogs: async () => {
+    const blogs = await prisma.jmkblog.findMany({
+      where: { status: true },
+    })
+    if (!blogs) throw new ApolloError('No data Found')
+    return blogs
+  },
+  getBlogBySlug: async (_, args) => {
+    if (!args.blog_slug) throw new ForbiddenError('blog_slug is required !')
+    const blog = await prisma.jmkblog.findFirst({
+      where: { blog_slug: args.blog_slug },
+    })
+    if (!blog) throw new ApolloError('Data Not Found')
+    return blog
   },
 }
 

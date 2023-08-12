@@ -4,7 +4,6 @@ import { sendMail } from '../../utils/mailHandler.js'
 import demoRequestHTML from '../../utils/demoRequest.js'
 import contackFormHTML from '../../utils/contackForm.js'
 
-
 const jamuntekQueryTypesAndInputs = `
     input demoRequestInput {
         std_fname: String!
@@ -24,6 +23,8 @@ const jamuntekQueryTypesAndInputs = `
         csubject: String!
         cmessage: String!
     }
+
+  
 
     input businessFormInput{
         bfname: String!
@@ -47,6 +48,7 @@ const jamuntekQueryTypesAndInputs = `
 
 const jamuntekQuery = `
 
+
 `
 
 const jamuntekMutation = `
@@ -59,49 +61,60 @@ const jamuntekMutation = `
 `
 
 const jamuntekResolvers = {
+  demoRequest: async (_, { data }) => {
+    const demoRequest = await prisma.jmkstddemo.create({
+      data: { ...data },
+    })
+    if (!demoRequest) throw new ApolloError('Something wrong !!')
+    await sendMail(
+      demoRequest.std_email,
+      'Successfully Submit Demo Request ',
+      demoRequestHTML
+    )
+    return 'Success'
+  },
 
-    demoRequest: async (_, { data }) => {
-        const demoRequest = await prisma.jmkstddemo.create({
-            data: { ...data },
-        })
-        if (!demoRequest) throw new ApolloError('Something wrong !!')
-        await sendMail(
-            demoRequest.std_email,
-            'Successfully Submit Demo Request ',
-            demoRequestHTML
-        )
-        return 'Success'
-    },
+  contactForm: async (_, { data }) => {
+    const contactForm = await prisma.jmkcontact.create({ data })
+    if (!contactForm) throw new ApolloError('Something wrong !!')
+    await sendMail(
+      contactForm.cemail,
+      'Your Contact Form Has Been Received',
+      contackFormHTML
+    )
+    return 'Success'
+  },
 
-    contactForm: async (_, { data }) => {
-        const contactForm = await prisma.jmkcontact.create({ data })
-        if (!contactForm) throw new ApolloError('Something wrong !!')
-        await sendMail(contactForm.cemail, 'Your Contact Form Has Been Received', contackFormHTML)
-        return 'Success'
-    },
+  businessForm: async (_, { data }) => {
+    const businessForm = await prisma.jmkcontactb.create({ data })
+    if (!businessForm) throw new ApolloError('Something wrong !!')
+    await sendMail(
+      businessForm.bemail,
+      'Your Bussiness Form Has Been Received',
+      contackFormHTML
+    )
+    return 'Success'
+  },
 
-    businessForm: async (_, { data }) => {
-        const businessForm = await prisma.jmkcontactb.create({ data })
-        if (!businessForm) throw new ApolloError('Something wrong !!')
-        await sendMail(businessForm.bemail, 'Your Bussiness Form Has Been Received', contackFormHTML)
-        return 'Success'
-    },
-
-    jamuntekReview: async (_, { data }) => {
-        if (!data.rate) throw new ApolloError('bad request')
-        const jamuntekReview = await prisma.jmkreview.create({
-            data: {
-                rate: data.rate,
-                date: new Date(),
-            },
-        })
-        if (!jamuntekReview) throw new Error('something went wrong!!')
-        return 'success'
-    },
+  jamuntekReview: async (_, { data }) => {
+    if (!data.rate) throw new ApolloError('bad request')
+    const jamuntekReview = await prisma.jmkreview.create({
+      data: {
+        rate: data.rate,
+        date: new Date(),
+      },
+    })
+    if (!jamuntekReview) throw new Error('something went wrong!!')
+    return 'success'
+  },
 }
 
-const jamuntekResolversQuery = {
+const jamuntekResolversQuery = {}
 
+export {
+  jamuntekQueryTypesAndInputs,
+  jamuntekQuery,
+  jamuntekMutation,
+  jamuntekResolvers,
+  jamuntekResolversQuery,
 }
-
-export { jamuntekQueryTypesAndInputs, jamuntekQuery, jamuntekMutation, jamuntekResolvers, jamuntekResolversQuery }
