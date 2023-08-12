@@ -735,12 +735,14 @@ model jmkblog {
   status                 Boolean  @default(false)
 }
 
+
 model jmkaccounts {
   account_id   Int     @id @default(autoincrement())
   account_name String? @db.VarChar(20)
   account_desc String? @db.VarChar(200)
   cid          Int?
 }
+
 
 model jmkstdreceipt {
   receipt_no     Int       @id @default(autoincrement())
@@ -749,6 +751,67 @@ model jmkstdreceipt {
   receipt_amount Int?
   receipt_desc   String?   @db.VarChar(100)
 }
+
+
+model jmk_std_ques {
+  ques_id          Int                              @id @default(autoincrement())
+  instance_id      Int
+  ques_Title       String                           @db.VarChar(500)
+  ques_description String                           @db.LongText
+  student_id       Int
+  severity_level   jmk_std_ques_severity_level_enum @default(Green)
+  status           Boolean                          @default(false)
+  created_at       DateTime                         @default(now())
+  updated_at       DateTime                         @db.Date
+}
+
+model jmk_ques_ans {
+  ans_id      Int                         @id @default(autoincrement())
+  user_type   jmk_ques_ans_user_type_enum @default(Student)
+  question_id Int
+  student_id  Int?
+  teacher_id  Int?
+  answer      String                      @db.LongText
+  created_at  DateTime                    @default(now())
+  updated_at  DateTime                    @db.Date
+}
+
+model jmk_ques_ans_imp {
+  imp_id      Int                         @id @default(autoincrement())
+  user_type   jmk_ques_ans_user_type_enum @default(Student)
+  imp_type    jmk_ques_ans_imp_type_enum  @default(Question)
+  question_id Int?
+  ans_id      Int?
+  student_id  Int?
+  teacher_id  Int?
+  upvote      Int                         @default(0)
+  downvote    Int                         @default(0)
+  created_at  DateTime                    @default(now())
+  updated_at  DateTime                    @db.Date
+}
+
+model jmk_ques_sub {
+  sub_id      Int      @id @default(autoincrement())
+  question_id Int
+  student_id  Int
+  created_at  DateTime @default(now())
+}
+
+enum jmk_std_ques_severity_level_enum {
+  Red
+  Green
+}
+
+enum jmk_ques_ans_user_type_enum {
+  Student
+  Teacher
+}
+
+enum jmk_ques_ans_imp_type_enum {
+  Question
+  Answer
+}
+
 
 enum jmkcrsmain_cramain_del_mod {
   Remote

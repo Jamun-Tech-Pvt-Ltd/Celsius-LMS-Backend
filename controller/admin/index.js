@@ -208,6 +208,8 @@ const adminQueryTypesAndInputs = `
       crsmain_title:String
       crsmain_type:String
       cramain_del_mod:String
+      cramain_seo_title:String
+      cramain_seo_desc:String
      }
      
      type staticCourseDetails{
@@ -302,6 +304,56 @@ const adminQueryTypesAndInputs = `
       pay_verified: Boolean!
      }
 
+     type JmkBlog {
+      blog_id: Int!
+      blog_type: String
+      blog_heading: String
+      blog_short_description: String
+      blog_description: String
+      blog_image: String
+      blog_image_key: String
+      author: String
+      created_by: Int
+      blog_meta_title: String
+      blog_meta_description: String
+      blog_meta_keyword: String
+      created_at: Date!
+      updated_at: Date
+      status: Boolean
+    }
+
+    input UpdateJmkBlogInput {
+      blog_id: Int!
+      blog_type: String
+      blog_heading: String
+      blog_short_description: String
+      blog_description: String
+      blog_image: Upload
+      author: String
+      blog_meta_title: String
+      blog_meta_description: String
+      blog_meta_keyword: String
+      updated_at: Date
+      status: Boolean
+    }
+
+    input updateJmkBlogStatus{
+      blog_id: Int!
+      status: Boolean
+    }
+    input AddJmkBlogInput {
+      blog_type: String
+      blog_heading: String
+      blog_short_description: String
+      blog_description: String
+      blog_image: Upload
+      author: String
+      blog_meta_title: String
+      blog_meta_description: String
+      blog_meta_keyword: String
+      status: Boolean
+    }
+        
 
      input createStaticCourseInput{
       crsmain_overview:String
@@ -312,6 +364,8 @@ const adminQueryTypesAndInputs = `
       crsmain_title:String
       crsmain_type:String
       cramain_del_mod:String
+      cramain_seo_title:String
+      cramain_seo_desc:String
      }
      input updateStaticCourseInput{
       crsmain_id:Int!
@@ -324,7 +378,10 @@ const adminQueryTypesAndInputs = `
       crsmain_title:String
       crsmain_type:String
       cramain_del_mod:String
+      cramain_seo_title:String
+      cramain_seo_desc:String
      }
+
 
       input deleteStaticCourseInput {
        crsmain_id: Int!
@@ -359,6 +416,7 @@ const adminQueryTypesAndInputs = `
         developer_add_district: String
         developer_add_province: String
         developer_add_zone: String
+
      }
   
      input updateTrainerFromDashboard {
@@ -493,6 +551,12 @@ const adminQuery = `
     getAllEventRegister:[EventReg]
 
 
+    getBlogs:[JmkBlog ]
+    getBlog(blog_id: Int!): JmkBlog
+
+    
+
+
 `
 
 const adminMutation = `
@@ -538,10 +602,133 @@ const adminMutation = `
 
     updateContactInfo(data:contactInfoUpdate):String
 
+
+    updateBlog(data:UpdateJmkBlogInput): String
+    deleteBlog(blog_id: Int!): String
+    addBlog(data:AddJmkBlogInput):  String
+    updateStatus(data: updateJmkBlogStatus!): String
+
+
+
 `
 
 const adminResolvers = {
+  updateStatus: async (_, { data }, { userId, role }) => {
+    if (!userId) return new AuthenticationError("Invalid Token");
+    if (role == "admin") {
+      const updateBlog = await prisma.jmkblog.update({
+        where: {
+          blog_id: data.blog_id
+        },
+        data: {
+          status: data.status
+        }
+      });
+
+      if (!updateBlog) return new ApolloError("Something went wrong");
+
+      return "success";
+    }
+
+  }
+  ,
+  deleteBlog: async (_, data, { userId, role }) => {
+    if (!userId) return new AuthenticationError("Invalid Token");
+    console.log(data)
+    const toDelete = await prisma.jmkblog.findFirst({
+      where: {
+        blog_id: data.blog_id
+      }
+    });
+
+
+    if (role == "admin") {
+      await deleteImgToAWS(toDelete.blog_image_key);
+      const deletedBlog = await prisma.jmkblog.delete({
+        where: {
+          blog_id: data.blog_id
+        }
+      })
+
+      if (!deletedBlog) return new ApolloError("Something went wrong");
+
+      return "success";
+    }
+  },
+  updateBlog: async (_, { data }, { userId, role }) => {
+
+    const { blog_id, ...updatedData } = data;
+    if (!userId) return new AuthenticationError("Invalid Token");
+    if (role == "admin") {
+
+      const prevBlog = await prisma.jmkblog.findFirst({
+        where: { blog_id: blog_id }
+      });
+
+
+      let file;
+      if (data.blog_image !== null) {
+        await deleteImgToAWS(prevBlog?.blog_image_key);
+
+        file = await uploadImgToAWS(data.blog_image, 'blog');
+        if (!file.data) throw new ApolloError("Something went wrong!");
+      }
+
+      const blog = await prisma.jmkblog.update({
+        where: {
+          blog_id: blog_id,
+        },
+        data: {
+          ...updatedData,
+          updated_at: new Date(),
+          blog_image: data.blog_image != null ? file?.data?.Location : prevBlog.blog_image,
+          blog_image_key: data.blog_image != null ? file?.data?.Location : prevBlog.blog_image_key,
+        }
+      });
+
+
+      if (!blog) return new ApolloError("Something went wrong");
+
+      return "success";
+    }
+
+  },
+  addBlog: async (_, { data }, { userId, role }) => {
+    if (!userId) return new AuthenticationError("Invalid Token");
+    if (role == "admin") {
+
+      let file;
+      if (data.blog_image !== null) {
+        file = await uploadImgToAWS(data.blog_image, 'blog');
+        if (!file.data) throw new ApolloError("Something went wrong!");
+      }
+
+      const name = data.blog_heading;
+      const formattedName = name.toLowerCase().replace(/ /g, '-');
+      console.log(formattedName);
+
+
+      const blog = await prisma.jmkblog.create({
+        data: {
+          ...data,
+          updated_at: new Date(),
+          created_by: userId,
+          blog_image: data.blog_image != null ? file?.data?.Location : null,
+          blog_image_key: data.blog_image != null ? file?.data?.Location : null,
+          blog_slug: formattedName
+        }
+      });
+
+
+      if (!blog) return new ApolloError("Something went wrong");
+
+      return "success";
+    }
+  },
+
   signinAdmin: async (_, { data }) => {
+    console.log(data)
+
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_email: data.usr_email },
     })
@@ -1287,6 +1474,8 @@ const adminResolvers = {
 
     throw new ApolloError('No such project exist')
   },
+
+
 }
 
 const adminResolversQuery = {
@@ -1297,6 +1486,25 @@ const adminResolversQuery = {
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
     return admin
+  },
+
+  getBlogs: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const blogs = await prisma.jmkblog.findMany();
+      return blogs;
+    }
+  },
+  getBlog: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const blog = await prisma.jmkblog.findFirst({
+        where: {
+          blog_id: args.blog_id
+        }
+      });
+      return blog;
+    }
   },
 
   getstudentForAdmin: async (_, args, { userId, role }) => {
