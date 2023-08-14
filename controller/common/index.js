@@ -103,7 +103,7 @@ input createCourseInput {
       blog_heading:String
       blog_image_key:String
       author:String
-      blog_id:String
+      blog_id:Int
       blog_short_description:String
   }
 
@@ -112,7 +112,7 @@ input createCourseInput {
       blog_heading:String
       blog_image_key:String
       author:String
-      blog_id:String
+      blog_id:Int
       blog_short_description:String
       blog_description:String
       blog_image:String
