@@ -109,6 +109,21 @@ const studentQueryTypesAndInputs = `
       token: String!
      }
 
+     input stdQuestionInput {
+      ques_id:Int
+      instance_id:String
+      ques_title:String! 
+      ques_description:String! 
+      severity_level:String 
+      status:Boolean!
+     }
+
+     input stdQuesAnsInput {
+      ans_id:Int
+      question_id:Int! 
+      answer:String! 
+     }
+
 
      type Feedback {
         grv_id : ID!
@@ -250,8 +265,30 @@ const studentQueryTypesAndInputs = `
         std_id: ID!
         vid_note: String!
      }
-  
 
+     type stdQuestion {
+      ques_id:Int!
+      instance_id:String
+      ques_title:String! 
+      ques_description:String! 
+      student_id:Int!
+      severity_level:String 
+      status:Boolean!
+      created_at:Date! 
+      updated_at:Date 
+     }
+
+     type stdQuesAns {
+      ans_id:Int!
+      user_type:String!
+      question_id:Int! 
+      student_id:Int
+      teacher_id:Int 
+      answer:String! 
+      created_at:Date! 
+      updated_at:Date 
+     }
+  
 `
 
 const studentQuery = `
@@ -279,6 +316,9 @@ const studentQuery = `
     getProjectByStudentSelectedCourse:[studentCourseProject]
     getProjectByStudentSelectedCourseById(proj_id:Int!):studentCourseProject
 
+    getStdQuestions:[stdQuestion]
+
+    getStdQuesAns:[stdQuesAns]
 
 `
 
@@ -306,7 +346,11 @@ const studentMutation = `
     submitProject(data:studentProjectInput):String!
 
     studentEmailVerify(data:studentEmailVerify!):String!
-    
+
+
+    createQuestion(data:stdQuestionInput!):String!
+
+    createQuesAns(data:stdQuesAnsInput!):String!
 
 `
 
@@ -850,6 +894,50 @@ const studentResolvers = {
     }
     return 'No such project found '
   },
+
+  createQuestion: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    const oldQuestion = await prisma.jmk_std_ques.findFirst({
+      where: {
+        ques_title: data.ques_title,
+      },
+    })
+    if (oldQuestion) throw new ApolloError('Already Exist Question')
+
+    const question = await prisma.jmk_std_ques.create({
+      data: { ...data, student_id: userId, instance_id: user.crs_id }
+    })
+
+    if (!question) throw new ApolloError('Someting went wrong !')
+
+    return 'Successfully created'
+  },
+
+  createQuesAns: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    const question = await prisma.jmk_std_ques.findFirst({
+      where: {
+        ques_id: data.question_id,
+      },
+    })
+    if (!question) throw new ApolloError('invalid question_id')
+
+    const answer = await prisma.jmk_ques_ans.create({
+      data: { ...data, student_id: userId, user_type: 'Student' }
+    })
+
+    if (!answer) throw new ApolloError('Someting went wrong !')
+
+    return 'Successfully created'
+  },
 }
 
 const studentResolversQuery = {
@@ -1239,6 +1327,28 @@ const studentResolversQuery = {
     }
     return ApolloError('No Data Found')
   },
+  getStdQuestions: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    const questions = await prisma.jmk_std_ques.findMany({ where: { instance_id: user.crs_id } })
+    if (!questions) throw new ForbiddenError('No Questions Found !')
+    return questions
+  },
+  
+  getStdQuesAns: async (_, args, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    const answer = await prisma.jmk_ques_ans.findMany({ where: { question_id: user.question_id } })
+    if (!answer) throw new ForbiddenError('No Answer Found !')
+    return answer
+  },
+
 }
 
 export {
