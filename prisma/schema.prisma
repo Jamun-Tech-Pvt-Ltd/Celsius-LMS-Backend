@@ -776,7 +776,7 @@ model jmk_ques_ans_imp {
   upvote      Int                         @default(0)
   downvote    Int                         @default(0)
   created_at  DateTime                    @default(now())
-  updated_at  DateTime                    @db.Date
+  updated_at  DateTime                    @default(now())
 }
 
 model jmk_ques_sub {
