@@ -94,6 +94,14 @@ const adminQueryTypesAndInputs = `
       time:Date
      }
 
+     type studentreceipt{
+      receipt_no:Int!
+      receipt_date: Date
+      std_id:Int
+      receipt_amount:Int
+      receipt_desc:String
+    }
+
      type AdminStudent {
         std_id: ID!
         std_fname: String!
@@ -554,7 +562,7 @@ const adminQuery = `
     getBlogs:[JmkBlog ]
     getBlog(blog_id: Int!): JmkBlog
 
-    
+    getPayments:[studentreceipt]
 
 
 `
@@ -1506,6 +1514,11 @@ const adminResolversQuery = {
       return blog;
     }
   },
+  getPayments: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const paymentDet = await prisma.jmkstdreceipt.findMany();
+    return paymentDet;
+  },
 
   getstudentForAdmin: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
@@ -1666,7 +1679,7 @@ const adminResolversQuery = {
           // tech details
           const dev_tech_details = await prisma.jmkdevtechdet.findMany({
             where: { developer_id: developer_id },
-          })
+          });
           const dev_tech_det = dev_tech_details.map((element) => {
             const {
               tech_stack,
@@ -1722,7 +1735,7 @@ const adminResolversQuery = {
           return mergedData
         })
       )
-
+      
       return allDevelopersData
     }
   },
