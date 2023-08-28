@@ -350,7 +350,7 @@ const contactForm = `
                                                                             be in touch with you shortly to address your
                                                                             inquiry. If you need to contact us in the
                                                                             meantime, please don't hesitate to call us
-                                                                            at +977 986-4133075 or direct mail to
+                                                                            at +977 980-2347080, +977 980-2347085 or direct mail to
                                                                             info@jamuntek.com
                                                                         </p>
                                                                     </div>

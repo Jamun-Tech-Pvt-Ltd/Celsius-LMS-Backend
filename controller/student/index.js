@@ -286,7 +286,12 @@ const studentQueryTypesAndInputs = `
       severity_level:String 
       status:Boolean!
       created_at:Date! 
-      updated_at:Date 
+      updated_at:Date
+      std_fname:String! 
+      std_mname:String 
+      std_lname:String! 
+      std_pic:String
+      user_role:String! 
      }
 
      type stdQuesAns {
@@ -346,8 +351,6 @@ const studentQuery = `
     getQuestionAnsVote(question_id:Int,answer_id:Int):[quesAndAnsVote]
 
     getStdQuesSub(question_id:Int):String!
-
-
 
 `
 
@@ -1514,7 +1517,12 @@ const studentResolversQuery = {
       where: { std_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user')
-    const questions = await prisma.jmk_std_ques.findMany({ where: { instance_id: user.crs_id } })
+    let questions = [];
+    const questionsData = await prisma.jmk_std_ques.findMany({ where: { instance_id: user.crs_id } })
+    for (let index = 0; index < questionsData.length; index++) {
+      const user = await prisma.jmkstdinfo.findFirst({ where: { std_id: questionsData[index].student_id } })
+      questions.push({ ...questionsData[index], std_fname: user.std_fname, std_mname: user.std_mname, std_lname: user.std_lname, std_pic: user.std_pic, user_role: "Student" })
+    }
     if (!questions) throw new ForbiddenError('No Questions Found !')
     return questions
   },
@@ -1557,7 +1565,7 @@ const studentResolversQuery = {
     if (!stdSub) return "unsubscribed"
     return "subscribed"
   },
-  
+
 }
 
 export {
