@@ -300,7 +300,12 @@ const studentQueryTypesAndInputs = `
       question_id:Int! 
       student_id:Int
       teacher_id:Int 
-      answer:String! 
+      answer:String!
+      user_fname:String!
+      user_mname:String
+      user_lname:String!
+      user_pic:String
+      user_role:String! 
       created_at:Date! 
       updated_at:Date 
      }
@@ -345,6 +350,7 @@ const studentQuery = `
     getProjectByStudentSelectedCourseById(proj_id:Int!):studentCourseProject
 
     getStdQuestions:[stdQuestion]
+    getStdQuestionById(question_id:Int!):stdQuestion
 
     getStdQuesAns(question_id:Int!):[stdQuesAns]
 
@@ -1527,15 +1533,38 @@ const studentResolversQuery = {
     return questions
   },
 
+  getStdQuestionById: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    const questionData = await prisma.jmk_std_ques.findFirst({ where: { ques_id: args.question_id } });
+    if (!questionData) throw new ForbiddenError('No Questions Found !')
+    const questionUser = await prisma.jmkstdinfo.findFirst({ where: { std_id: questionData.student_id } })
+    if (!user) throw new ForbiddenError('No Questions Found !')
+    return { ...questionData, ...questionUser, user_role: "Student" }
+  },
+
   getStdQuesAns: async (_, { question_id }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user')
-    const answer = await prisma.jmk_ques_ans.findMany({ where: { question_id: question_id } })
-    if (!answer) throw new ForbiddenError('No Answer Found !')
-    return answer
+    let answers = [];
+    const answersData = await prisma.jmk_ques_ans.findMany({ where: { question_id: question_id } })
+    for (let index = 0; index < answersData.length; index++) {
+      if (answersData?.[index].user_type === 'Student') {
+        const user = await prisma.jmkstdinfo.findFirst({ where: { std_id: answersData[index].student_id } })
+        answers.push({ ...answersData[index], user_fname: user.std_fname, user_mname: user.std_mname, user_lname: user.std_lname, user_pic: user.std_pic, user_role: "Student" })
+      } else {
+        const user = await prisma.jmkdevinfo.findFirst({ where: { developer_id: answersData[index].teacher_id } })
+        answers.push({ ...answersData[index], user_fname: user.developer_fname, user_mname: user.developer_mname, user_lname: user.developer_lname, user_pic: '', user_role: "Teacher" })
+      }
+    }
+    if (!answers) throw new ForbiddenError('No Answer Found !')
+    return answers
   },
 
   getQuestionAnsVote: async (_, { question_id, answer_id }, { userId }) => {
