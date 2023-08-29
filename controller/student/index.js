@@ -1568,7 +1568,6 @@ const studentResolversQuery = {
   },
 
   getQuestionAnsVote: async (_, { question_id, answer_id }, { userId }) => {
-    console.log(answer_id);
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
