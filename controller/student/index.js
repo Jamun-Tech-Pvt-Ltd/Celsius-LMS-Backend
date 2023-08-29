@@ -1088,7 +1088,7 @@ const studentResolvers = {
       }
 
       const vote = await prisma.jmk_ques_ans_imp.create({
-        data: { ...data, user_type: "Student" }
+        data: { ...data, user_type: "Student", student_id: userId }
       })
 
       if (!vote) throw new ApolloError('Someting went wrong !')
@@ -1568,6 +1568,7 @@ const studentResolversQuery = {
   },
 
   getQuestionAnsVote: async (_, { question_id, answer_id }, { userId }) => {
+    console.log(answer_id);
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
@@ -1580,7 +1581,7 @@ const studentResolversQuery = {
     if (answer_id) {
       vote = await prisma.jmk_ques_ans_imp.findMany({ where: { ans_id: answer_id } })
     }
-    if (!vote) throw new ForbiddenError('No Data !')
+    if (!vote) throw new ApolloError('No Data !')
     return vote
   },
 
