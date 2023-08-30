@@ -115,6 +115,7 @@ const studentQueryTypesAndInputs = `
       ques_title:String! 
       ques_description:String! 
       severity_level:String 
+      ques_image: Upload
       status:Boolean!
      }
 
@@ -292,11 +293,13 @@ const studentQueryTypesAndInputs = `
       std_lname:String! 
       std_pic:String
       user_role:String! 
+      totalUpvote:Int
+      ques_image:String
      }
 
      type stdQuesAns {
       ans_id:Int!
-      user_type:String!
+      user_type:String!  
       question_id:Int! 
       student_id:Int
       teacher_id:Int 
@@ -307,7 +310,8 @@ const studentQueryTypesAndInputs = `
       user_pic:String
       user_role:String! 
       created_at:Date! 
-      updated_at:Date 
+      updated_at:Date
+      totalUpvote:Int 
      }
 
      type quesAndAnsVote {
@@ -947,6 +951,7 @@ const studentResolvers = {
       where: { std_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user')
+
     const oldQuestion = await prisma.jmk_std_ques.findFirst({
       where: {
         ques_title: data.ques_title,
@@ -954,8 +959,18 @@ const studentResolvers = {
     })
     if (oldQuestion) throw new ApolloError('Already Exist Question')
 
+    let file
+    if (data.ques_image) {
+      file = await uploadImgToAWS(data.ques_image, 'questions_images/')
+      if (!file.data) throw new ApolloError('Someting went wrong !')
+    }
+
     const question = await prisma.jmk_std_ques.create({
-      data: { ...data, student_id: userId, instance_id: user.crs_id }
+      data: {
+        ...data, student_id: userId, instance_id: user.crs_id,
+        ques_image: file?.data?.Location ?? null,
+        ques_image_key: file?.data?.key ?? '',
+      }
     })
 
     if (!question) throw new ApolloError('Someting went wrong !')
@@ -977,8 +992,22 @@ const studentResolvers = {
     })
     if (!oldQuestion) throw new ApolloError('Invalid !')
 
+    if (data.ques_image && oldQuestion.ques_image_key) {
+      await deleteImgToAWS(oldQuestion.ques_image_key)
+    }
+
+    let file
+    if (data.ques_image) {
+      file = await uploadImgToAWS(data.ques_image, 'questions_images/')
+      if (!file.data) throw new ApolloError('Someting went wrong !')
+    }
+
     const question = await prisma.jmk_std_ques.update({
-      data: { ...data },
+      data: {
+        ...data,
+        ques_image: file?.data?.Location ?? oldQuestion.ques_image ?? '',
+        ques_image_key: file?.data?.key ?? oldQuestion.ques_image_key ?? '',
+      },
       where: { ques_id: data.ques_id }
     })
 
@@ -1526,8 +1555,15 @@ const studentResolversQuery = {
     let questions = [];
     const questionsData = await prisma.jmk_std_ques.findMany({ where: { instance_id: user.crs_id } })
     for (let index = 0; index < questionsData.length; index++) {
+      let totalUpvote = 0;
+      const vote = await prisma.jmk_ques_ans_imp.findMany({ where: { question_id: questionsData[index].ques_id } })
+      vote.forEach(item => {
+        if (item.upvote === 1) {
+          totalUpvote = +1
+        }
+      })
       const user = await prisma.jmkstdinfo.findFirst({ where: { std_id: questionsData[index].student_id } })
-      questions.push({ ...questionsData[index], std_fname: user.std_fname, std_mname: user.std_mname, std_lname: user.std_lname, std_pic: user.std_pic, user_role: "Student" })
+      questions.push({ ...questionsData[index], std_fname: user.std_fname, std_mname: user.std_mname, std_lname: user.std_lname, std_pic: user.std_pic, user_role: "Student", totalUpvote: totalUpvote })
     }
     if (!questions) throw new ForbiddenError('No Questions Found !')
     return questions
@@ -1556,13 +1592,23 @@ const studentResolversQuery = {
     const answersData = await prisma.jmk_ques_ans.findMany({ where: { question_id: question_id } })
     for (let index = 0; index < answersData.length; index++) {
       if (answersData?.[index].user_type === 'Student') {
+        let totalUpvote = 0;
+        const vote = await prisma.jmk_ques_ans_imp.findMany({ where: { ans_id: answersData[index].ans_id } })
+        vote.forEach(item => {
+          if (item.upvote === 1) {
+            totalUpvote = +1
+          }
+        })
         const user = await prisma.jmkstdinfo.findFirst({ where: { std_id: answersData[index].student_id } })
-        answers.push({ ...answersData[index], user_fname: user.std_fname, user_mname: user.std_mname, user_lname: user.std_lname, user_pic: user.std_pic, user_role: "Student" })
+        answers.push({ ...answersData[index], user_fname: user.std_fname, user_mname: user.std_mname, user_lname: user.std_lname, user_pic: user.std_pic, user_role: "Student", totalUpvote })
       } else {
         const user = await prisma.jmkdevinfo.findFirst({ where: { developer_id: answersData[index].teacher_id } })
         answers.push({ ...answersData[index], user_fname: user.developer_fname, user_mname: user.developer_mname, user_lname: user.developer_lname, user_pic: '', user_role: "Teacher" })
       }
     }
+    answers = [...answers].sort((a, b) => {
+      return b.totalUpvote - a.totalUpvote;
+    });
     if (!answers) throw new ForbiddenError('No Answer Found !')
     return answers
   },

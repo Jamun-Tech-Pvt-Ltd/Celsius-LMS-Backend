@@ -752,6 +752,8 @@ model jmk_std_ques {
   created_at       DateTime?                        @default(now())
   updated_at       DateTime?                        @default(now())
   ques_title       String                           @db.VarChar(500)
+  ques_image       String?
+  ques_image_key   String?
 }
 
 model jmk_ques_ans {
