@@ -392,6 +392,7 @@ const studentMutation = `
 
     createStdQuestion(data:stdQuestionInput!):String!
     updateStdQuestion(data:stdQuestionInput!):String!
+    deleteStdQuestion(question_id:Int!):String!
 
 
     createQuesAns(data:stdQuesAnsInput!):String!
@@ -1014,6 +1015,55 @@ const studentResolvers = {
     if (!question) throw new ApolloError('Someting went wrong !')
 
     return 'Successfully updated !'
+  },
+
+  deleteStdQuestion: async (_, { question_id }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    const oldQuestion = await prisma.jmk_std_ques.findFirst({
+      where: {
+        student_id: userId,
+        ques_id: question_id
+      },
+    })
+    if (!oldQuestion) throw new ApolloError('Invalid !')
+
+    // delete aws image
+    if (oldQuestion.ques_image_key) {
+      await deleteImgToAWS(oldQuestion.ques_image_key)
+    }
+
+    const allAnswers = await prisma.jmk_ques_ans.findMany({ where: { question_id: question_id } })
+    // delete all answers and answers votes
+    for (let index = 0; index < allAnswers.length; index++) {
+      const allAnsVotes = await prisma.jmk_ques_ans_imp.findMany({ where: { ans_id: allAnswers[index].ans_id } })
+      for (let index2 = 0; index2 < allAnsVotes.length; index2++) {
+        await prisma.jmk_ques_ans_imp.delete({ where: { imp_id: allAnsVotes[index2].imp_id } })
+      }
+      await prisma.jmk_ques_ans.delete({ where: { ans_id: allAnswers[index].ans_id } })
+    }
+
+    const allSubsStudents = await prisma.jmk_ques_sub.findMany({ where: { question_id: question_id } })
+    // delete all student subs data
+    for (let index = 0; index < allSubsStudents.length; index++) {
+      await prisma.jmk_ques_sub.delete({ where: { sub_id: allSubsStudents[index].sub_id } })
+    }
+
+    // delete all Question Vote
+    const allQuesVotes = await prisma.jmk_ques_ans_imp.findMany({ where: { question_id: oldQuestion.ques_id } })
+    for (let index = 0; index < allQuesVotes.length; index++) {
+      await prisma.jmk_ques_ans_imp.delete({ where: { imp_id: allQuesVotes[index].imp_id } })
+    }
+
+    // delete question
+    const question = await prisma.jmk_std_ques.delete({ where: { ques_id: question_id } })
+
+    if (!question) throw new ApolloError('Someting went wrong !')
+
+    return 'Successfully deleted !'
   },
 
   createQuesAns: async (_, { data }, { userId }) => {
