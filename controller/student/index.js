@@ -326,6 +326,15 @@ const studentQueryTypesAndInputs = `
       created_at:Date
       updated_at:Date 
      }
+
+
+     type stdCrsRelatedQuesInfo {
+      crsmain_id:Int!
+      crs_id:Int!
+      name:String!
+      totalDiscussions:Int! 
+      new:Int! 
+     }
 `
 
 const studentQuery = `
@@ -362,6 +371,7 @@ const studentQuery = `
 
     getStdQuesSub(question_id:Int):String!
 
+    getStdCrsRelatedQuesInfo:[stdCrsRelatedQuesInfo]!
 `
 
 const studentMutation = `
@@ -1652,13 +1662,29 @@ const studentResolversQuery = {
         const user = await prisma.jmkstdinfo.findFirst({ where: { std_id: answersData[index].student_id } })
         answers.push({ ...answersData[index], user_fname: user.std_fname, user_mname: user.std_mname, user_lname: user.std_lname, user_pic: user.std_pic, user_role: "Student", totalUpvote })
       } else {
+        let totalUpvote = 0;
+        const vote = await prisma.jmk_ques_ans_imp.findMany({ where: { ans_id: answersData[index].ans_id } })
+        vote.forEach(item => {
+          if (item.upvote === 1) {
+            totalUpvote = +1
+          }
+        })
         const user = await prisma.jmkdevinfo.findFirst({ where: { developer_id: answersData[index].teacher_id } })
-        answers.push({ ...answersData[index], user_fname: user.developer_fname, user_mname: user.developer_mname, user_lname: user.developer_lname, user_pic: '', user_role: "Teacher" })
+        answers.push({ ...answersData[index], user_fname: user.developer_fname, user_mname: user.developer_mname, user_lname: user.developer_lname, user_pic: '', user_role: "Teacher", totalUpvote })
       }
     }
-    answers = [...answers].sort((a, b) => {
-      return b.totalUpvote - a.totalUpvote;
-    });
+
+    // Filter and sort teachers
+    const teacherAnswers = answers.filter(item => item.user_role === "Teacher");
+    teacherAnswers.sort((a, b) => (b.totalUpvote || 0) - (a.totalUpvote || 0));
+
+    // Filter and sort non-teachers
+    const nonTeacherAnswers = answers.filter(item => item.user_role !== "Teacher");
+    nonTeacherAnswers.sort((a, b) => (b.totalUpvote || 0) - (a.totalUpvote || 0));
+
+    // Concatenate the two sorted arrays
+    answers = [...teacherAnswers, ...nonTeacherAnswers];
+
     if (!answers) throw new ForbiddenError('No Answer Found !')
     return answers
   },
@@ -1691,6 +1717,29 @@ const studentResolversQuery = {
     return "subscribed"
   },
 
+  getStdCrsRelatedQuesInfo: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    const channel = []
+    const stdRlatedCrs = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: userId } })
+
+    for (let index = 0; index < stdRlatedCrs.length; index++) {
+      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: stdRlatedCrs[index].crs_id } })
+      const questionsCount = await prisma.jmk_std_ques.count({ where: { instance_id: stdRlatedCrs[index].crs_id } })
+      channel.push({
+        crsmain_id: stdRlatedCrs[index].crsmain_id,
+        crs_id: course.crs_id,
+        name: course.crs_name,
+        totalDiscussions: questionsCount,
+        new: 0
+      })
+    }
+    if (!channel[0]) throw new ApolloError('user doesnt have course')
+    return channel
+  },
 }
 
 export {
