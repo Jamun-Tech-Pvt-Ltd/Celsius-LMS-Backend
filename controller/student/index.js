@@ -10,7 +10,10 @@ import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 import { sendMail } from '../../utils/mailHandler.js'
 import registerrHTML from '../../utils/signup.js'
 import newUserSignupNotification from '../../utils/newUsersignup.js'
+import QuestionCreateTemplate from '../../utils/QuestionCreateEmail.js'
 import forgotPasswordHTML from '../../utils/forgotPassword.js'
+import QuestionInformTemplate from '../../utils/QuestionInformEmail.js'
+import SubscriptionEmailTemplate from '../../utils/SubscriptionEmail.js'
 
 const studentQueryTypesAndInputs = `
     input SigninInput{
@@ -982,7 +985,26 @@ const studentResolvers = {
         ques_image: file?.data?.Location ?? null,
         ques_image_key: file?.data?.key ?? '',
       }
+    });
+
+    //This one sends the mail to the current user informing his post has been sucessfully posted
+    await sendMail(user.std_email, `Question Sucessfully Posted`, QuestionCreateTemplate(`${user.std_fname} ${user.std_lname}`, `${user.std_pic}`, question.ques_id));
+
+    //This one is for all the other users having common CRSID informing that the user has posted a question
+    const studentList = await prisma.jmkstdinfo.findMany({
+      where: {
+        crs_id: user.crs_id,
+        std_verifyed: true
+      }
+    });
+    studentList.forEach(async (stud) => {
+      if (stud.std_id != user.std_id) {
+        console.log(`${stud.std_fname} ${stud.std_lname}`);
+        await sendMail(user.std_email, `Question was posted`, QuestionInformTemplate(`${user.std_fname} ${user.std_lname}`, `${user.std_fname} ${user.std_lname}`, `${user.std_pic}`, question.ques_id));
+      }
     })
+
+    //TODO: Teacher one up for discussion
 
     if (!question) throw new ApolloError('Someting went wrong !')
 
@@ -1092,6 +1114,24 @@ const studentResolvers = {
     const answer = await prisma.jmk_ques_ans.create({
       data: { ...data, student_id: userId, user_type: 'Student' }
     })
+
+
+    const subsList = await prisma.jmk_ques_sub.findMany({
+      where: {
+        question_id: data.question_id
+      }
+    });
+
+    subsList.forEach(async (student) => {
+      let studentDB = await prisma.jmkstdinfo.findFirst({
+        where: {
+          std_id: student.student_id
+        }
+      });
+      console.log(studentDB.std_fname)
+      await sendMail(studentDB.std_email, `Question Subscription Update`, SubscriptionEmailTemplate(`${studentDB.std_fname} ${studentDB.std_lname}`, `${studentDB.std_pic}`, data.question_id));
+
+    });
 
     if (!answer) throw new ApolloError('Someting went wrong !')
 
