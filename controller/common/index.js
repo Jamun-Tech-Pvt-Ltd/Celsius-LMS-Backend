@@ -9,6 +9,15 @@ import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 
 const commonQueryTypesAndInputs = `
 
+input createUpdateCourseVideoInput {
+    vid_id: Int
+    vid_name: String!
+    vid_loc: Upload
+    crs_id: Int!
+    vid_date: String!
+    vid_summary:String!
+}
+
 input createCourseInput {
     crs_name: String!
     crs_desc: String
@@ -121,6 +130,15 @@ input createCourseInput {
       created_at:Date
   }
 
+  type Video {
+      vid_id: String!
+      vid_name: String!
+      vid_loc: String
+      crs_id: String!
+      vid_date: Date!
+      vid_summary: String!
+  }
+
 `
 
 const commonQuery = `
@@ -130,13 +148,17 @@ const commonQuery = `
     getContactInfo:[ContactInfoType!]
     getAllActiveBlogs:[JmkALlBlog]
     getBlogBySlug(blog_slug:String!):JmkBlog!
+    getAllVideosByCourseId(crs_id:Int!):[Video]
+    getVideosByVideoId(vid_id:Int!):Video
 `
 
 const commonMutation = `
     createCourse(data:createCourseInput!):Course
     updateCourse(data:updateCourseInput!):String!
     deleteCourse(data:deleteCourseInput):String
-    
+    addCourseVideo(data:createUpdateCourseVideoInput!):String!
+    updateCourseVideo(data:createUpdateCourseVideoInput!):String!
+    deleteCourseVideo(vid_id:Int!):String!
 `
 
 const commonResolvers = {
@@ -283,6 +305,117 @@ const commonResolvers = {
     }
     throw new AuthenticationError('invalid access')
   },
+
+  addCourseVideo: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[2] || role === 'admin') {
+      if (role === 'admin') {
+        const admin = await prisma.jmkuserinfo.findFirst({
+          where: { usr_id: userId, usr_role: role },
+        })
+        if (!admin) throw new AuthenticationError('invalid admin')
+      }
+      if (role === ROLES[2]) {
+        const consultancy = await prisma.jmkconsulinfo.findFirst({
+          where: { serial: userId },
+        })
+        if (!consultancy) throw new AuthenticationError('invalid consultancy')
+      }
+      let file
+      file = await uploadImgToAWS(data.vid_loc, 'videos/')
+      if (!file.data) throw new ApolloError('Someting went wrong !')
+      const newVideo = await prisma.jmkvidinfo.create({
+        data: {
+          ...data,
+          vid_loc: file?.data?.Location ?? null,
+          vid_loc_key: file?.data?.key ?? '',
+        },
+      })
+      if (!newVideo) throw new ApolloError('something went wrong !')
+      return "Success"
+    }
+    throw new AuthenticationError('invalid access')
+  },
+
+  updateCourseVideo: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[2] || role === 'admin') {
+      if (role === 'admin') {
+        const admin = await prisma.jmkuserinfo.findFirst({
+          where: { usr_id: userId, usr_role: role },
+        })
+        if (!admin) throw new AuthenticationError('invalid admin')
+      }
+      if (role === ROLES[2]) {
+        const consultancy = await prisma.jmkconsulinfo.findFirst({
+          where: { serial: userId },
+        })
+        if (!consultancy) throw new AuthenticationError('invalid consultancy')
+      }
+
+      const oldVideo = await prisma.jmkvidinfo.findFirst({ where: { vid_id: data.vid_id } })
+      if (!oldVideo) throw new ForbiddenError('invalid Vdeo id !');
+
+      if (data.vid_loc) {
+        await deleteImgToAWS(oldVideo.vid_loc_key);
+        let file
+        file = await uploadImgToAWS(data.vid_loc, 'videos/')
+        if (!file.data) throw new ApolloError('Someting went wrong !')
+        const updateVideo = await prisma.jmkvidinfo.update({
+          data: {
+            ...data,
+            vid_loc: file?.data?.Location ?? null,
+            vid_loc_key: file?.data?.Key ?? '',
+          },
+          where: { vid_id: data.vid_id }
+        })
+        if (!updateVideo) throw new ApolloError('something went wrong !')
+        return "Success"
+      }
+      const updateVideo = await prisma.jmkvidinfo.update({
+        data: {
+          ...data,
+          vid_loc: oldVideo.vid_loc,
+          vid_loc_key: oldVideo.vid_loc_key,
+        },
+        where: { vid_id: data.vid_id }
+      })
+      if (!updateVideo) throw new ApolloError('something went wrong !')
+      return "Success"
+    }
+    throw new AuthenticationError('invalid access')
+  },
+
+  deleteCourseVideo: async (_, { vid_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[2] || role === 'admin') {
+      if (role === 'admin') {
+        const admin = await prisma.jmkuserinfo.findFirst({
+          where: { usr_id: userId, usr_role: role },
+        })
+        if (!admin) throw new AuthenticationError('invalid admin')
+      }
+      if (role === ROLES[2]) {
+        const consultancy = await prisma.jmkconsulinfo.findFirst({
+          where: { serial: userId },
+        })
+        if (!consultancy) throw new AuthenticationError('invalid consultancy')
+      }
+
+      const oldVideo = await prisma.jmkvidinfo.findFirst({ where: { vid_id: vid_id } })
+      if (!oldVideo) throw new ForbiddenError('invalid Vdeo id !');
+
+      if (oldVideo.vid_loc_key) {
+        await deleteImgToAWS(oldVideo.vid_loc_key);
+      }
+
+      const deleteVideo = await prisma.jmkvidinfo.delete({ where: { vid_id: vid_id } })
+      if (!deleteVideo) throw new ApolloError('something went wrong !')
+
+      return "Deleted !"
+    }
+    throw new AuthenticationError('invalid access')
+  },
 }
 
 const commonResolversQuery = {
@@ -321,7 +454,6 @@ const commonResolversQuery = {
     }
     throw new AuthenticationError('invalid access !!')
   },
-
   getCourseById: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     if (!args.crs_id) throw new ForbiddenError('crs_id is required !')
@@ -355,6 +487,24 @@ const commonResolversQuery = {
     })
     if (!blog) throw new ApolloError('Data Not Found')
     return blog
+  },
+  getAllVideosByCourseId: async (_, { crs_id }, { userId }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (!crs_id) throw new ForbiddenError('crs_id is required !')
+    const videos = await prisma.jmkvidinfo.findMany({
+      where: { crs_id: crs_id },
+    })
+    if (!videos[0]) throw new ApolloError('Data Not Found')
+    return videos
+  },
+  getVideosByVideoId: async (_, { vid_id }, { userId }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (!vid_id) throw new ForbiddenError('vid_id is required !')
+    const video = await prisma.jmkvidinfo.findFirst({
+      where: { vid_id: vid_id },
+    })
+    if (!video) throw new ApolloError('Data Not Found')
+    return video
   },
 }
 

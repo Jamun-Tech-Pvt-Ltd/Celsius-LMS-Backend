@@ -264,15 +264,6 @@ const studentQueryTypesAndInputs = `
         content_date: Date!
         content_title:String!
      }
-
-     type Video {
-        vid_id: String!
-        vid_name: String!
-        vid_loc: String
-        crs_id: String!
-        vid_date: Date!
-        vid_summary: String!
-     }
   
      type VideoNote {
         serial: ID!

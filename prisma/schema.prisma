@@ -109,6 +109,7 @@ model jmkvidinfo {
   crs_id      Int
   vid_date    DateTime   @db.Date
   vid_summary String?    @db.VarChar(10000)
+  vid_loc_key String?    @db.VarChar(1000)
   jmkcrsinfo  jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "crs_id_vid_fk")
 
   @@index([crs_id], map: "crs_id_vid_fk")
