@@ -109,6 +109,7 @@ model jmkvidinfo {
   crs_id      Int
   vid_date    DateTime   @db.Date
   vid_summary String?    @db.VarChar(10000)
+  vid_loc_key String?    @db.VarChar(1000)
   jmkcrsinfo  jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "crs_id_vid_fk")
 
   @@index([crs_id], map: "crs_id_vid_fk")
@@ -734,13 +735,6 @@ model jmkblog {
   status                 Boolean  @default(false)
 }
 
-model jmkaccounts {
-  account_id   Int     @id @default(autoincrement())
-  account_name String? @db.VarChar(20)
-  account_desc String? @db.VarChar(200)
-  cid          Int?
-}
-
 model jmkstdreceipt {
   receipt_no     Int       @id @default(autoincrement())
   receipt_date   DateTime? @db.Date
@@ -752,13 +746,15 @@ model jmkstdreceipt {
 model jmk_std_ques {
   ques_id          Int                              @id @default(autoincrement())
   instance_id      Int
-  ques_Title       String                           @db.VarChar(500)
   ques_description String                           @db.LongText
   student_id       Int
   severity_level   jmk_std_ques_severity_level_enum @default(Green)
   status           Boolean                          @default(false)
-  created_at       DateTime                         @default(now())
-  updated_at       DateTime                         @db.Date
+  created_at       DateTime?                        @default(now())
+  updated_at       DateTime?                        @default(now())
+  ques_title       String                           @db.VarChar(500)
+  ques_image       String?
+  ques_image_key   String?
 }
 
 model jmk_ques_ans {
@@ -768,8 +764,8 @@ model jmk_ques_ans {
   student_id  Int?
   teacher_id  Int?
   answer      String                      @db.LongText
-  created_at  DateTime                    @default(now())
-  updated_at  DateTime                    @db.Date
+  created_at  DateTime?                   @default(now())
+  updated_at  DateTime?                   @default(now())
 }
 
 model jmk_ques_ans_imp {
@@ -783,7 +779,7 @@ model jmk_ques_ans_imp {
   upvote      Int                         @default(0)
   downvote    Int                         @default(0)
   created_at  DateTime                    @default(now())
-  updated_at  DateTime                    @db.Date
+  updated_at  DateTime                    @default(now())
 }
 
 model jmk_ques_sub {
