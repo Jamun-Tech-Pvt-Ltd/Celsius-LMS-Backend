@@ -5,7 +5,7 @@ import {
 } from 'apollo-server-express'
 import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
-import { ROLES } from '../../utils/helper.js'
+import { ROLES, getRandomItemsFromArray } from '../../utils/helper.js'
 import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 import { sendMail } from '../../utils/mailHandler.js'
 import registerrHTML from '../../utils/signup.js'
@@ -358,6 +358,7 @@ const studentQuery = `
 
     getStdQuestions:[stdQuestion]
     getStdQuestionById(question_id:Int!):stdQuestion
+    getStdRandomQuestions:[stdQuestion]
 
     getStdQuesAns(question_id:Int!):[stdQuesAns]
 
@@ -1656,7 +1657,31 @@ const studentResolversQuery = {
       const user = await prisma.jmkstdinfo.findFirst({ where: { std_id: questionsData[index].student_id } })
       questions.push({ ...questionsData[index], std_fname: user.std_fname, std_mname: user.std_mname, std_lname: user.std_lname, std_pic: user.std_pic, user_role: "Student", totalUpvote: totalUpvote })
     }
-    if (!questions) throw new ForbiddenError('No Questions Found !')
+    if (!questions[0]) throw new ForbiddenError('No Questions Found !')
+    return questions
+  },
+
+  getStdRandomQuestions: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+    let questions = [];
+    const questionsData = await prisma.jmk_std_ques.findMany({ where: { instance_id: user.crs_id } })
+    for (let index = 0; index < questionsData.length; index++) {
+      let totalUpvote = 0;
+      const vote = await prisma.jmk_ques_ans_imp.findMany({ where: { question_id: questionsData[index].ques_id } })
+      vote.forEach(item => {
+        if (item.upvote === 1) {
+          totalUpvote = +1
+        }
+      })
+      const user = await prisma.jmkstdinfo.findFirst({ where: { std_id: questionsData[index].student_id } })
+      questions.push({ ...questionsData[index], std_fname: user.std_fname, std_mname: user.std_mname, std_lname: user.std_lname, std_pic: user.std_pic, user_role: "Student", totalUpvote: totalUpvote })
+    }
+    questions = getRandomItemsFromArray(questions, 3)
+    if (!questions[0]) throw new ForbiddenError('No Questions Found !')
     return questions
   },
 
