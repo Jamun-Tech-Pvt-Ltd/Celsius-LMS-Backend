@@ -417,6 +417,8 @@ const developerQueryResolvers = {
     }
     if (answer_id) {
       vote = await prisma.jmk_ques_ans_imp.findMany({ where: { ans_id: answer_id } })
+      console.log(vote);
+
     }
     if (!vote) throw new ApolloError('No Data !')
     return vote
@@ -753,7 +755,6 @@ const developerQueryResolvers = {
     )
 
 
-    console.log(updatedValue);
     return updatedValue;
   },
 
@@ -809,7 +810,6 @@ const developerMutationResolver = {
     const user = await prisma.jmkdevinfo.findFirst({
       where: { developer_id: userId },
     });
-    console.log(user);
     if (!user) throw new AuthenticationError('invalid user')
 
     if (data.imp_type === "Question") {
@@ -1293,7 +1293,6 @@ const developerMutationResolver = {
     // );
 
     // if (existingTechStack) return new ApolloError("Tech Stack already exists");
-    console.log(udpatedData)
     const updatedTechStack = await prisma.jmktechstk.update({
       where: {
         techstk_id: techstk_id,
@@ -1353,7 +1352,6 @@ const developerMutationResolver = {
     const marksList = args.data
 
     marksList.forEach(async (element) => {
-      console.log(element);
       await prisma.jmkstdtermsub.update({
         where: {
           serial: element.serial
