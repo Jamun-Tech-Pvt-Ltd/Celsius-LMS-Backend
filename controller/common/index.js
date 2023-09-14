@@ -16,6 +16,8 @@ input createUpdateCourseVideoInput {
     crs_id: Int!
     vid_date: String!
     vid_summary:String!
+    vid_link:String
+    content:String
 }
 
 input createCourseInput {
@@ -137,6 +139,7 @@ input createCourseInput {
       crs_id: String!
       vid_date: Date!
       vid_summary: String!
+      content: String
   }
 
 `
@@ -321,9 +324,15 @@ const commonResolvers = {
         })
         if (!consultancy) throw new AuthenticationError('invalid consultancy')
       }
+      if (!data.vid_loc && !data.vid_link) throw new AuthenticationError('video file or video link required !')
       let file
-      file = await uploadImgToAWS(data.vid_loc, 'videos/')
-      if (!file.data) throw new ApolloError('Someting went wrong !')
+      if (data.vid_loc) {
+        file = await uploadImgToAWS(data.vid_loc, 'videos/')
+        if (!file.data) throw new ApolloError('Someting went wrong !')
+      } else {
+        file = { data: { Location: data.vid_link, key: '' } }
+      }
+      delete data.vid_link
       const newVideo = await prisma.jmkvidinfo.create({
         data: {
           ...data,
@@ -355,9 +364,14 @@ const commonResolvers = {
 
       const oldVideo = await prisma.jmkvidinfo.findFirst({ where: { vid_id: data.vid_id } })
       if (!oldVideo) throw new ForbiddenError('invalid Vdeo id !');
+      const videoLink = data.vid_link;
+      delete data.vid_link
 
       if (data.vid_loc) {
-        await deleteImgToAWS(oldVideo.vid_loc_key);
+        if (videoLink) throw new AuthenticationError('invalid input data !')
+        if (oldVideo.vid_loc_key) {
+          await deleteImgToAWS(oldVideo.vid_loc_key);
+        }
         let file
         file = await uploadImgToAWS(data.vid_loc, 'videos/')
         if (!file.data) throw new ApolloError('Someting went wrong !')
@@ -375,7 +389,7 @@ const commonResolvers = {
       const updateVideo = await prisma.jmkvidinfo.update({
         data: {
           ...data,
-          vid_loc: oldVideo.vid_loc,
+          vid_loc: videoLink ? videoLink : oldVideo.vid_loc,
           vid_loc_key: oldVideo.vid_loc_key,
         },
         where: { vid_id: data.vid_id }
