@@ -401,34 +401,35 @@ const commonResolvers = {
   },
 
   deleteCourseVideo: async (_, { vid_id }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === ROLES[2] || role === 'admin') {
-      if (role === 'admin') {
-        const admin = await prisma.jmkuserinfo.findFirst({
-          where: { usr_id: userId, usr_role: role },
-        })
-        if (!admin) throw new AuthenticationError('invalid admin')
-      }
-      if (role === ROLES[2]) {
-        const consultancy = await prisma.jmkconsulinfo.findFirst({
-          where: { serial: userId },
-        })
-        if (!consultancy) throw new AuthenticationError('invalid consultancy')
-      }
+    throw new ForbiddenError('invalid opration !')
+    // if (!userId) throw new ForbiddenError('invalid token')
+    // if (role === ROLES[2] || role === 'admin') {
+    //   if (role === 'admin') {
+    //     const admin = await prisma.jmkuserinfo.findFirst({
+    //       where: { usr_id: userId, usr_role: role },
+    //     })
+    //     if (!admin) throw new AuthenticationError('invalid admin')
+    //   }
+    //   if (role === ROLES[2]) {
+    //     const consultancy = await prisma.jmkconsulinfo.findFirst({
+    //       where: { serial: userId },
+    //     })
+    //     if (!consultancy) throw new AuthenticationError('invalid consultancy')
+    //   }
 
-      const oldVideo = await prisma.jmkvidinfo.findFirst({ where: { vid_id: vid_id } })
-      if (!oldVideo) throw new ForbiddenError('invalid Vdeo id !');
+    //   const oldVideo = await prisma.jmkvidinfo.findFirst({ where: { vid_id: vid_id } })
+    //   if (!oldVideo) throw new ForbiddenError('invalid Vdeo id !');
 
-      if (oldVideo.vid_loc_key) {
-        await deleteImgToAWS(oldVideo.vid_loc_key);
-      }
+    //   if (oldVideo.vid_loc_key) {
+    //     await deleteImgToAWS(oldVideo.vid_loc_key);
+    //   }
 
-      const deleteVideo = await prisma.jmkvidinfo.delete({ where: { vid_id: vid_id } })
-      if (!deleteVideo) throw new ApolloError('something went wrong !')
+    //   const deleteVideo = await prisma.jmkvidinfo.delete({ where: { vid_id: vid_id } })
+    //   if (!deleteVideo) throw new ApolloError('something went wrong !')
 
-      return "Deleted !"
-    }
-    throw new AuthenticationError('invalid access')
+    //   return "Deleted !"
+    // }
+    // throw new AuthenticationError('invalid access')
   },
 }
 
