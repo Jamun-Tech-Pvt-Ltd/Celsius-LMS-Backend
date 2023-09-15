@@ -753,9 +753,9 @@ model jmk_std_ques {
   status           Boolean                          @default(false)
   created_at       DateTime?                        @default(now())
   updated_at       DateTime?                        @default(now())
-  ques_title       String                           @db.VarChar(500)
   ques_image       String?
   ques_image_key   String?
+  ques_title       String                           @db.VarChar(500)
 }
 
 model jmk_ques_ans {
