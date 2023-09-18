@@ -417,6 +417,8 @@ const developerQueryResolvers = {
     }
     if (answer_id) {
       vote = await prisma.jmk_ques_ans_imp.findMany({ where: { ans_id: answer_id } })
+      console.log(vote);
+
     }
     if (!vote) throw new ApolloError('No Data !')
     return vote
@@ -468,9 +470,20 @@ const developerQueryResolvers = {
         answers.push({ ...answersData[index], user_fname: user.developer_fname, user_mname: user.developer_mname, user_lname: user.developer_lname, user_pic: '', user_role: "Teacher" })
       }
     }
-    answers = [...answers].sort((a, b) => {
-      return b.totalUpvote - a.totalUpvote;
-    });
+    // answers = [...answers].sort((a, b) => {
+    //   return b.totalUpvote - a.totalUpvote;
+    // });
+    // Filter and sort teachers
+    const teacherAnswers = answers.filter(item => item.user_role === "Teacher");
+    teacherAnswers.sort((a, b) => (b.totalUpvote || 0) - (a.totalUpvote || 0));
+
+    // Filter and sort non-teachers
+    const nonTeacherAnswers = answers.filter(item => item.user_role !== "Teacher");
+    nonTeacherAnswers.sort((a, b) => (b.totalUpvote || 0) - (a.totalUpvote || 0));
+
+    // Concatenate the two sorted arrays
+    answers = [...teacherAnswers, ...nonTeacherAnswers];
+
     if (!answers) throw new ForbiddenError('No Answer Found !')
     return answers
   },
@@ -753,7 +766,6 @@ const developerQueryResolvers = {
     )
 
 
-    console.log(updatedValue);
     return updatedValue;
   },
 
@@ -809,7 +821,6 @@ const developerMutationResolver = {
     const user = await prisma.jmkdevinfo.findFirst({
       where: { developer_id: userId },
     });
-    console.log(user);
     if (!user) throw new AuthenticationError('invalid user')
 
     if (data.imp_type === "Question") {
@@ -1293,7 +1304,6 @@ const developerMutationResolver = {
     // );
 
     // if (existingTechStack) return new ApolloError("Tech Stack already exists");
-    console.log(udpatedData)
     const updatedTechStack = await prisma.jmktechstk.update({
       where: {
         techstk_id: techstk_id,
@@ -1353,7 +1363,6 @@ const developerMutationResolver = {
     const marksList = args.data
 
     marksList.forEach(async (element) => {
-      console.log(element);
       await prisma.jmkstdtermsub.update({
         where: {
           serial: element.serial

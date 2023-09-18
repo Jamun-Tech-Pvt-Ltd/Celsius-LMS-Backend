@@ -313,6 +313,7 @@ const studentQueryTypesAndInputs = `
       user_type:String!
       imp_type:String! 
       question_id:Int
+      teacher_id:Int
       ans_id:Int 
       student_id:Int
       upvote:Int!
