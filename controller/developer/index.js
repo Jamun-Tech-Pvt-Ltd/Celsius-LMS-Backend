@@ -470,9 +470,20 @@ const developerQueryResolvers = {
         answers.push({ ...answersData[index], user_fname: user.developer_fname, user_mname: user.developer_mname, user_lname: user.developer_lname, user_pic: '', user_role: "Teacher" })
       }
     }
-    answers = [...answers].sort((a, b) => {
-      return b.totalUpvote - a.totalUpvote;
-    });
+    // answers = [...answers].sort((a, b) => {
+    //   return b.totalUpvote - a.totalUpvote;
+    // });
+    // Filter and sort teachers
+    const teacherAnswers = answers.filter(item => item.user_role === "Teacher");
+    teacherAnswers.sort((a, b) => (b.totalUpvote || 0) - (a.totalUpvote || 0));
+
+    // Filter and sort non-teachers
+    const nonTeacherAnswers = answers.filter(item => item.user_role !== "Teacher");
+    nonTeacherAnswers.sort((a, b) => (b.totalUpvote || 0) - (a.totalUpvote || 0));
+
+    // Concatenate the two sorted arrays
+    answers = [...teacherAnswers, ...nonTeacherAnswers];
+
     if (!answers) throw new ForbiddenError('No Answer Found !')
     return answers
   },
