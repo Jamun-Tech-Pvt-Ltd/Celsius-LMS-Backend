@@ -4,9 +4,9 @@ import { developerMutationResolver, developerQueryResolvers } from './controller
 import { courseQueryResolver, courseMutationResolver } from './controller/course/index.js'
 import { trainerResolvers, trainerResolversQuery } from './controller/trainer/index.js'
 import { studentResolvers, studentResolversQuery } from './controller/student/index.js'
-import { commonResolvers, commonResolversQuery } from './controller/common/index.js'
+import { commonResolvers, commonResolversQuery, subscription } from './controller/common/index.js'
 import { adminResolvers, adminResolversQuery } from './controller/admin/index.js'
-import { jamuntekQuery, jamuntekResolvers } from './controller/jamuntek/index.js'
+import { jamuntekResolvers } from './controller/jamuntek/index.js'
 import { employerMutationResolver, employerQueryResolver } from './controller/employer/index.js';
 
 
@@ -22,7 +22,6 @@ const resolvers = {
     ...studentResolversQuery,
     ...adminResolversQuery,
     ...employerQueryResolver,
-    // ...jamuntekQuery,
   },
 
   Mutation: {
@@ -36,6 +35,7 @@ const resolvers = {
     ...jamuntekResolvers,
     ...employerMutationResolver
   },
+  ...subscription,
 }
 
 

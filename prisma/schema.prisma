@@ -790,6 +790,32 @@ model jmk_ques_sub {
   created_at  DateTime @default(now())
 }
 
+model jmk_chats {
+  chat_id     Int                         @id @default(autoincrement())
+  receiver_id Int
+  sender_id   Int
+  user_type   jmk_ques_ans_user_type_enum
+  created_at  DateTime                    @default(now())
+  message     String                      @db.VarChar(1000)
+}
+
+model jmk_group_chats {
+  chat_id    Int                         @id @default(autoincrement())
+  group_id   Int
+  sender_id  Int
+  user_type  jmk_ques_ans_user_type_enum
+  created_at DateTime                    @default(now())
+  message    String                      @db.VarChar(1000)
+}
+
+model jmk_chat_group {
+  group_id   Int                         @id @default(autoincrement())
+  user_id    Int?
+  teacher_id Int?
+  user_type  jmk_ques_ans_user_type_enum
+  created_at DateTime                    @default(now())
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green

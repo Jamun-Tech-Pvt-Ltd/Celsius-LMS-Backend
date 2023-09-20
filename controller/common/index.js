@@ -7,6 +7,12 @@ import prisma from '../../database.js'
 import { ROLES } from '../../utils/helper.js'
 import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 
+import { PubSub } from 'graphql-subscriptions'
+
+const pubsub = new PubSub()
+
+const NEW_MESSAGE = "NEW_MESSAGE"
+
 const commonQueryTypesAndInputs = `
 
 input createUpdateCourseVideoInput {
@@ -51,6 +57,13 @@ input createCourseInput {
 
  input deleteCourseInput {
     crs_id: Int!
+ }
+
+ input createMessageInput{
+    receiver_id:Int!
+    sender_id:Int!
+    user_type:String!
+    message:String!
  }
 
     type Token {
@@ -142,6 +155,18 @@ input createCourseInput {
       content: String
   }
 
+  type Message{
+    chat_id:Int!
+    receiver_id:Int!
+    sender_id:Int!
+    user_type:String!
+    message:String!
+    created_at: Date!
+  }
+
+  type Subscription{
+    newMessage:Message
+  }
 `
 
 const commonQuery = `
@@ -153,6 +178,7 @@ const commonQuery = `
     getBlogBySlug(blog_slug:String!):JmkBlog!
     getAllVideosByCourseId(crs_id:Int!):[Video]
     getVideosByVideoId(vid_id:Int!):Video
+    getChatsByReceverId(receiver_id:Int!):[Message]
 `
 
 const commonMutation = `
@@ -162,7 +188,17 @@ const commonMutation = `
     addCourseVideo(data:createUpdateCourseVideoInput!):String!
     updateCourseVideo(data:createUpdateCourseVideoInput!):String!
     deleteCourseVideo(vid_id:Int!):String!
+
+    createMessage(data:createMessageInput!):Message
 `
+
+const subscription = {
+  Subscription: {
+    newMessage: {
+      subscribe: () => pubsub.asyncIterator(NEW_MESSAGE)
+    }
+  }
+}
 
 const commonResolvers = {
   createCourse: async (_, { data }, { userId, role }) => {
@@ -431,6 +467,23 @@ const commonResolvers = {
     // }
     // throw new AuthenticationError('invalid access')
   },
+
+  createMessage: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (!data.receiver_id) throw new ForbiddenError('receiver cant be null');
+    if (!data.message) throw new ForbiddenError('message cant be empty');
+    const message = await prisma.jmk_chats.create({
+      data: {
+        receiver_id: data.receiver_id,
+        sender_id: data.sender_id,
+        user_type: data.user_type,
+        message: data.message
+      }
+    })
+    if (!message) throw new ApolloError('Someting went wrong try again !')
+    pubsub.publish(NEW_MESSAGE, { newMessage: message })
+    return message
+  },
 }
 
 const commonResolversQuery = {
@@ -512,6 +565,7 @@ const commonResolversQuery = {
     if (!videos[0]) throw new ApolloError('Data Not Found')
     return videos
   },
+
   getVideosByVideoId: async (_, { vid_id }, { userId }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     if (!vid_id) throw new ForbiddenError('vid_id is required !')
@@ -521,6 +575,16 @@ const commonResolversQuery = {
     if (!video) throw new ApolloError('Data Not Found')
     return video
   },
+
+  getChatsByReceverId: async (_, { receiver_id }, { userId }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (!receiver_id) throw new ForbiddenError('receiver_id is required !')
+    const chats = await prisma.jmk_chats.findMany({
+      where: { receiver_id: receiver_id },
+    })
+    if (!chats) throw new ApolloError('Data Not Found')
+    return chats
+  },
 }
 
 export {
@@ -529,4 +593,5 @@ export {
   commonMutation,
   commonResolvers,
   commonResolversQuery,
+  subscription
 }
