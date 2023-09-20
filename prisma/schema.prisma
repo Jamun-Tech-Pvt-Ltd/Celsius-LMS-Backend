@@ -183,6 +183,8 @@ model jmktrinfo {
   tr_github     String?   @db.VarChar(50)
   tr_linkedin   String?   @db.VarChar(50)
   tr_resume_key String?   @db.VarChar(100)
+  jmktrcrsinfo jmktrcrsinfo[]
+  crs_id Int
 }
 
 model jmkstdcrsinfo {
@@ -274,8 +276,10 @@ model jmkcrscontents {
 
 model jmktrcrsinfo {
   serial Int  @id @default(autoincrement())
-  tr_id  Int?
+  tr_id  Int
   crs_id Int?
+  jmktrinfo jmktrinfo @relation(fields: [tr_id], references: [tr_id], onDelete: NoAction, onUpdate: NoAction)
+
 }
 
 model jmktrloginfo {
@@ -816,6 +820,26 @@ model jmk_chat_group {
   created_at DateTime                    @default(now())
 }
 
+model jmk_tr_week{
+  week_id Int @id @default(autoincrement())
+  title String @db.VarChar(100)
+  description String @db.VarChar(1000)
+  jmk_week_content jmk_week_content[]
+}
+
+model jmk_week_content{
+  content_id Int @id @default(autoincrement())
+  title String @db.VarChar(100)
+  description String @db.VarChar(1000)
+  type jmk_content_type
+  week_id Int
+  video_url String @db.VarChar(1000)
+  jmk_tr_week jmk_tr_week @relation(fields: [week_id],references: [week_id])
+}
+
+
+
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
@@ -849,4 +873,11 @@ enum jmkmktgstd_mktg_status {
   Processing
   Interview
   Completed
+}
+
+enum jmk_content_type {
+  Test
+  Project
+  Video
+  Notes
 }
