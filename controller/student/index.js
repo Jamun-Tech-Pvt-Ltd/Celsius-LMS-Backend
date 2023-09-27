@@ -54,11 +54,7 @@ const studentQueryTypesAndInputs = `
         std_password: String
     }
 
-    input GrievancesInput {
-        grv_type: String!
-        grv_desc: String!
-        grv_rate: String!
-     }
+
 
      input studentProjectInput{
       proj_id:Int!
@@ -103,11 +99,6 @@ const studentQueryTypesAndInputs = `
         std_test_set_id: Int!
      }
 
-     input addStudentPaymentInput{
-        payment_date: Date!
-        pay_amount: Int!
-        transaction_id: String!
-     }
      input studentEmailVerify{
       token: String!
      }
@@ -179,28 +170,24 @@ const studentQueryTypesAndInputs = `
      
 
      type UserCourse {
-        serial : ID
-        crs_id: ID
-        crsmain_title:String
+        serial : Int
+        crs_id: Int!
         crs_start_dt: Date
-        crsmain_id:ID
-        std_id: ID
         crs_name: String!
-        discount: Int
-        amt_paid: Int
-        amt_due: Int
         crs_rate: Int
-        std_crs_verirfy: Boolean
-        crs_complete: Boolean
-        crs_complete_date: Date
+        crs_image:String!
+        crs_desc:String!
      }
   
      type ActiveUserCourse {
-        serial : ID
-        crs_id: ID
+        serial : Int!
+        crs_id: Int!
         crs_start_dt: Date
-        std_id: ID
-        crs_name: String
+        crs_name: String!
+        crs_image:String!
+        crs_desc:String!
+        crs_ins:String!
+        crs_duration:Int!
         discount: Int
         amt_paid: Int
         amt_due: Int
@@ -330,6 +317,25 @@ const studentQueryTypesAndInputs = `
       totalDiscussions:Int! 
       new:Int! 
      }
+
+     type courseWeek {
+      week_id:Int!
+      title:String!
+      description:String!
+      created_at:Date!
+     }
+
+     type courseWeekContent {
+       content_id:Int!
+       week_id:Int!
+       title:String!
+       description:String
+       type:String!
+       date:Date!
+       video_url:String
+       project_url: String
+       test_set_id: Int
+      }
 `
 
 const studentQuery = `
@@ -357,6 +363,13 @@ const studentQuery = `
     getProjectByStudentSelectedCourse:[studentCourseProject]
     getProjectByStudentSelectedCourseById(proj_id:Int!):studentCourseProject
 
+
+
+
+    getStudentCourseWeek:[courseWeek]
+    getStudentCourseWeekContent(week_id:Int!):[courseWeekContent]
+
+
     getStdQuestions:[stdQuestion]
     getStdQuestionById(question_id:Int!):stdQuestion
     getStdRandomQuestions:[stdQuestion]
@@ -376,8 +389,6 @@ const studentMutation = `
     signupUser(userNew:SignupInput!):Token
     updateUser(data:UpdateUserInput):User
 
-    feedback(data:GrievancesInput!):[Feedback]
-    studentVideoNoteUpdate(data:studentVideoNoteUpdateInput):VideoNote!
 
     updateStudentAns(data:[updateStudentAnsInput]):String!
 
@@ -390,7 +401,6 @@ const studentMutation = `
     uploadFile(file: Upload!): User
     studentReview(data:studentReviewInput):String
 
-    addStudentPayInfo(data:addStudentPaymentInput): String!
     submitProject(data:studentProjectInput):String!
 
     studentEmailVerify(data:studentEmailVerify!):String!
@@ -412,6 +422,7 @@ const studentMutation = `
 `
 
 const studentResolvers = {
+
   studentEmailVerify: async (_, { data }) => {
     const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY)
 
@@ -436,6 +447,7 @@ const studentResolvers = {
       throw new AuthenticationError('Could not verify your email')
     return 'Email Verification Completed'
   },
+
   signinUser: async (_, { userSignIn }) => {
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userSignIn.email },
@@ -626,6 +638,7 @@ const studentResolvers = {
     return newUser
   },
 
+  //  not sure
   studentReview: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
@@ -643,47 +656,7 @@ const studentResolvers = {
     return 'success'
   },
 
-  feedback: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: userId },
-    })
-    if (!user) throw new AuthenticationError('invalid user')
-    const grv = await prisma.jmkgrvinfo.findMany({
-      where: { std_id: userId },
-    })
-    const oldgrv = grv.find((item) => item.grv_type === data.grv_type)
-    if (oldgrv) {
-      const updateFeedback = await prisma.jmkgrvinfo.update({
-        data: {
-          grv_type: data.grv_type,
-          grv_desc: data.grv_desc,
-          grv_rate: data.grv_rate,
-        },
-        where: { grv_id: oldgrv.grv_id },
-      })
-      if (!updateFeedback) throw new Error('something went wrong!!')
-      const newFeedback = await prisma.jmkgrvinfo.findMany({
-        where: { std_id: userId },
-      })
-      return newFeedback
-    }
-    const createFeedback = await prisma.jmkgrvinfo.create({
-      data: {
-        std_id: userId,
-        grv_date: new Date(),
-        grv_type: data.grv_type,
-        grv_desc: data.grv_desc,
-        grv_rate: data.grv_rate,
-      },
-    })
-    if (!createFeedback) throw new Error('something went wrong!!')
-    const newFeedback = await prisma.jmkgrvinfo.findMany({
-      where: { std_id: userId },
-    })
-    return newFeedback
-  },
-
+  // used
   addNewCourse: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
@@ -708,24 +681,7 @@ const studentResolvers = {
     return 'success'
   },
 
-  addStudentPayInfo: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: userId },
-    })
-    if (!user) throw new AuthenticationError('invalid user')
-    await prisma.jmktstdpayinfo.create({
-      data: {
-        std_id: user.std_id,
-        payment_date: new Date(data.payment_date),
-        pay_amount: parseInt(data.pay_amount),
-        transaction_id: data.transaction_id,
-        crs_id: user.crs_id,
-      },
-    })
-    return 'success'
-  },
-
+  //  used
   changeActiveCourse: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
@@ -754,6 +710,8 @@ const studentResolvers = {
     return updateUser
   },
 
+
+  // not sure
   removeCourseFromUser: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
@@ -779,45 +737,7 @@ const studentResolvers = {
     return 'success'
   },
 
-  studentVideoNoteUpdate: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: userId },
-    })
-    if (!user) throw new AuthenticationError('invalid user')
-    const vid = await prisma.jmkvidinfo.findFirst({
-      where: {
-        vid_id: data.vid_id,
-      },
-    })
-    if (user.crs_id !== vid.crs_id) throw new AuthenticationError('invalid')
-    const getStdNote = await prisma.jmkstdvidnote.findFirst({
-      where: {
-        std_id: userId,
-        vid_id: data.vid_id,
-      },
-    })
-    if (!getStdNote) {
-      const note = await prisma.jmkstdvidnote.create({
-        data: {
-          std_id: userId,
-          vid_id: data.vid_id,
-          vid_note: data.vid_note,
-        },
-      })
 
-      return note
-    }
-    const note = await prisma.jmkstdvidnote.update({
-      data: {
-        vid_note: data.vid_note,
-      },
-      where: {
-        serial: data.serial,
-      },
-    })
-    return note
-  },
 
   updateStudentAns: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
@@ -926,6 +846,7 @@ const studentResolvers = {
     //
     return 'success'
   },
+
   submitProject: async (_, { data }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
@@ -1297,17 +1218,7 @@ const studentResolversQuery = {
     return video
   },
 
-  myCourse: async (_, args, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: userId },
-    })
-    const course = await prisma.jmkcrsinfo.findFirst({
-      where: { crs_id: user.crs_id },
-    })
-    return course
-  },
-
+  // need to chnage 
   courseList: async () => {
     const course = await prisma.jmkcrsmain.findMany()
     const filter = course.reduce((all, course) => {
@@ -1336,75 +1247,12 @@ const studentResolversQuery = {
       })
       const userCourse = []
       for (let index = 0; index < stdcourse.length; index++) {
-        const course = await prisma.jmkcrsmain.findFirst({
-          where: { crsmain_id: stdcourse[index].crsmain_id },
+        const course = await prisma.jmkcrsinfo.findFirst({
+          where: { crs_id: stdcourse[index].crs_id },
         })
-        userCourse.push({ ...stdcourse[index], crs_name: course.crsmain_title })
+        userCourse.push(course)
       }
       return userCourse
-    }
-    throw new ForbiddenError('Bad request !!')
-  },
-
-  myCourseContents: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    if (role === ROLES[0]) {
-      const user = await prisma.jmkstdinfo.findFirst({
-        where: { std_id: userId },
-      })
-      if (!user) throw new AuthenticationError('invalid user credentials')
-      const courseContents = await prisma.jmkcrscontents.findMany({
-        where: { crs_id: user.crs_id },
-        orderBy: {
-          content_date: 'desc',
-        },
-      })
-      if (!courseContents) throw new ApolloError('empty courseContents')
-      return courseContents
-    }
-    throw new ForbiddenError('Bad request !!')
-  },
-
-  myCourseContent: async (_, args, { userId, role }) => {
-    if (role === ROLES[0]) {
-      if (!userId) throw new ForbiddenError('user need to login')
-      const user = await prisma.jmkstdinfo.findFirst({
-        where: { std_id: userId },
-      })
-      if (!user) throw new AuthenticationError('invalid user credentials')
-      const courseContent = await prisma.jmkcrscontents.findFirst({
-        where: { serial: args.id, crs_id: user.crs_id },
-      })
-      if (!courseContent) throw new ApolloError('empty courseContents')
-      return courseContent
-    }
-    if (role === ROLES[1]) {
-      if (!userId) throw new ForbiddenError('trainer need to login')
-      const trainer = await prisma.jmktrinfo.findFirst({
-        where: { tr_id: userId },
-      })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-      const courseContent = await prisma.jmkcrscontents.findFirst({
-        where: { serial: args.id },
-      })
-      if (!courseContent) throw new ApolloError('empty courseContents')
-      return courseContent
-    }
-    throw new ForbiddenError('Bad request !!')
-  },
-
-  getCourseContentsByCrsId: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('trainer need to login')
-    if (role === ROLES[1]) {
-      const trainer = await prisma.jmktrinfo.findFirst({
-        where: { tr_id: userId },
-      })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-      const courseContent = await prisma.jmkcrscontents.findMany({
-        where: { crs_id: args.crs_id },
-      })
-      if (!courseContent) throw new ApolloError('empty courseContents')
-      return courseContent
     }
     throw new ForbiddenError('Bad request !!')
   },
@@ -1424,23 +1272,7 @@ const studentResolversQuery = {
       const crs = await prisma.jmkcrsinfo.findFirst({
         where: { crs_id: user.crs_id },
       })
-      return { ...stdcourse, crs_rate: crs.crs_rate, crs_name: crs.crs_name }
-    }
-    throw new ForbiddenError('Bad request !!')
-  },
-
-  studentVideoNote: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    if (role === ROLES[0]) {
-      const user = await prisma.jmkstdinfo.findFirst({
-        where: { std_id: userId },
-      })
-      if (!user) throw new AuthenticationError('invalid user credentials')
-      const note = await prisma.jmkstdvidnote.findFirst({
-        where: { std_id: userId, vid_id: args.vid_id },
-      })
-      if (!note) throw new ApolloError('Empty Note !')
-      return note
+      return { ...stdcourse, ...crs }
     }
     throw new ForbiddenError('Bad request !!')
   },
@@ -1460,6 +1292,7 @@ const studentResolversQuery = {
     }
     throw new ForbiddenError('Bad request !!')
   },
+
   loadQuestion: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     if (role === ROLES[0]) {
@@ -1499,6 +1332,7 @@ const studentResolversQuery = {
     }
     throw new ForbiddenError('Bad request !!')
   },
+
   loadTest: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     if (role === ROLES[0]) {
@@ -1639,6 +1473,38 @@ const studentResolversQuery = {
     return ApolloError('No Data Found')
   },
 
+  // ! new api
+
+  getStudentCourseWeek: async (_, args, { userId, role }) => {
+
+    if (!userId) throw new ForbiddenError('user need to login')
+
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+
+    if (!user) throw new AuthenticationError('invalid user')
+    const week = await prisma.jmk_tr_week.findMany({ where: { crs_id: user.crs_id } })
+
+    if (!week[0]) throw new ForbiddenError('Course not started yet .')
+    return week
+  },
+
+  getStudentCourseWeekContent: async (_, { week_id }, { userId, role }) => {
+
+    if (!userId) throw new ForbiddenError('user need to login')
+
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+
+    if (!user) throw new AuthenticationError('invalid user')
+    const weekContents = await prisma.jmk_week_content.findMany({ where: { week_id: week_id } })
+
+    if (!weekContents[0]) throw new ForbiddenError('No data in this week .')
+    return weekContents
+  },
+
   getStdQuestions: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
@@ -1699,6 +1565,8 @@ const studentResolversQuery = {
     return { ...questionData, ...questionUser, user_role: "Student" }
   },
 
+
+  // diss panel
   getStdQuesAns: async (_, { question_id }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
