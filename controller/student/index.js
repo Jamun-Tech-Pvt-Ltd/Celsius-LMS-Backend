@@ -318,11 +318,11 @@ const studentQueryTypesAndInputs = `
       questions:[weeklyTest]
      }
 
-
      type weeklyNote {
       serial: Int!
       week_id: Int!
       std_note:String!
+      week_title:String
       created_at: Date!
       updated_at: Date!
    }
@@ -340,6 +340,7 @@ const studentQuery = `
     getWeeklyTest(content_id:Int!):weeklyTestSet
 
     getWeeklyNote(week_id:Int!):weeklyNote
+    getAllWeeklyNote:[weeklyNote]
 
 
     getStudentCourseWeek:[courseWeek]
@@ -1227,6 +1228,32 @@ const studentResolversQuery = {
       if (!weekNote) throw new ForbiddenError('Empty Note !')
 
       return weekNote
+    }
+    throw new ForbiddenError('Bad request !!')
+  },
+
+
+  getAllWeeklyNote: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    if (role === ROLES[0]) {
+      const user = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      })
+      if (!user) throw new AuthenticationError('invalid user credentials')
+      const stdNotes = []
+
+      const weekNotes = await prisma.jmk_std_week_note.findMany({ where: { std_id: userId } })
+
+      for (let index = 0; index < weekNotes.length; index++) {
+        const week = await prisma.jmk_tr_week.findFirst({ where: { week_id: weekNotes[index].week_id } });
+        if (week.crs_id === user.crs_id) {
+          stdNotes.push({ ...weekNotes[index], week_title: week.title })
+        }
+      }
+
+      if (!stdNotes[0]) throw new ForbiddenError('Empty Note !')
+
+      return stdNotes
     }
     throw new ForbiddenError('Bad request !!')
   },
