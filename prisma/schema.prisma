@@ -45,9 +45,46 @@ model jmk_week_content {
   description String           @db.VarChar(1000)
   type        jmk_content_type
   week_id     Int
-  video_url   String           @db.VarChar(1000)
+  video_url   String?          @db.VarChar(1000)
+  project_url String?          @db.VarChar(1000)
   date        DateTime         @default(now())
   jmk_tr_week jmk_tr_week      @relation(fields: [week_id], references: [week_id])
+}
+
+model jmk_test_set {
+  test_set_id Int     @id @default(autoincrement())
+  content_id  Int
+  question    String? @db.VarChar(100)
+  ans1        String? @db.VarChar(100)
+  ans2        String? @db.VarChar(100)
+  ans3        String? @db.VarChar(100)
+  ans4        String? @db.VarChar(100)
+  rtans       String? @db.VarChar(100)
+}
+
+model jmk_std_test_result {
+  serial        Int     @id @default(autoincrement())
+  content_id    Int
+  std_id        Int
+  test_complete Boolean @default(false)
+  score         String  @default("0")
+}
+
+model jmk_std_test_ans {
+  serial      Int    @id @default(autoincrement())
+  content_id  Int
+  test_set_id Int
+  std_id      Int
+  std_ans     String
+}
+
+model jmk_std_week_note {
+  serial     Int      @id @default(autoincrement())
+  week_id    Int
+  std_id     Int
+  std_note   String   @db.VarChar(50000)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
 }
 
 model jmkstdinfo {
