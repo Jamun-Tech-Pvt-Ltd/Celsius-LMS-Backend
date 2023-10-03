@@ -17,7 +17,6 @@ import SubscriptionEmailTemplate from '../../utils/SubscriptionEmail.js'
 
 const studentQueryTypesAndInputs = `
     input SigninInput{
-      cid:Int!
         email: String!
         password: String!
     }
@@ -430,10 +429,7 @@ const studentResolvers = {
     if (!user) throw new AuthenticationError('invalid user credentials')
     const isMatch = userSignIn.password == user.std_password
     if (!isMatch) throw new AuthenticationError('invalid user credentials')
-    if (!user.std_verifyed)
-      throw new AuthenticationError('Email not verified. Please check the mail')
-    if (user.cid !== userSignIn.cid)
-      throw new AuthenticationError('invalid organization selected')
+    if (!user.std_verifyed) throw new AuthenticationError('Email not verified. Please check the mail')
 
     const token = jwt.sign(
       { userId: user.std_id, role: ROLES[0] },
