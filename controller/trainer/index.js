@@ -12,6 +12,14 @@ import { ROLES } from '../../utils/helper.js'
 import { uploadImgToAWS } from '../../utils/imageHandler.js'
 
 const trainerQueryTypesAndInputs = `
+
+    enum ContentTypes{
+      Test
+      Project
+      Video
+      Notes
+    }
+
     input signinTrainerInput{
         email: String!
         password: String!
@@ -62,6 +70,10 @@ const trainerQueryTypesAndInputs = `
         serial: Int!
         comment: String!
      }
+
+     input updateActiveSession {
+      crs_id:Int!
+     }
   
      input deleteTrainerStudentFeedbackInput {
         serial: Int!
@@ -90,6 +102,42 @@ const trainerQueryTypesAndInputs = `
         ans3: String!
         ans4: String!
         rtans: String!
+     }
+
+     input weekInput{
+      title:String!
+      description:String!
+     }
+
+     input updateWeekInput{
+      title:String!
+      description:String!
+      week_id:Int!
+     }
+     input deleteWeekInput{
+      week_id:Int!
+     }
+
+     input weekContentInput{
+      title:String!
+      description:String!
+      video_url:String
+      project_url:String
+      type: ContentTypes
+      
+      content_id:Int
+      test: TestInput
+     }
+
+     input TestInput{
+      test_set_id:Int
+      content_id:Int!
+      question:String
+      ans1: String
+      ans2: String
+      ans3: String
+      ans4: String
+      rtans: String
      }
 
      input addCourseContentInput {
@@ -205,7 +253,40 @@ const trainerQueryTypesAndInputs = `
         rtans: String!
      }
 
-     
+     type sessionDetail{
+      serial: Int
+      tr_id:Int
+      crs_id:Int
+      jmkcrsinfo:JmkCrsInfo
+    }
+
+    type JmkCrsInfo {  # Define the type for jmkcrsinfo
+      crs_code: String
+      crs_name: String
+      crs_image: String
+      crs_image_key: String
+    }
+
+    type weekContentAndTest {
+      week_id:Int
+      title:String
+      description:String
+      created_at:Date
+      
+    }
+
+    type jmkWeekContent{
+      content_id:Int
+      title:String
+      description:String
+      type:String
+      video_url:String
+      project_url:String
+      date:Date
+    }
+
+
+
 
 `
 
@@ -222,6 +303,13 @@ const trainerQuery = `
     getQuestionModule:[QuestionModule]
     getQuestionByModuleId(mod_id:Int!):[Question!]!
     getQuestionByQuestionId(ques_id:Int!):QuestionAdmin!
+
+    getAssignedSessions(tr_id:Int!):[sessionDetail]
+
+
+    getWeekContentBasedonActiveSession:[weekContentAndTest] 
+    getContentByWeekId(week_id:Int!):[jmkWeekContent]
+
 
 `
 
@@ -242,38 +330,61 @@ const trainerMutation = `
     updateQuestion(data:updateQuestionInput!):String!
 
     trainerEmailVerify(data: emailVerifyTrainer!): String!
+
+    ActiveSession(data:updateActiveSession!): String!
+
+    addWeek(data:weekInput!):String!
+    updateWeek(data:updateWeekInput!):String!
+    deleteWeek(data:deleteWeekInput!):String!
+
+    addTrainerWeekContentById(data:weekContentInput):String!
+    updateTrainerWeekContentById(data:weekContentInput):String!
+   
 `
 
 const trainerResolvers = {
   trainerEmailVerify: async (_, { data }) => {
-    const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY);
-    console.log(decodedToken);
-    if (!decodedToken) throw new AuthenticationError("The token is not valid");
+    const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY)
+    console.log(decodedToken)
+    if (!decodedToken) throw new AuthenticationError('The token is not valid')
     const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_id: decodedToken.userId }
-    });
-    if (!trainer) throw new AuthenticationError("Invalid Token");
+      where: { tr_id: decodedToken.userId },
+    })
+    if (!trainer) throw new AuthenticationError('Invalid Token')
 
     const updateStatus = await prisma.jmktrinfo.update({
       where: {
-        tr_id: trainer.tr_id
+        tr_id: trainer.tr_id,
       },
       data: {
-        tr_verifyed: true
-      }
+        tr_verifyed: true,
+      },
     })
-    if (!updateStatus) throw new AuthenticationError("Could not verify your email")
-    return "Email Verification Complete";
-
-
-
+    if (!updateStatus)
+      throw new AuthenticationError('Could not verify your email')
+    return 'Email Verification Complete'
 
     // const generatedToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIzLCJyb2xlIjoidHJhaW5lciIsImlhdCI6MTY5MDAwMTI3NX0.jnArqzd6dCS8vhIMKU8CEm4v-uGdkP1988Vlvq9Vxp8';
     // await sendMail("py.suhant@gmail.com", 'Successfully Register ', emailVerificationHTML(generatedToken))
     // return "mail sent";
-
   },
 
+  ActiveSession: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+    if (!trainer) throw new AuthenticationError('invalid trainer')
+
+    const updateSession = await prisma.jmktrinfo.update({
+      data: {
+        crs_id: data.crs_id,
+      },
+      where: { tr_id: trainer.tr_id },
+    })
+    if (!updateSession) throw ApolloError('Unsuccessful to update session')
+    return 'Successfully Updated Session'
+  },
   signinTrainer: async (_, { data }) => {
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_email: data.email },
@@ -310,12 +421,20 @@ const trainerResolvers = {
       },
     })
     const token = jwt.sign(
-      { userId: newTrainer.tr_id, purpose: "Trainer Verification" },
+      { userId: newTrainer.tr_id, purpose: 'Trainer Verification' },
       process.env.JWT_SECRET_KEY
     )
     // await sendMail(data.tr_email, 'Successfully Register ', registerrHTML)
 
-    await sendMail(newTrainer.tr_email, 'Successfully Register ', emailVerificationHTML(token, `${newTrainer.tr_fname} ${newTrainer.tr_lname}`, "TrainerVerification"))
+    await sendMail(
+      newTrainer.tr_email,
+      'Successfully Register ',
+      emailVerificationHTML(
+        token,
+        `${newTrainer.tr_fname} ${newTrainer.tr_lname}`,
+        'TrainerVerification'
+      )
+    )
     return { token }
   },
 
@@ -523,9 +642,187 @@ const trainerResolvers = {
     }
     throw new ForbiddenError('Bad request !!')
   },
+  addWeek: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+      const week = await prisma.jmk_tr_week.create({
+        data: {
+          ...data,
+          crs_id: trainer.crs_id,
+        },
+      })
+      if (!week) throw new ApolloError('Unable to create the week')
+      return 'Week Successfully added'
+    }
+  },
+  updateWeek: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+      const week = await prisma.jmk_tr_week.update({
+        data: {
+          ...data,
+        },
+        where: {
+          week_id: data.week_id,
+        },
+      })
+      if (!week) throw new ApolloError('No week Found !')
+      return 'Week Successfully updated'
+    }
+  },
+  deleteWeek: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+      const weekContents = await prisma.jmk_week_content.findMany({
+        where: {
+          week_id: data.week_id,
+        },
+      })
+      if (weekContents.length <= 0) {
+        await prisma.jmk_tr_week.delete({
+          where: {
+            week_id: data.week_id,
+          },
+        })
+        return 'Week Successfully deleted'
+      } else {
+        return `Week is full of content. Can't delete`
+      }
+    }
+  },
+  addTrainerWeekContentById: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+      if (data.type !== 'Test') {
+        await prisma.jmk_week_content.create({
+          data: {
+            ...data,
+          },
+        })
+      } else {
+        const testcontent = await prisma.jmk_week_content.create({
+          data: {
+            title: data.title,
+            description: data.description,
+          },
+        })
+
+        const test = await prisma.jmk_test_set.create({
+          data: {
+            ...data,
+          },
+          where: {
+            content_id: testcontent.content_id,
+          },
+        })
+        return 'week test added successfully'
+      }
+      return 'Successfully added content'
+    }
+  },
+  updateTrainerWeekContentById: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+      if (data.type !== 'Test') {
+        await prisma.jmk_week_content.update({
+          data: {
+            ...data,
+          },
+          where: {
+            content_id: data.content_id,
+          },
+        })
+      } else {
+        const testcontent = await prisma.jmk_week_content.update({
+          data: {
+            ...data,
+          },
+          where: {
+            content_id_id: data.content_id_id,
+            test_set_id: data.test_set_id,
+          },
+        })
+
+        const test = await prisma.jmk_test_set.create({
+          data: {
+            ...data,
+          },
+          where: {
+            content_id: testcontent.content_id,
+          },
+        })
+        return 'week test updated successfully'
+      }
+      return 'Successfully updated content'
+    }
+  },
 }
 
 const trainerResolversQuery = {
+  getWeekContentBasedonActiveSession: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+    if (!trainer) throw new AuthenticationError('invalid trainer')
+    const weeks = await prisma.jmk_tr_week.findMany({
+      where: {
+        crs_id: trainer.crs_id,
+      },
+    })
+    return weeks
+  },
+  getContentByWeekId: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+    if (!trainer) throw new AuthenticationError('invalid trainer')
+    const contents = await prisma.jmk_week_content.findMany({
+      where: {
+        week_id: args.week_id,
+      },
+    })
+    return contents
+  },
+
+  getAssignedSessions: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+    if (!trainer) throw new AuthenticationError('invalid trainer')
+    const sessionDetails = await prisma.jmktrcrsinfo.findMany({
+      where: {
+        tr_id: trainer.tr_id,
+      },
+      include: {
+        jmkcrsinfo: true,
+      },
+    })
+
+    return sessionDetails
+  },
   trainer: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     if (role === ROLES[1]) {

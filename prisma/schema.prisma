@@ -24,10 +24,12 @@ model jmkcrsinfo {
   crs_image_key   String?      @db.VarChar(1000)
   cid             Int?
   crs_code        String?      @db.VarChar(40)
-  tr_id           Int?
+  tr_id           Int
+  jmktrinfo jmktrinfo[] 
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]
   jmkvidinfo      jmkvidinfo[]
+  jmktrcrsinfo jmktrcrsinfo[]
 }
 
 model jmk_tr_week {
@@ -38,6 +40,7 @@ model jmk_tr_week {
   created_at       DateTime           @default(now())
   jmk_week_content jmk_week_content[]
 }
+
 
 model jmk_week_content {
   content_id  Int              @id @default(autoincrement())
@@ -240,6 +243,9 @@ model jmktrinfo {
   tr_github     String?   @db.VarChar(50)
   tr_linkedin   String?   @db.VarChar(50)
   tr_resume_key String?   @db.VarChar(100)
+  jmktrcrsinfo jmktrcrsinfo[]
+  crs_id Int?
+  jmkcrsinfo jmkcrsinfo? @relation(fields: [crs_id],references: [crs_id])
 }
 
 model jmkstdcrsinfo {
@@ -315,6 +321,7 @@ model jmkcrstest {
   crs_id          Int
   crs_test_con_id String     @db.VarChar(100)
   crs_test_con    String     @db.VarChar(1000)
+
   jmkcrsinfo      jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsinfo_jmkcrstest_crs_id_fk")
 
   @@index([crs_id], map: "jmkcrsinfo_jmkcrstest_crs_id_fk")
@@ -331,8 +338,10 @@ model jmkcrscontents {
 
 model jmktrcrsinfo {
   serial Int  @id @default(autoincrement())
-  tr_id  Int?
-  crs_id Int?
+  tr_id  Int
+  crs_id Int
+  jmktrinfo jmktrinfo @relation(fields: [tr_id], references: [tr_id], onDelete: NoAction, onUpdate: NoAction)
+  jmkcrsinfo jmkcrsinfo @relation(fields: [crs_id],references: [crs_id],onDelete:NoAction,onUpdate: NoAction)
 }
 
 model jmktrloginfo {
@@ -873,6 +882,10 @@ model jmk_chat_group {
   created_at DateTime                    @default(now())
 }
 
+
+
+
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
@@ -907,6 +920,8 @@ enum jmkmktgstd_mktg_status {
   Interview
   Completed
 }
+
+
 
 enum jmk_content_type {
   Test
