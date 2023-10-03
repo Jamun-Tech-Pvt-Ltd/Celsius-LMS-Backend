@@ -161,6 +161,7 @@ const developerQueryTypesAndInputs = `
       subject_id: Int
       marks_obtained:Int
     }
+  
     
     input signinDeveloperUserInput{
         developer_email: String
@@ -351,6 +352,7 @@ const developerQuery = `
 
     getStdQueAnswer(question_id:Int!):[stdQuesAns]
     
+    
 
     getQuestionAnsVoteTeacher(question_id:Int,answer_id:Int):[quesAndAnsVote]
 `
@@ -392,59 +394,85 @@ const developerMutation = `
 `
 
 const developerQueryResolvers = {
-
   getTchrQuestionById: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkdevinfo.findFirst({
       where: { developer_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user')
-    const questionData = await prisma.jmk_std_ques.findFirst({ where: { ques_id: args.question_id } });
+    const questionData = await prisma.jmk_std_ques.findFirst({
+      where: { ques_id: args.question_id },
+    })
     if (!questionData) throw new ForbiddenError('No Questions Found !')
-    const questionUser = await prisma.jmkstdinfo.findFirst({ where: { std_id: questionData.student_id } })
+    const questionUser = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: questionData.student_id },
+    })
     if (!user) throw new ForbiddenError('No Questions Found !')
-    return { ...questionData, ...questionUser, user_role: "Student" }
+    return { ...questionData, ...questionUser, user_role: 'Student' }
   },
-  getQuestionAnsVoteTeacher: async (_, { question_id, answer_id }, { userId }) => {
+  getQuestionAnsVoteTeacher: async (
+    _,
+    { question_id, answer_id },
+    { userId }
+  ) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkdevinfo.findFirst({
       where: { developer_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user')
-    let vote;
+    let vote
     if (question_id) {
-      vote = await prisma.jmk_ques_ans_imp.findMany({ where: { question_id: question_id } })
+      vote = await prisma.jmk_ques_ans_imp.findMany({
+        where: { question_id: question_id },
+      })
     }
     if (answer_id) {
-      vote = await prisma.jmk_ques_ans_imp.findMany({ where: { ans_id: answer_id } })
-      console.log(vote);
-
+      vote = await prisma.jmk_ques_ans_imp.findMany({
+        where: { ans_id: answer_id },
+      })
+      console.log(vote)
     }
     if (!vote) throw new ApolloError('No Data !')
     return vote
   },
 
   getTchrQuestion: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('User needs to login');
+    if (!userId) throw new ForbiddenError('User needs to login')
     const user = await prisma.jmkdevinfo.findFirst({
-      where: { developer_id: userId }
+      where: { developer_id: userId },
     })
-    if (!user) { throw new Error("No such User") }
-    let questions = [];
-    const questionsData = await prisma.jmk_std_ques.findMany({ where: { instance_id: user.crs_id } })
+    if (!user) {
+      throw new Error('No such User')
+    }
+    let questions = []
+    const questionsData = await prisma.jmk_std_ques.findMany({
+      where: { instance_id: user.crs_id },
+    })
     for (let index = 0; index < questionsData.length; index++) {
-      let totalUpvote = 0;
-      const vote = await prisma.jmk_ques_ans_imp.findMany({ where: { question_id: questionsData[index].ques_id } })
-      vote.forEach(item => {
+      let totalUpvote = 0
+      const vote = await prisma.jmk_ques_ans_imp.findMany({
+        where: { question_id: questionsData[index].ques_id },
+      })
+      vote.forEach((item) => {
         if (item.upvote === 1) {
           totalUpvote = +1
         }
       })
-      const user = await prisma.jmkstdinfo.findFirst({ where: { std_id: questionsData[index].student_id } })
-      questions.push({ ...questionsData[index], std_fname: user.std_fname, std_mname: user.std_mname, std_lname: user.std_lname, std_pic: user.std_pic, user_role: "Student", totalUpvote: totalUpvote })
+      const user = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: questionsData[index].student_id },
+      })
+      questions.push({
+        ...questionsData[index],
+        std_fname: user.std_fname,
+        std_mname: user.std_mname,
+        std_lname: user.std_lname,
+        std_pic: user.std_pic,
+        user_role: 'Student',
+        totalUpvote: totalUpvote,
+      })
     }
     if (!questions) throw new ForbiddenError('No Questions Found !')
-    return questions;
+    return questions
   },
   getStdQueAnswer: async (_, { question_id }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
@@ -452,37 +480,66 @@ const developerQueryResolvers = {
       where: { developer_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user')
-    let answers = [];
-    const answersData = await prisma.jmk_ques_ans.findMany({ where: { question_id: question_id } })
+    let answers = []
+    const answersData = await prisma.jmk_ques_ans.findMany({
+      where: { question_id: question_id },
+    })
     for (let index = 0; index < answersData.length; index++) {
       if (answersData?.[index].user_type === 'Student') {
-        let totalUpvote = 0;
-        const vote = await prisma.jmk_ques_ans_imp.findMany({ where: { ans_id: answersData[index].ans_id } })
-        vote.forEach(item => {
+        let totalUpvote = 0
+        const vote = await prisma.jmk_ques_ans_imp.findMany({
+          where: { ans_id: answersData[index].ans_id },
+        })
+        vote.forEach((item) => {
           if (item.upvote === 1) {
             totalUpvote = +1
           }
         })
-        const user = await prisma.jmkstdinfo.findFirst({ where: { std_id: answersData[index].student_id } })
-        answers.push({ ...answersData[index], user_fname: user.std_fname, user_mname: user.std_mname, user_lname: user.std_lname, user_pic: user.std_pic, user_role: "Student", totalUpvote })
+        const user = await prisma.jmkstdinfo.findFirst({
+          where: { std_id: answersData[index].student_id },
+        })
+        answers.push({
+          ...answersData[index],
+          user_fname: user.std_fname,
+          user_mname: user.std_mname,
+          user_lname: user.std_lname,
+          user_pic: user.std_pic,
+          user_role: 'Student',
+          totalUpvote,
+        })
       } else {
-        const user = await prisma.jmkdevinfo.findFirst({ where: { developer_id: answersData[index].teacher_id } })
-        answers.push({ ...answersData[index], user_fname: user.developer_fname, user_mname: user.developer_mname, user_lname: user.developer_lname, user_pic: '', user_role: "Teacher" })
+        const user = await prisma.jmkdevinfo.findFirst({
+          where: { developer_id: answersData[index].teacher_id },
+        })
+        answers.push({
+          ...answersData[index],
+          user_fname: user.developer_fname,
+          user_mname: user.developer_mname,
+          user_lname: user.developer_lname,
+          user_pic: '',
+          user_role: 'Teacher',
+        })
       }
     }
     // answers = [...answers].sort((a, b) => {
     //   return b.totalUpvote - a.totalUpvote;
     // });
     // Filter and sort teachers
-    const teacherAnswers = answers.filter(item => item.user_role === "Teacher");
-    teacherAnswers.sort((a, b) => (b.totalUpvote || 0) - (a.totalUpvote || 0));
+    const teacherAnswers = answers.filter(
+      (item) => item.user_role === 'Teacher'
+    )
+    teacherAnswers.sort((a, b) => (b.totalUpvote || 0) - (a.totalUpvote || 0))
 
     // Filter and sort non-teachers
-    const nonTeacherAnswers = answers.filter(item => item.user_role !== "Teacher");
-    nonTeacherAnswers.sort((a, b) => (b.totalUpvote || 0) - (a.totalUpvote || 0));
+    const nonTeacherAnswers = answers.filter(
+      (item) => item.user_role !== 'Teacher'
+    )
+    nonTeacherAnswers.sort(
+      (a, b) => (b.totalUpvote || 0) - (a.totalUpvote || 0)
+    )
 
     // Concatenate the two sorted arrays
-    answers = [...teacherAnswers, ...nonTeacherAnswers];
+    answers = [...teacherAnswers, ...nonTeacherAnswers]
 
     if (!answers) throw new ForbiddenError('No Answer Found !')
     return answers
@@ -565,7 +622,7 @@ const developerQueryResolvers = {
   },
 
   getProjectById: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token');
+    if (!userId) throw new ForbiddenError('invalid token')
     if (!args.serial) throw new ForbiddenError('serial is required !')
     const project = await prisma.jmkdevprojdet.findFirst({
       where: {
@@ -578,7 +635,7 @@ const developerQueryResolvers = {
     return project
   },
   getDeveloperProjectList: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login');
+    if (!userId) throw new ForbiddenError('user need to login')
     const projectList = await prisma.jmkdevprojdet.findMany({
       where: {
         developer_id: args.userId,
@@ -597,7 +654,7 @@ const developerQueryResolvers = {
     return projectList
   },
   getConsultancyRecommendation: async (_, args, { userId }) => {
-    if (!userId) return new AuthenticationError("Login to continue");
+    if (!userId) return new AuthenticationError('Login to continue')
     const techStackList = await prisma.jmkdevtechdet.findMany({
       where: {
         developer_id: userId,
@@ -706,69 +763,69 @@ const developerQueryResolvers = {
   },
 
   getCourseList: async (_, args, { userId }) => {
-    const courseDetail = await prisma.jmkcrsinfo.findMany();
-    return courseDetail;
-
+    const courseDetail = await prisma.jmkcrsinfo.findMany()
+    return courseDetail
   },
   getTermList: async (_, args, { userId }) => {
-    const termDetail = await prisma.jmktermdet.findMany({ where: { crs_id: args.crs_id } });
+    const termDetail = await prisma.jmktermdet.findMany({
+      where: { crs_id: args.crs_id },
+    })
     // Use map to create an array of promises that resolve to updated elements
-    const updatedTermDetail = await Promise.all(termDetail.map(async (element) => {
-      const value = await prisma.jmktermmstr.findFirstOrThrow({
-        where: {
-          term_id: element.term_id
-        }
-      });
-      element.term_code = value.term_code;
-      return element; // Return the updated element
-    }));
+    const updatedTermDetail = await Promise.all(
+      termDetail.map(async (element) => {
+        const value = await prisma.jmktermmstr.findFirstOrThrow({
+          where: {
+            term_id: element.term_id,
+          },
+        })
+        element.term_code = value.term_code
+        return element // Return the updated element
+      })
+    )
 
-    return updatedTermDetail;
+    return updatedTermDetail
   },
 
   getSubjectList: async (_, args, { userId }) => {
-    if (!userId) throw new AuthenticationError("Please login to continue")
+    if (!userId) throw new AuthenticationError('Please login to continue')
 
     const subjectDetail = await prisma.jmksubjectmaster.findMany({
       where: {
-        crs_id: args.crs_id
-      }
-    });
-    return subjectDetail;
-
+        crs_id: args.crs_id,
+      },
+    })
+    return subjectDetail
   },
 
   getStudentTermSubjectList: async (_, args, { userId }) => {
     const stdtermsub = await prisma.jmkstdtermsub.findMany({
       where: {
         subject_id: args.data.subject_id,
-        termdet_id: args.data.termdet_id
-      }
-    });
+        termdet_id: args.data.termdet_id,
+      },
+    })
 
     const updatedValue = await Promise.all(
       stdtermsub.map(async (element) => {
         const StudentName = await prisma.jmkstdinfo.findFirst({
           where: {
-            std_id: element.std_id
-          }
-        });
+            std_id: element.std_id,
+          },
+        })
         const subjectCode = await prisma.jmksubjectmaster.findFirst({
           where: {
-            subject_id: element.subject_id
-          }
+            subject_id: element.subject_id,
+          },
         })
-        element.subject_name = subjectCode.subject_code;
+        element.subject_name = subjectCode.subject_code
         element.student_name = `${StudentName.std_fname} ${StudentName.std_lname}`
 
-        return element;
+        return element
       })
     )
 
-
-    return updatedValue;
+    return updatedValue
   },
-
 }
 
 const developerMutationResolver = {
@@ -786,7 +843,7 @@ const developerMutationResolver = {
     if (!question) throw new ApolloError('invalid question_id')
 
     const answer = await prisma.jmk_ques_ans.create({
-      data: { ...data, teacher_id: userId, user_type: 'Teacher' }
+      data: { ...data, teacher_id: userId, user_type: 'Teacher' },
     })
 
     if (!answer) throw new ApolloError('Someting went wrong !')
@@ -802,14 +859,14 @@ const developerMutationResolver = {
     const oldAns = await prisma.jmk_ques_ans.findFirst({
       where: {
         ans_id: data.ans_id,
-        teacher_id: userId
+        teacher_id: userId,
       },
     })
     if (!oldAns) throw new ApolloError('invalid !')
 
     const answer = await prisma.jmk_ques_ans.update({
       data: { ...data },
-      where: { ans_id: data.ans_id }
+      where: { ans_id: data.ans_id },
     })
 
     if (!answer) throw new ApolloError('Someting went wrong !')
@@ -820,22 +877,21 @@ const developerMutationResolver = {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkdevinfo.findFirst({
       where: { developer_id: userId },
-    });
+    })
     if (!user) throw new AuthenticationError('invalid user')
 
-    if (data.imp_type === "Question") {
-
+    if (data.imp_type === 'Question') {
       const oldVote = await prisma.jmk_ques_ans_imp.findFirst({
         where: {
           teacher_id: userId,
-          question_id: data.question_id
+          question_id: data.question_id,
         },
       })
 
       if (oldVote) {
         const vote = await prisma.jmk_ques_ans_imp.update({
           data: { ...data },
-          where: { imp_id: oldVote.imp_id }
+          where: { imp_id: oldVote.imp_id },
         })
 
         if (!vote) throw new ApolloError('Someting went wrong !')
@@ -843,26 +899,25 @@ const developerMutationResolver = {
       }
 
       const vote = await prisma.jmk_ques_ans_imp.create({
-        data: { ...data, user_type: "Teacher", teacher_id: userId, }
+        data: { ...data, user_type: 'Teacher', teacher_id: userId },
       })
 
       if (!vote) throw new ApolloError('Someting went wrong !')
 
       return 'Successfully Created !'
     }
-    if (data.imp_type === "Answer") {
-
+    if (data.imp_type === 'Answer') {
       const oldVote = await prisma.jmk_ques_ans_imp.findFirst({
         where: {
           teacher_id: userId,
-          ans_id: data.ans_id
+          ans_id: data.ans_id,
         },
       })
 
       if (oldVote) {
         const vote = await prisma.jmk_ques_ans_imp.update({
           data: { ...data },
-          where: { imp_id: oldVote.imp_id }
+          where: { imp_id: oldVote.imp_id },
         })
 
         if (!vote) throw new ApolloError('Someting went wrong !')
@@ -870,7 +925,7 @@ const developerMutationResolver = {
       }
 
       const vote = await prisma.jmk_ques_ans_imp.create({
-        data: { ...data, user_type: "Teacher", teacher_id: userId, }
+        data: { ...data, user_type: 'Teacher', teacher_id: userId },
       })
 
       if (!vote) throw new ApolloError('Someting went wrong !')
@@ -890,11 +945,13 @@ const developerMutationResolver = {
     const subscribe = await prisma.jmk_ques_sub.findFirst({
       where: {
         question_id: data.question_id,
-        student_id: userId
+        student_id: userId,
       },
     })
     if (subscribe) {
-      const stdSubscribe = await prisma.jmk_ques_sub.delete({ where: { sub_id: subscribe.sub_id } })
+      const stdSubscribe = await prisma.jmk_ques_sub.delete({
+        where: { sub_id: subscribe.sub_id },
+      })
 
       if (!stdSubscribe) throw new ApolloError('Someting went wrong !')
 
@@ -910,70 +967,70 @@ const developerMutationResolver = {
     return 'subscribed'
   },
   developerEmailVerify: async (_, { data }) => {
-    const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY);
-    if (!decodedToken) throw new AuthenticationError("The token is not valid");
+    const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY)
+    if (!decodedToken) throw new AuthenticationError('The token is not valid')
     const developer = await prisma.jmkdevinfo.findFirst({
-      where: { developer_id: decodedToken.userId }
-    });
-    if (!developer) throw new AuthenticationError("Invalid Token");
+      where: { developer_id: decodedToken.userId },
+    })
+    if (!developer) throw new AuthenticationError('Invalid Token')
 
     const updateStatus = await prisma.jmkdevinfo.update({
       where: {
-        developer_id: developer.developer_id
+        developer_id: developer.developer_id,
       },
       data: {
-        dev_verified: true
-      }
+        dev_verified: true,
+      },
     })
-    if (!updateStatus) throw new AuthenticationError("Could not verify your email")
-    return "Email Verification Complete";
+    if (!updateStatus)
+      throw new AuthenticationError('Could not verify your email')
+    return 'Email Verification Complete'
 
     // const generatedToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIzLCJyb2xlIjoidHJhaW5lciIsImlhdCI6MTY5MDAwMTI3NX0.jnArqzd6dCS8vhIMKU8CEm4v-uGdkP1988Vlvq9Vxp8';
     // await sendMail("py.suhant@gmail.com", 'Successfully Register ', emailVerificationHTML(generatedToken))
     // return "mail sent";
-
   },
   signinDeveloper: async (_, { data }) => {
     const developer = await prisma.jmkdevinfo.findFirst({
       where: {
         developer_email: data.developer_email,
       },
-    });
+    })
 
     if (!developer) {
-      throw new AuthenticationError("Invalid email");
+      throw new AuthenticationError('Invalid email')
     }
 
     if (!developer.dev_verified) {
-      throw new AuthenticationError("Please verify your email");
+      throw new AuthenticationError('Please verify your email')
     }
 
-    const isMatch = data.developer_password === developer.developer_password;
+    const isMatch = data.developer_password === developer.developer_password
     if (!isMatch) {
-      throw new AuthenticationError("Invalid Password");
+      throw new AuthenticationError('Invalid Password')
     }
 
-    let acc_type = "Consultancy";
+    let acc_type = 'Consultancy'
     if (developer.cid) {
       const consultinfo = await prisma.jmkconsulinfo.findFirst({
         where: {
           serial: developer.cid,
         },
-      });
+      })
       if (consultinfo) {
-        acc_type = consultinfo.acc_type;
+        acc_type = consultinfo.acc_type
       }
     }
 
     const token = jwt.sign(
       { userId: developer.developer_id, role: ROLES[3] },
       process.env.JWT_SECRET_KEY
-    );
+    )
 
     return {
       token,
       acc_type,
-    };
+    }
   },
 
   signupDeveloper: async (_, { data }) => {
@@ -1001,8 +1058,8 @@ const developerMutationResolver = {
     const createTechStack = async (techStackId, techStackExp) => {
       const techStack = await prisma.jmktechstk.findFirst({
         where: {
-          techstk_id: parseInt(techStackId)
-        }
+          techstk_id: parseInt(techStackId),
+        },
       })
       try {
         await prisma.jmkdevtechdet.create({
@@ -1061,13 +1118,20 @@ const developerMutationResolver = {
       { userId: newDev.developer_id, role: ROLES[3] },
       process.env.JWT_SECRET_KEY
     )
-    await sendMail(newDev.developer_email, 'Successfully Register ', emailVerificationHTML(token, `${newDev.developer_fname} ${newDev.developer_lname}`, "developerVerification"))
+    await sendMail(
+      newDev.developer_email,
+      'Successfully Register ',
+      emailVerificationHTML(
+        token,
+        `${newDev.developer_fname} ${newDev.developer_lname}`,
+        'developerVerification'
+      )
+    )
 
     return 'success'
   },
 
   updateDeveloper: async (_, { data }, { userId }) => {
-
     const updatedDeveloper = await prisma.jmkdevinfo.update({
       where: { developer_id: userId },
       data: { ...data },
@@ -1093,7 +1157,7 @@ const developerMutationResolver = {
     const techStackName = await prisma.jmktechstk.findFirst({
       where: {
         techstk_id: data.techstk_id,
-      }
+      },
     })
 
     const newExperience = await prisma.jmkdevtechdet.create({
@@ -1357,24 +1421,21 @@ const developerMutationResolver = {
     return 'success'
   },
   updateStudentMarks: async (_, args, { userId }) => {
-
-
-
     const marksList = args.data
 
     marksList.forEach(async (element) => {
       await prisma.jmkstdtermsub.update({
         where: {
-          serial: element.serial
+          serial: element.serial,
         },
         data: {
           marks_obtained: element.marks_obtained,
-        }
+        },
       })
-    });
+    })
 
-    return true;
-  }
+    return true
+  },
 }
 
 export {
