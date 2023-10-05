@@ -159,7 +159,6 @@ const studentQueryTypesAndInputs = `
         timer: Int!
      }
   
-     
      type studentQA {
         question: String!
         rtans: String!
@@ -213,6 +212,7 @@ const studentQueryTypesAndInputs = `
         std_status: Int
         std_paidup: Int
         std_due: Int
+        lastSeen:Date
         feedback: [Feedback]
      }
 
@@ -344,6 +344,7 @@ const studentQueryTypesAndInputs = `
     std_mname:String 
     std_lname:String! 
     std_pic:String
+    lastSeen:Date!
    }
 
    type Chat {
@@ -352,6 +353,7 @@ const studentQueryTypesAndInputs = `
     sender_id:Int! 
     created_at:Date! 
     message:String!
+    isSeen: Boolean!
     user_type:String!
    }
 
@@ -359,12 +361,16 @@ const studentQueryTypesAndInputs = `
     user:Student!
     student:Student!
     chat_history:[Chat]
-
    }
 
   type Subscription{
     newMessage(receiver_id: Int!, user_id:Int!):Chat
   }
+
+  type Subscription{
+    messageSeen(receiver_id: Int!, user_id:Int!):String!
+  }
+
 `
 
 const studentQuery = `
@@ -439,6 +445,9 @@ const studentMutation = `
     createStdWeeklyNote(data:createStdWeeklyNoteInput):String!
 
     createMessage(data:createMessageInput!):Chat
+
+    updateMessageSeen(student_id:Int!):String!
+
 
 `
 
@@ -1154,7 +1163,6 @@ const studentResolvers = {
     }
   },
 
-
   createMessage: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('invalid token');
     if (!data.receiver_id) throw new ForbiddenError('receiver cant be null');
@@ -1178,25 +1186,51 @@ const studentResolvers = {
     }
 
     return message;
+  },
+
+  updateMessageSeen: async (_, { student_id }, { userId }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (!student_id) throw new ForbiddenError('student_id cant be null');
+
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new ForbiddenError('invalid user');
+
+    const student = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: student_id },
+    })
+    if (!student) throw new ForbiddenError('invalid');
+
+    const oldChats = await prisma.jmk_chats.findMany({
+      where: {
+        receiver_id: userId,
+        sender_id: student_id,
+        isSeen: false
+      }
+    })
+
+    if (!oldChats[0]) return 'Nothing to update !'
+
+    for (let index = 0; index < oldChats.length; index++) {
+      await prisma.jmk_chats.update({
+        data: {
+          isSeen: true
+        }, where: {
+          chat_id: oldChats[index].chat_id
+        }
+      });
+    }
+
+    const receiverChannel = `message_seen_${userId}_${student_id}`;
+
+    if (receiverChannel) {
+      pubsub.publish(receiverChannel, { messageSeen: "allMessage" });
+    }
+
+    return "success";
   }
 
-
-  // createMessage: async (_, { data }, { userId }) => {
-  //   if (!userId) throw new ForbiddenError('invalid token')
-  //   if (!data.receiver_id) throw new ForbiddenError('receiver cant be null');
-  //   if (!data.message) throw new ForbiddenError('message cant be empty');
-  //   const message = await prisma.jmk_chats.create({
-  //     data: {
-  //       receiver_id: data.receiver_id,
-  //       sender_id: userId,
-  //       user_type: data.user_type,
-  //       message: data.message
-  //     }
-  //   })
-  //   if (!message) throw new ApolloError('Someting went wrong try again !')
-  //   pubsub.publish(NEW_MESSAGE, { newMessage: message })
-  //   return message
-  // },
 }
 
 const studentResolversQuery = {
@@ -1606,8 +1640,24 @@ const subscription = {
         const receiverChannel = `channel_${receiver_id}_${user_id}`
         return pubsub.asyncIterator(receiverChannel);
       }
+    },
+    messageSeen: {
+      subscribe: (_, { receiver_id, user_id }) => {
+        const receiverChannel = `message_seen_${receiver_id}_${user_id}`
+        return pubsub.asyncIterator(receiverChannel);
+      }
     }
   }
+}
+
+const updateStdActiveDate = async (userId) => {
+  await prisma.jmkstdinfo.update({
+    data: {
+      lastSeen: new Date()
+    }, where: {
+      std_id: userId
+    }
+  })
 }
 
 export {
@@ -1616,5 +1666,6 @@ export {
   studentMutation,
   studentResolvers,
   studentResolversQuery,
+  updateStdActiveDate,
   subscription
 }

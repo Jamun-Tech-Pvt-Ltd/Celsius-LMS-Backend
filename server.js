@@ -14,6 +14,8 @@ import logger from './utils/logger.js';
 import { SubscriptionServer } from 'subscriptions-transport-ws'; // Import the SubscriptionServer class
 import typeDefs from './typeDefs.js'
 import resolvers from './resolvers.js'
+import { ROLES } from './utils/helper.js';
+import { updateStdActiveDate } from './controller/student/index.js';
 
 new PrismaClient();
 
@@ -32,6 +34,9 @@ const context = ({ req }) => {
         authorization,
         process.env.JWT_SECRET_KEY
       );
+      if (role === ROLES[0]) {
+        updateStdActiveDate(userId)
+      }
       if (userId && role) return { userId, role };
     } catch (error) {
       throw new AuthenticationError('Token Expired !');
