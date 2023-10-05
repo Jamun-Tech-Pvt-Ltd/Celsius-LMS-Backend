@@ -8,28 +8,27 @@ datasource db {
 }
 
 model jmkcrsinfo {
-  crs_id          Int          @id @default(autoincrement())
-  crs_name        String       @db.VarChar(200)
-  crs_desc        String       @db.VarChar(1000)
+  crs_id          Int            @id @default(autoincrement())
+  crs_name        String         @db.VarChar(200)
+  crs_desc        String         @db.VarChar(1000)
   crs_duration    Int?
   crs_rate        Int?
-  crs_cat         String?      @db.VarChar(1000)
-  crs_cat_id      String?      @db.VarChar(1000)
-  crs_con         String?      @db.VarChar(1000)
-  crs_con_id      String?      @db.VarChar(1000)
-  crs_ins         String?      @db.VarChar(200)
-  crs_type        String       @db.VarChar(200)
-  crs_nxt_st_date DateTime?    @db.Date
-  crs_image       String?      @db.VarChar(1000)
-  crs_image_key   String?      @db.VarChar(1000)
+  crs_cat         String?        @db.VarChar(1000)
+  crs_cat_id      String?        @db.VarChar(1000)
+  crs_con         String?        @db.VarChar(1000)
+  crs_con_id      String?        @db.VarChar(1000)
+  crs_ins         String?        @db.VarChar(200)
+  crs_type        String         @db.VarChar(200)
+  crs_nxt_st_date DateTime?      @db.Date
+  crs_image       String?        @db.VarChar(1000)
+  crs_image_key   String?        @db.VarChar(1000)
   cid             Int?
-  crs_code        String?      @db.VarChar(40)
-  tr_id           Int
-  jmktrinfo jmktrinfo[] 
+  crs_code        String?        @db.VarChar(40)
+  tr_id           Int?
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]
+  jmktrcrsinfo    jmktrcrsinfo[]
   jmkvidinfo      jmkvidinfo[]
-  jmktrcrsinfo jmktrcrsinfo[]
 }
 
 model jmk_tr_week {
@@ -41,7 +40,6 @@ model jmk_tr_week {
   jmk_week_content jmk_week_content[]
 }
 
-
 model jmk_week_content {
   content_id  Int              @id @default(autoincrement())
   title       String           @db.VarChar(100)
@@ -52,6 +50,8 @@ model jmk_week_content {
   project_url String?          @db.VarChar(1000)
   date        DateTime         @default(now())
   jmk_tr_week jmk_tr_week      @relation(fields: [week_id], references: [week_id])
+
+  @@index([week_id], map: "jmk_week_content_week_id_fkey")
 }
 
 model jmk_test_set {
@@ -76,16 +76,16 @@ model jmk_std_test_result {
 model jmk_std_test_ans {
   serial      Int    @id @default(autoincrement())
   content_id  Int
-  test_set_id Int
   std_id      Int
   std_ans     String
+  test_set_id Int
 }
 
 model jmk_std_week_note {
   serial     Int      @id @default(autoincrement())
   week_id    Int
   std_id     Int
-  std_note   String   @db.VarChar(50000)
+  std_note   String   @db.MediumText
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
 }
@@ -225,27 +225,26 @@ model jmkfgpasswd {
 }
 
 model jmktrinfo {
-  tr_id         Int       @id @default(autoincrement())
-  tr_fname      String    @db.VarChar(30)
-  tr_mname      String?   @db.VarChar(30)
-  tr_lname      String    @db.VarChar(30)
-  tr_mobile     String?   @db.VarChar(15)
-  tr_email      String?   @db.VarChar(30)
-  tr_city       String?   @db.VarChar(50)
-  tr_country    String?   @db.VarChar(50)
-  tr_main_tech1 String?   @db.VarChar(30)
-  tr_main_tech2 String?   @db.VarChar(30)
-  tr_main_tech3 String?   @db.VarChar(30)
-  tr_dob        DateTime? @db.Date
-  tr_verifyed   Boolean   @default(false)
-  tr_password   String    @db.VarChar(16)
-  tr_resume     String?   @db.VarChar(100)
-  tr_github     String?   @db.VarChar(50)
-  tr_linkedin   String?   @db.VarChar(50)
-  tr_resume_key String?   @db.VarChar(100)
-  jmktrcrsinfo jmktrcrsinfo[]
-  crs_id Int?
-  jmkcrsinfo jmkcrsinfo? @relation(fields: [crs_id],references: [crs_id])
+  tr_id         Int            @id @default(autoincrement())
+  tr_fname      String         @db.VarChar(30)
+  tr_mname      String?        @db.VarChar(30)
+  tr_lname      String         @db.VarChar(30)
+  tr_mobile     String?        @db.VarChar(15)
+  tr_email      String?        @db.VarChar(30)
+  tr_city       String?        @db.VarChar(50)
+  tr_country    String?        @db.VarChar(50)
+  tr_main_tech1 String?        @db.VarChar(30)
+  tr_main_tech2 String?        @db.VarChar(30)
+  tr_main_tech3 String?        @db.VarChar(30)
+  tr_dob        DateTime?      @db.Date
+  tr_verifyed   Boolean        @default(false)
+  tr_password   String         @db.VarChar(16)
+  tr_resume     String?        @db.VarChar(100)
+  tr_github     String?        @db.VarChar(50)
+  tr_linkedin   String?        @db.VarChar(50)
+  tr_resume_key String?        @db.VarChar(100)
+  crs_id        Int
+  jmktrcrsinfo  jmktrcrsinfo[]
 }
 
 model jmkstdcrsinfo {
@@ -321,7 +320,6 @@ model jmkcrstest {
   crs_id          Int
   crs_test_con_id String     @db.VarChar(100)
   crs_test_con    String     @db.VarChar(1000)
-
   jmkcrsinfo      jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsinfo_jmkcrstest_crs_id_fk")
 
   @@index([crs_id], map: "jmkcrsinfo_jmkcrstest_crs_id_fk")
@@ -337,11 +335,14 @@ model jmkcrscontents {
 }
 
 model jmktrcrsinfo {
-  serial Int  @id @default(autoincrement())
-  tr_id  Int
-  crs_id Int
-  jmktrinfo jmktrinfo @relation(fields: [tr_id], references: [tr_id], onDelete: NoAction, onUpdate: NoAction)
-  jmkcrsinfo jmkcrsinfo @relation(fields: [crs_id],references: [crs_id],onDelete:NoAction,onUpdate: NoAction)
+  serial     Int        @id @default(autoincrement())
+  tr_id      Int
+  crs_id     Int
+  jmkcrsinfo jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction)
+  jmktrinfo  jmktrinfo  @relation(fields: [tr_id], references: [tr_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([crs_id], map: "jmktrcrsinfo_crs_id_fkey")
+  @@index([tr_id], map: "jmktrcrsinfo_tr_id_fkey")
 }
 
 model jmktrloginfo {
@@ -882,10 +883,6 @@ model jmk_chat_group {
   created_at DateTime                    @default(now())
 }
 
-
-
-
-
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
@@ -920,8 +917,6 @@ enum jmkmktgstd_mktg_status {
   Interview
   Completed
 }
-
-
 
 enum jmk_content_type {
   Test

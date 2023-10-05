@@ -78,7 +78,7 @@ async function startServer() {
     },
     {
       server: httpServer,
-      path: '/graphql/chat',
+      path: '/graphql',
     }
   );
 

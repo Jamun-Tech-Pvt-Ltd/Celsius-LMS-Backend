@@ -15,6 +15,12 @@ import forgotPasswordHTML from '../../utils/forgotPassword.js'
 import QuestionInformTemplate from '../../utils/QuestionInformEmail.js'
 import SubscriptionEmailTemplate from '../../utils/SubscriptionEmail.js'
 
+import { PubSub } from 'graphql-subscriptions'
+
+const pubsub = new PubSub()
+
+const NEW_MESSAGE = "NEW_MESSAGE"
+
 const studentQueryTypesAndInputs = `
     input SigninInput{
         email: String!
@@ -120,6 +126,12 @@ const studentQueryTypesAndInputs = `
       test_set_id:Int!
       std_ans:String!
      }
+
+     input createMessageInput{
+      receiver_id:Int!
+      user_type:String!
+      message:String!
+   }
 
     input createStdWeeklyNoteInput {
       week_id: Int!
@@ -325,6 +337,34 @@ const studentQueryTypesAndInputs = `
       created_at: Date!
       updated_at: Date!
    }
+
+   type Student {
+    std_id:Int!
+    std_fname:String! 
+    std_mname:String 
+    std_lname:String! 
+    std_pic:String
+   }
+
+   type Chat {
+    chat_id:Int!
+    receiver_id:Int! 
+    sender_id:Int! 
+    created_at:Date! 
+    message:String!
+    user_type:String!
+   }
+
+   type StudentChatHistory {
+    user:Student!
+    student:Student!
+    chat_history:[Chat]
+
+   }
+
+  type Subscription{
+    newMessage(receiver_id: Int!, user_id:Int!):Chat
+  }
 `
 
 const studentQuery = `
@@ -356,6 +396,10 @@ const studentQuery = `
     getStdQuesSub(question_id:Int):String!
 
     getStdCrsRelatedQuesInfo:[stdCrsRelatedQuesInfo]!
+
+    getAllRelatedCrsStd:[Student]!
+
+    getStudentChats(std_id:Int!):StudentChatHistory!
 `
 
 const studentMutation = `
@@ -393,6 +437,9 @@ const studentMutation = `
     submitStdTestAns(data:[submitStdTestAnsInput]!):String!
 
     createStdWeeklyNote(data:createStdWeeklyNoteInput):String!
+
+    createMessage(data:createMessageInput!):Chat
+
 `
 
 const studentResolvers = {
@@ -1106,6 +1153,50 @@ const studentResolvers = {
       return 'Created !'
     }
   },
+
+
+  createMessage: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (!data.receiver_id) throw new ForbiddenError('receiver cant be null');
+    if (!data.message) throw new ForbiddenError('message cant be empty');
+
+    const message = await prisma.jmk_chats.create({
+      data: {
+        receiver_id: data.receiver_id,
+        sender_id: userId,
+        user_type: data.user_type,
+        message: data.message
+      }
+    });
+
+    if (!message) throw new ApolloError('Something went wrong, try again!');
+
+    const receiverChannel = `channel_${userId}_${data.receiver_id}`;
+
+    if (receiverChannel) {
+      pubsub.publish(receiverChannel, { newMessage: message });
+    }
+
+    return message;
+  }
+
+
+  // createMessage: async (_, { data }, { userId }) => {
+  //   if (!userId) throw new ForbiddenError('invalid token')
+  //   if (!data.receiver_id) throw new ForbiddenError('receiver cant be null');
+  //   if (!data.message) throw new ForbiddenError('message cant be empty');
+  //   const message = await prisma.jmk_chats.create({
+  //     data: {
+  //       receiver_id: data.receiver_id,
+  //       sender_id: userId,
+  //       user_type: data.user_type,
+  //       message: data.message
+  //     }
+  //   })
+  //   if (!message) throw new ApolloError('Someting went wrong try again !')
+  //   pubsub.publish(NEW_MESSAGE, { newMessage: message })
+  //   return message
+  // },
 }
 
 const studentResolversQuery = {
@@ -1229,6 +1320,24 @@ const studentResolversQuery = {
   },
 
 
+  getAllRelatedCrsStd: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    if (role === ROLES[0]) {
+      const user = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      })
+      if (!user) throw new AuthenticationError('invalid user credentials')
+
+      let students = await prisma.jmkstdinfo.findMany({ where: { crs_id: user.crs_id } })
+      if (!students) throw new ForbiddenError('Empty Note !')
+      students = students.filter(item => item.std_id != userId)
+
+      return students
+    }
+    throw new ForbiddenError('Bad request !!')
+  },
+
+
   getAllWeeklyNote: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     if (role === ROLES[0]) {
@@ -1242,7 +1351,7 @@ const studentResolversQuery = {
 
       for (let index = 0; index < weekNotes.length; index++) {
         const week = await prisma.jmk_tr_week.findFirst({ where: { week_id: weekNotes[index].week_id } });
-        if (week.crs_id === user.crs_id) {
+        if (week?.crs_id === user?.crs_id) {
           stdNotes.push({ ...weekNotes[index], week_title: week.title })
         }
       }
@@ -1296,6 +1405,36 @@ const studentResolversQuery = {
 
     if (!weekContents[0]) throw new ForbiddenError('No data in this week .')
     return weekContents
+  },
+
+  getStudentChats: async (_, { std_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+
+    const student = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: std_id },
+    })
+
+    if (!user) throw new AuthenticationError('invalid user')
+    if (!student) throw new AuthenticationError('invalid student')
+
+    const chats = await prisma.jmk_chats.findMany({ where: { receiver_id: userId, sender_id: std_id } })
+    const myChats = await prisma.jmk_chats.findMany({ where: { receiver_id: std_id, sender_id: userId } })
+
+    let filterchat = [...chats, ...myChats]
+
+    const sortedMessages = filterchat.sort((a, b) => {
+      return new Date(a.created_at) - new Date(b.created_at);
+    });
+
+    return {
+      user: user,
+      student: student,
+      chat_history: sortedMessages
+    }
   },
 
   // diss panel
@@ -1460,10 +1599,22 @@ const studentResolversQuery = {
   },
 }
 
+const subscription = {
+  Subscription: {
+    newMessage: {
+      subscribe: (_, { receiver_id, user_id }) => {
+        const receiverChannel = `channel_${receiver_id}_${user_id}`
+        return pubsub.asyncIterator(receiverChannel);
+      }
+    }
+  }
+}
+
 export {
   studentQueryTypesAndInputs,
   studentQuery,
   studentMutation,
   studentResolvers,
   studentResolversQuery,
+  subscription
 }
