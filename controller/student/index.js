@@ -19,8 +19,6 @@ import { PubSub } from 'graphql-subscriptions'
 
 const pubsub = new PubSub()
 
-const NEW_MESSAGE = "NEW_MESSAGE"
-
 const studentQueryTypesAndInputs = `
     input SigninInput{
         email: String!
@@ -363,12 +361,26 @@ const studentQueryTypesAndInputs = `
     chat_history:[Chat]
    }
 
+   type studentAndLastMessage {
+    student: Student
+    message: Chat
+   }
+
+   type typing {
+    student_id:Int!
+    isTyping:Boolean!
+   }
+
   type Subscription{
     newMessage(receiver_id: Int!, user_id:Int!):Chat
   }
 
   type Subscription{
     messageSeen(receiver_id: Int!, user_id:Int!):String!
+  }
+
+  type Subscription{
+    messageTyping(receiver_id: Int!, user_id:Int!):typing!
   }
 
 `
@@ -403,7 +415,7 @@ const studentQuery = `
 
     getStdCrsRelatedQuesInfo:[stdCrsRelatedQuesInfo]!
 
-    getAllRelatedCrsStd:[Student]!
+    getAllRelatedCrsStd:[studentAndLastMessage]
 
     getStudentChats(std_id:Int!):StudentChatHistory!
 `
@@ -444,11 +456,11 @@ const studentMutation = `
 
     createStdWeeklyNote(data:createStdWeeklyNoteInput):String!
 
+    isTypingMessage(isTyping:Boolean!, receiver_id:Int!):String!
+
     createMessage(data:createMessageInput!):Chat
 
     updateMessageSeen(student_id:Int!):String!
-
-
 `
 
 const studentResolvers = {
@@ -826,7 +838,6 @@ const studentResolvers = {
     });
     studentList.forEach(async (stud) => {
       if (stud.std_id != user.std_id) {
-        console.log(`${stud.std_fname} ${stud.std_lname}`);
         await sendMail(user.std_email, `Question was posted`, QuestionInformTemplate(`${user.std_fname} ${user.std_lname}`, `${user.std_fname} ${user.std_lname}`, `${user.std_pic}`, question.ques_id));
       }
     })
@@ -955,7 +966,6 @@ const studentResolvers = {
           std_id: student.student_id
         }
       });
-      console.log(studentDB.std_fname)
       await sendMail(studentDB.std_email, `Question Subscription Update`, SubscriptionEmailTemplate(`${studentDB.std_fname} ${studentDB.std_lname}`, `${studentDB.std_pic}`, data.question_id));
 
     });
@@ -1188,6 +1198,30 @@ const studentResolvers = {
     return message;
   },
 
+  isTypingMessage: async (_, { isTyping, receiver_id }, { userId }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (!receiver_id) throw new ForbiddenError('receiver cant be null');
+
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+
+    if (!user) throw new AuthenticationError('invalid user')
+
+    const receiverChannel = `channel_${userId}_${receiver_id}`;
+
+    if (receiverChannel) {
+      pubsub.publish(receiverChannel, {
+        messageTyping: {
+          student_id: userId,
+          isTyping
+        }
+      });
+    }
+
+    return 'Status changed';
+  },
+
   updateMessageSeen: async (_, { student_id }, { userId }) => {
     if (!userId) throw new ForbiddenError('invalid token');
     if (!student_id) throw new ForbiddenError('student_id cant be null');
@@ -1230,7 +1264,6 @@ const studentResolvers = {
 
     return "success";
   }
-
 }
 
 const studentResolversQuery = {
@@ -1353,7 +1386,6 @@ const studentResolversQuery = {
     throw new ForbiddenError('Bad request !!')
   },
 
-
   getAllRelatedCrsStd: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     if (role === ROLES[0]) {
@@ -1361,16 +1393,35 @@ const studentResolversQuery = {
         where: { std_id: userId },
       })
       if (!user) throw new AuthenticationError('invalid user credentials')
-
-      let students = await prisma.jmkstdinfo.findMany({ where: { crs_id: user.crs_id } })
-      if (!students) throw new ForbiddenError('Empty Note !')
-      students = students.filter(item => item.std_id != userId)
-
+      let students = []
+      let studentsData = await prisma.jmkstdinfo.findMany({ where: { crs_id: user.crs_id } })
+      if (!studentsData) throw new ForbiddenError('Empty Note !')
+      for (let index = 0; index < studentsData.length; index++) {
+        if (studentsData[index].std_id != userId) {
+          const message = await prisma.jmk_chats.findFirst({
+            where: {
+              OR: [
+                {
+                  sender_id: studentsData[index].std_id,
+                  receiver_id: userId
+                },
+                {
+                  sender_id: userId,
+                  receiver_id: studentsData[index].std_id
+                }
+              ]
+            },
+            orderBy: {
+              created_at: 'desc'
+            }
+          });
+          students.push({ student: { ...studentsData[index] }, message })
+        }
+      }
       return students
     }
     throw new ForbiddenError('Bad request !!')
   },
-
 
   getAllWeeklyNote: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
@@ -1646,7 +1697,13 @@ const subscription = {
         const receiverChannel = `message_seen_${receiver_id}_${user_id}`
         return pubsub.asyncIterator(receiverChannel);
       }
-    }
+    },
+    messageTyping: {
+      subscribe: (_, { receiver_id, user_id }) => {
+        const receiverChannel = `channel_${receiver_id}_${user_id}`
+        return pubsub.asyncIterator(receiverChannel);
+      }
+    },
   }
 }
 
