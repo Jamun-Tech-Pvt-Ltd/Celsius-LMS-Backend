@@ -129,6 +129,8 @@ const studentQueryTypesAndInputs = `
       receiver_id:Int!
       user_type:String!
       message:String!
+      chat_type:String!
+      image:Upload
    }
 
     input createStdWeeklyNoteInput {
@@ -353,6 +355,7 @@ const studentQueryTypesAndInputs = `
     message:String!
     isSeen: Boolean!
     user_type:String!
+    chat_type:String!
    }
 
    type StudentChatHistory {
@@ -1178,11 +1181,20 @@ const studentResolvers = {
     if (!data.receiver_id) throw new ForbiddenError('receiver cant be null');
     if (!data.message) throw new ForbiddenError('message cant be empty');
 
+    if (data.chat_type === 'Image') {
+      const imgData = await uploadImgToAWS(data.image, 'user_chat_files/')
+      if (!imgData?.data?.Location) throw new ApolloError('Image is too large');
+      data.message = imgData.data.Location;
+      delete data.image
+    }
+
+
     const message = await prisma.jmk_chats.create({
       data: {
         receiver_id: data.receiver_id,
         sender_id: userId,
         user_type: data.user_type,
+        chat_type: data.chat_type,
         message: data.message
       }
     });

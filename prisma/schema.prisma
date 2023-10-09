@@ -863,9 +863,10 @@ model jmk_chats {
   receiver_id Int
   sender_id   Int
   user_type   jmk_ques_ans_user_type_enum
+  chat_type   jmk_chat_type_enum          @default(Text)
   created_at  DateTime                    @default(now())
   message     String                      @db.VarChar(1000)
-  isSeen     Boolean                     @default(false)
+  isSeen      Boolean                     @default(false)
 }
 
 model jmk_group_chats {
@@ -874,6 +875,7 @@ model jmk_group_chats {
   sender_id  Int
   isSeen     Boolean                     @default(false)
   user_type  jmk_ques_ans_user_type_enum
+  chat_type  jmk_chat_type_enum          @default(Text)
   created_at DateTime                    @default(now())
   message    String                      @db.VarChar(1000)
 }
@@ -889,6 +891,11 @@ model jmk_chat_group {
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
+}
+
+enum jmk_chat_type_enum {
+  Text
+  Image
 }
 
 enum jmk_ques_ans_user_type_enum {
