@@ -76,8 +76,7 @@ const studentQueryTypesAndInputs = `
      }
   
      input addNewCourseInput {
-        crsmain_id: ID!
-        crs_start_dt: Date!
+        crsmain_id: Int!
      }
   
      input removeCourseFromUserInput   {
@@ -85,7 +84,7 @@ const studentQueryTypesAndInputs = `
      }
   
      input changeActiveCourseInput {
-        crsmain_id: ID!
+      crsmain_id: Int!
      }
   
      input studentEmailVerify{
@@ -166,8 +165,9 @@ const studentQueryTypesAndInputs = `
      }
      
      type UserCourse {
-        serial : Int
+        serial : Int!
         crs_id: Int!
+        crsmain_id:Int!
         crs_start_dt: Date
         crs_name: String!
         crs_rate: Int
@@ -707,11 +707,12 @@ const studentResolvers = {
     })
     if (!user) throw new AuthenticationError('invalid user')
     if (!course) throw new ApolloError('Bad Request')
-    if (userCourse) throw new ApolloError('you already have this course')
+    if (userCourse.crs_id) throw new ApolloError("Great news! The course you requested has been approved and is now available on our platform. If you have any further questions or if there's anything else you'd like to learn, please don't hesitate to ask. We're here to support your learning journey!")
+    if (!userCourse.crs_id) throw new ApolloError("Thank you for your interest, but it looks like you've already requested this course. If you have any other course suggestions or questions, feel free to reach out. We're here to assist you!")
     await prisma.jmkstdcrsinfo.create({
       data: {
         crsmain_id: parseInt(data.crsmain_id),
-        crs_start_dt: data.crs_start_dt,
+        crs_start_dt: new Date(),
         std_id: userId,
       },
     })
@@ -725,28 +726,37 @@ const studentResolvers = {
       where: { std_id: userId },
     })
 
-    if (!user) throw new AuthenticationError('invalid user')
+    if (!user) throw new AuthenticationError('invalid user');
+
     const userCourse = await prisma.jmkstdcrsinfo.findFirst({
       where: {
         std_id: userId,
-        crsmain_id: parseInt(data.crsmain_id),
+        crsmain_id: data.crsmain_id,
       },
     })
-    if (parseInt(userCourse.crs_id) === user.crs_id)
-      throw new ApolloError('Already selected')
-    if (!userCourse.std_crs_verirfy)
-      throw new ApolloError(
-        'your are not permited to use this course, wait for admin to approve or contact our support !'
-      )
+
+    const crs = await prisma.jmkcrsinfo.findFirst({
+      where: {
+        crs_id: userCourse.crs_id,
+      },
+    })
+
+    if (!crs === user.crs_id) throw new ApolloError('Invalid opration : contact our support');
+
+    if (userCourse.crs_id === user.crs_id) throw new ApolloError('Already selected');
+
+    if (!userCourse.std_crs_verirfy) throw new ApolloError('your are not permited to use this course, wait for admin to approve or contact our support !');
+
     const updateUser = await prisma.jmkstdinfo.update({
       data: {
-        crs_id: parseInt(userCourse.crs_id),
+        crs_id: userCourse.crs_id,
       },
       where: { std_id: userId },
     })
+
+    if (!updateUser) throw new AuthenticationError('invalid user');
     return updateUser
   },
-
 
   // not sure
   removeCourseFromUser: async (_, { data }, { userId }) => {
@@ -1330,10 +1340,12 @@ const studentResolversQuery = {
       })
       const userCourse = []
       for (let index = 0; index < stdcourse.length; index++) {
-        const course = await prisma.jmkcrsinfo.findFirst({
-          where: { crs_id: stdcourse[index].crs_id },
-        })
-        userCourse.push(course)
+        if (stdcourse[index].crs_id) {
+          const course = await prisma.jmkcrsinfo.findFirst({
+            where: { crs_id: stdcourse[index].crs_id },
+          })
+          userCourse.push({ ...course, crsmain_id: stdcourse[index].crsmain_id })
+        }
       }
       return userCourse
     }
