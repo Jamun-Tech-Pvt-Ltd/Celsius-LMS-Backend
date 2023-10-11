@@ -39,7 +39,7 @@ const studentQueryTypesAndInputs = `
         std_add_street:String
         std_add_city:String
         std_add_ward_no:Int
-        std_add_distrcit:String
+        std_add_district:String
         std_add_province:String
         std_add_zone:String
         crs_id:Int
@@ -54,7 +54,19 @@ const studentQueryTypesAndInputs = `
         std_email: String!
         std_mobile: String!
         std_birth_dt: String
-        std_password: String
+        std_add_house_no:String
+        std_add_street:String
+        std_add_city:String
+        std_add_ward_no:Int
+        std_add_district:String
+        std_add_province:String
+        std_add_zone:String
+        std_country:String
+    }
+
+    input UpdateUserPasswordInput{
+      old_std_password:String!
+      std_password:String!
     }
 
      input studentProjectInput{
@@ -199,21 +211,23 @@ const studentQueryTypesAndInputs = `
         std_lname: String!
         std_email: String!
         std_pic: String
-        crs_complete: Boolean
-        crs_complete_date: Date
-        std_password: String!
         c_id:ID
         acc_type:String
         std_mobile: String!
-        std_join_dt: Date
         std_birth_dt: Date
-        std_high_ql: String
         crs_id: ID!
         std_status: Int
         std_paidup: Int
         std_due: Int
         lastSeen:Date
-        feedback: [Feedback]
+        std_add_house_no:String
+        std_add_street:String
+        std_add_city:String
+        std_add_district:String
+        std_add_ward_no:String
+        std_add_province:String
+        std_add_zone:String
+        std_country:String
      }
 
      type StudentQuestionSet {
@@ -428,6 +442,7 @@ const studentMutation = `
     signinUser(userSignIn:SigninInput!):Token
     signupUser(userNew:SignupInput!):Token
     updateUser(data:UpdateUserInput):User
+    updateUserPassword(data:UpdateUserPasswordInput):String!
 
 
     addNewCourse(data:addNewCourseInput):String!
@@ -597,19 +612,28 @@ const studentResolvers = {
     })
     if (!user) throw new AuthenticationError('invalid user')
     const newUser = await prisma.jmkstdinfo.update({
-      data: {
-        std_fname: data.std_fname,
-        std_mname: data.std_mname,
-        std_lname: data.std_lname,
-        std_email: data.std_email,
-        std_mobile: data.std_mobile,
-        std_birth_dt: data.std_birth_dt,
-        std_password: data.std_password,
-      },
+      data: { ...data },
       where: { std_id: userId },
     })
     if (!newUser) throw new Error('something went wrong!!')
     return newUser
+  },
+
+  updateUserPassword: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user');
+    if (user.std_password !== data.old_std_password) throw new AuthenticationError('old password didnt match !');
+    if (user.std_password === data.std_password) throw new AuthenticationError('old password new password cant be same !');
+    if (data.std_password.length < 6) throw new AuthenticationError('password must be 6 char long !');
+    const update = await prisma.jmkstdinfo.update({
+      data: { std_password: data.std_password },
+      where: { std_id: userId },
+    })
+    if (!update) throw new Error('something went wrong!!')
+    return 'successfully changed'
   },
 
   forgotPPEmailCheck: async (_, { data }) => {
