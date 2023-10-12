@@ -174,6 +174,7 @@ const trainerQueryTypesAndInputs = `
         tr_resume: String
         tr_github: String
         tr_linkedin: String
+        crs_id: String!
      }
 
      type TrainerCourse {
@@ -260,11 +261,11 @@ const trainerQueryTypesAndInputs = `
       jmkcrsinfo:JmkCrsInfo
     }
 
-    type JmkCrsInfo {  # Define the type for jmkcrsinfo
-      crs_code: String
-      crs_name: String
+    type JmkCrsInfo {
+      crs_id: Int!
+      crs_name: String!
       crs_image: String
-      crs_image_key: String
+      crs_desc: String
     }
 
     type weekContentAndTest {
@@ -285,14 +286,16 @@ const trainerQueryTypesAndInputs = `
       date:Date
     }
 
-
-
-
 `
 
 const trainerQuery = `
     trainer:Trainer!
 
+    getAssignedSessions:[sessionDetail]
+
+
+
+    
     getTrainerDashboard:TrainerDashboard
     getstudentForTrainer:[TrainerStudent!]!
     getstudentTestSetForTrainer:[StudentTestSet!]!
@@ -304,9 +307,6 @@ const trainerQuery = `
     getQuestionByModuleId(mod_id:Int!):[Question!]!
     getQuestionByQuestionId(ques_id:Int!):QuestionAdmin!
 
-    getAssignedSessions(tr_id:Int!):[sessionDetail]
-
-
     getWeekContentBasedonActiveSession:[weekContentAndTest] 
     getContentByWeekId(week_id:Int!):[jmkWeekContent]
 
@@ -317,6 +317,9 @@ const trainerMutation = `
     signupTrainer(data:signupTrainerInput!):Token
     signinTrainer(data:signinTrainerInput!):Token
     updateTrainer(data:updateTrainerInput):Trainer!
+
+    activeSession(data:updateActiveSession!): Trainer!
+
     
     addTrainerStudentFeedback(data:addTrainerStudentFeedbackInput!):String!
     updateTrainerStudentFeedback(data:updateTrainerStudentFeedbackInput!):String!
@@ -331,7 +334,6 @@ const trainerMutation = `
 
     trainerEmailVerify(data: emailVerifyTrainer!): String!
 
-    ActiveSession(data:updateActiveSession!): String!
 
     addWeek(data:weekInput!):String!
     updateWeek(data:updateWeekInput!):String!
@@ -343,9 +345,9 @@ const trainerMutation = `
 `
 
 const trainerResolvers = {
+
   trainerEmailVerify: async (_, { data }) => {
     const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY)
-    console.log(decodedToken)
     if (!decodedToken) throw new AuthenticationError('The token is not valid')
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_id: decodedToken.userId },
@@ -369,12 +371,17 @@ const trainerResolvers = {
     // return "mail sent";
   },
 
-  ActiveSession: async (_, { data }, { userId }) => {
+  activeSession: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_id: userId },
     })
     if (!trainer) throw new AuthenticationError('invalid trainer')
+
+    const checkCrsidAssign = await prisma.jmktrcrsinfo.findFirst({ where: { tr_id: trainer.tr_id, crs_id: data.crs_id } })
+
+    if (!checkCrsidAssign) throw ApolloError('Invalid request')
+
 
     const updateSession = await prisma.jmktrinfo.update({
       data: {
@@ -383,8 +390,9 @@ const trainerResolvers = {
       where: { tr_id: trainer.tr_id },
     })
     if (!updateSession) throw ApolloError('Unsuccessful to update session')
-    return 'Successfully Updated Session'
+    return updateSession
   },
+
   signinTrainer: async (_, { data }) => {
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_email: data.email },
