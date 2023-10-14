@@ -158,6 +158,47 @@ const trainerQueryTypesAndInputs = `
         serial: Int!
      }
 
+     input TrainerStudentInput {
+        std_fname: String!
+        std_mname: String
+        std_lname: String!
+        std_email: String!
+        crs_complete: Boolean
+        crs_complete_date: Date
+        std_mobile: String!
+        std_birth_dt: Date
+        std_add_house_no:String
+        std_add_street:String
+        std_add_city:String
+        std_add_district:String
+        std_add_ward_no:String
+        std_add_province:String
+        std_add_zone:String
+        std_country:String
+        std_password:String
+      }
+
+      input TrainerStudentUpdateInput {
+        std_id: Int!
+        std_fname: String!
+        std_mname: String
+        std_lname: String!
+        std_email: String!
+        crs_complete: Boolean
+        crs_complete_date: Date
+        std_mobile: String!
+        std_birth_dt: Date
+        std_add_house_no:String
+        std_add_street:String
+        std_add_city:String
+        std_add_district:String
+        std_add_ward_no:String
+        std_add_province:String
+        std_add_zone:String
+        std_country:String
+        std_password:String
+      }
+
      type Trainer {
         tr_id: ID!
         tr_fname: String!
@@ -194,7 +235,7 @@ const trainerQueryTypesAndInputs = `
      }
 
      type TrainerStudent {
-        std_id: ID!
+        std_id: Int!
         std_fname: String!
         std_mname: String
         std_lname: String!
@@ -205,8 +246,14 @@ const trainerQueryTypesAndInputs = `
         std_mobile: String!
         std_join_dt: Date
         std_birth_dt: Date
-        crs_type: String!
-        crs_name: String!
+        std_add_house_no:String
+        std_add_street:String
+        std_add_city:String
+        std_add_district:String
+        std_add_ward_no:String
+        std_add_province:String
+        std_add_zone:String
+        std_country:String
      }
 
      type TrainerStudentFeedback {
@@ -293,11 +340,11 @@ const trainerQuery = `
 
     getAssignedSessions:[sessionDetail]
 
+    getstudentForTrainer:[TrainerStudent!]!
 
-
+    getStudentById(std_id:Int!):TrainerStudent!
     
     getTrainerDashboard:TrainerDashboard
-    getstudentForTrainer:[TrainerStudent!]!
     getstudentTestSetForTrainer:[StudentTestSet!]!
     getstudentTestResultById(serial:Int!):StudentTestResult
     getTrainerStudentFeedback(std_id:Int!):[TrainerStudentFeedback]
@@ -319,6 +366,10 @@ const trainerMutation = `
     updateTrainer(data:updateTrainerInput):Trainer!
 
     activeSession(data:updateActiveSession!): Trainer!
+
+    createStudentFromTrainer(data:TrainerStudentInput!):String!
+
+    updateStudentFromTrainer(data:TrainerStudentUpdateInput!):String!
 
     
     addTrainerStudentFeedback(data:addTrainerStudentFeedbackInput!):String!
@@ -391,6 +442,103 @@ const trainerResolvers = {
     })
     if (!updateSession) throw ApolloError('Unsuccessful to update session')
     return updateSession
+  },
+
+  createStudentFromTrainer: async (_, { data }, { userId }) => {
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+
+    if (!trainer) throw new AuthenticationError('invalid token');
+
+    const checkEmailUnique = await prisma.jmkstdinfo.findFirst({ where: { std_email: data.std_email } })
+
+    if (checkEmailUnique) throw new ApolloError('Email is already taken');
+
+    let newStudentData = {}
+
+    for (let key in data) {
+      if (data.hasOwnProperty(key) && key !== 'crs_complete' && key !== 'crs_complete_date' && data[key] !== '') {
+        if (key === 'std_add_ward_no') {
+          newStudentData[key] = parseInt(data[key])
+        } else if (key === 'std_birth_dt') {
+          newStudentData[key] = new Date(data[key])
+        } else {
+          newStudentData[key] = data[key];
+        }
+      }
+    }
+
+    const newStudent = await prisma.jmkstdinfo.create({
+      data: { ...newStudentData, cid: 1, crs_id: trainer.crs_id, std_verifyed: true, std_join_dt: new Date(), crs_id: trainer.crs_id },
+    })
+
+    const stdCrs = await prisma.jmkstdcrsinfo.create({
+      data: {
+        crsmain_id: 1,
+        crs_start_dt: new Date(),
+        std_id: newStudent.std_id,
+        crs_complete: data.crs_complete,
+        crs_complete_date: data.crs_complete_date,
+        crs_start_dt: new Date(),
+        crs_id: trainer.crs_id,
+        std_crs_verirfy: true
+      },
+    })
+
+    if (!stdCrs) {
+      await prisma.jmkstdinfo.delete({ where: { std_id: newStudent.std_id } })
+      throw new ApolloError('Something went wrong');
+    }
+
+    if (!stdCrs) throw new ApolloError('Something went wrong');
+
+    return 'Success'
+  },
+
+  updateStudentFromTrainer: async (_, { data }, { userId }) => {
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+
+    if (!trainer) throw new AuthenticationError('invalid token');
+
+    let newStudentData = {}
+
+    for (let key in data) {
+      if (data.hasOwnProperty(key) && key !== 'crs_complete' && key !== 'crs_complete_date' && data[key] !== '') {
+        if (key === 'std_add_ward_no') {
+          newStudentData[key] = parseInt(data[key])
+        } else if (key === 'std_birth_dt') {
+          newStudentData[key] = new Date(data[key])
+        } else {
+          newStudentData[key] = data[key];
+        }
+      }
+    }
+
+    const updateStudent = await prisma.jmkstdinfo.update({
+      data: { ...newStudentData },
+      where: { std_id: data.std_id }
+    })
+
+    if (!updateStudent) throw new ApolloError('Something went wrong');
+
+    const stdCrs = await prisma.jmkstdcrsinfo.findFirst({ where: { std_id: data.std_id, crs_id: trainer.crs_id } });
+
+    if (!stdCrs) throw new ApolloError('invalid req');
+
+    const updateStdCrs = await prisma.jmkstdcrsinfo.update({
+      data: {
+        crs_complete: data.crs_complete,
+        crs_complete_date: data.crs_complete_date,
+      },
+      where: { serial: stdCrs.serial }
+    })
+
+    if (!updateStdCrs) throw new ApolloError('Something went wrong');
+
+    return 'Success'
   },
 
   signinTrainer: async (_, { data }) => {
@@ -475,6 +623,10 @@ const trainerResolvers = {
     if (!newTrainer) throw new Error('something went wrong!!')
     return newTrainer
   },
+
+
+
+
 
   addTrainerStudentFeedback: async (_, { data }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid aceess')
@@ -831,6 +983,7 @@ const trainerResolversQuery = {
 
     return sessionDetails
   },
+
   trainer: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     if (role === ROLES[1]) {
@@ -878,43 +1031,58 @@ const trainerResolversQuery = {
   getstudentForTrainer: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === ROLES[1]) {
+
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      });
+
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+
+      const course = await prisma.jmkcrsinfo.findFirst({
+        where: { crs_id: trainer.crs_id },
+      });
+
+      if (!course) throw new AuthenticationError('invalid trainer');
+
+      const studentList = await prisma.jmkstdcrsinfo.findMany({
+        where: { crs_id: course.crs_id },
+      });
+
+      if (!studentList) throw new ApolloError('No data');
+
+      let students = [];
+
+      for (let index = 0; index < studentList.length; index++) {
+        if (studentList[index].std_id) {
+          const student = await prisma.jmkstdinfo.findFirst({
+            where: { std_id: studentList[index].std_id },
+          })
+          students.push({ ...student, crs_complete: studentList[index].crs_complete, crs_complete_date: studentList[index].crs_complete_date })
+        }
+      }
+      return students
+    }
+  },
+
+  getStudentById: async (_, { std_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[1]) {
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
       })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-      const trainerCourses = await prisma.jmktrcrsinfo.findMany({
-        where: {
-          tr_id: userId,
-        },
-      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
 
-      let students = []
-      for (let index = 0; index < trainerCourses.length; index++) {
-        const crs = await prisma.jmkstdcrsinfo.findMany({
-          where: { crs_id: trainerCourses[index].crs_id },
-        })
-        for (let index = 0; index < crs.length; index++) {
-          const course = await prisma.jmkcrsinfo.findFirst({
-            where: { crs_id: crs[index].crs_id },
-          })
-          const student = await prisma.jmkstdinfo.findMany({
-            where: { std_id: crs[index].std_id },
-          })
-          if (crs) {
-            const mergestudent = student.map((i) => ({
-              ...i,
-              crs_type: course.crs_type,
-              crs_name: course.crs_name,
-            }))
-            students.push(...mergestudent)
-          }
-        }
-      }
-      students = students.filter(
-        (v, i, a) => a.findIndex((v2) => v2.std_id === v.std_id) === i
-      )
-      return students
+      const stdCrs = await prisma.jmkstdcrsinfo.findFirst({ where: { std_id: std_id, crs_id: trainer.crs_id } });
+
+      if (!stdCrs) throw new AuthenticationError('invalid');
+
+      const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: std_id } });
+
+      if (!student) throw new AuthenticationError('invalid');
+
+      return { ...student, crs_complete: stdCrs.crs_complete, crs_complete_date: stdCrs.crs_complete_date }
     }
+    throw new AuthenticationError('invalid access');
   },
 
   getTrainerCourses: async (_, args, { userId, role }) => {

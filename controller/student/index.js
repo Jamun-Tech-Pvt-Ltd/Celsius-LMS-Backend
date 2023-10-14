@@ -42,8 +42,9 @@ const studentQueryTypesAndInputs = `
         std_add_district:String
         std_add_province:String
         std_add_zone:String
+        std_country:String
         crs_id:Int
-        crs_ecp_st_d:Date!
+        crs_ecp_st_d:Date
         cid:Int
     }
 
