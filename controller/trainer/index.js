@@ -315,22 +315,30 @@ const trainerQueryTypesAndInputs = `
       crs_desc: String
     }
 
-    type weekContentAndTest {
-      week_id:Int
-      title:String
-      description:String
-      created_at:Date
-      
+    type weekDetails {
+      title: String!
+      totalNotes:Int!
+      totalProjects:Int!
+      totalTests:Int!
+      totalVideos:Int!
+      week_id:Int!
     }
 
     type jmkWeekContent{
-      content_id:Int
-      title:String
+      content_id:Int!
+      title:String!
       description:String
-      type:String
+      type:String!
       video_url:String
       project_url:String
       date:Date
+    }
+
+    type Week{
+      week_id:Int!
+      title:String!
+      description:String!
+      created_at:Date
     }
 
 `
@@ -345,6 +353,11 @@ const trainerQuery = `
     getStudentById(std_id:Int!):TrainerStudent!
     
     getTrainerDashboard:TrainerDashboard
+
+    getWeekContentBasedonActiveSession:[weekDetails]!
+    getWeekDetailsById(week_id:Int!):Week
+    getContentByWeekId(week_id:Int!):[jmkWeekContent]
+
     getstudentTestSetForTrainer:[StudentTestSet!]!
     getstudentTestResultById(serial:Int!):StudentTestResult
     getTrainerStudentFeedback(std_id:Int!):[TrainerStudentFeedback]
@@ -354,8 +367,7 @@ const trainerQuery = `
     getQuestionByModuleId(mod_id:Int!):[Question!]!
     getQuestionByQuestionId(ques_id:Int!):QuestionAdmin!
 
-    getWeekContentBasedonActiveSession:[weekContentAndTest] 
-    getContentByWeekId(week_id:Int!):[jmkWeekContent]
+
 
 
 `
@@ -368,9 +380,11 @@ const trainerMutation = `
     activeSession(data:updateActiveSession!): Trainer!
 
     createStudentFromTrainer(data:TrainerStudentInput!):String!
-
     updateStudentFromTrainer(data:TrainerStudentUpdateInput!):String!
 
+    addWeek(data:weekInput!):String!
+    updateWeek(data:updateWeekInput!):String!
+    deleteWeek(data:deleteWeekInput!):String!
     
     addTrainerStudentFeedback(data:addTrainerStudentFeedbackInput!):String!
     updateTrainerStudentFeedback(data:updateTrainerStudentFeedbackInput!):String!
@@ -384,11 +398,6 @@ const trainerMutation = `
     updateQuestion(data:updateQuestionInput!):String!
 
     trainerEmailVerify(data: emailVerifyTrainer!): String!
-
-
-    addWeek(data:weekInput!):String!
-    updateWeek(data:updateWeekInput!):String!
-    deleteWeek(data:deleteWeekInput!):String!
 
     addTrainerWeekContentById(data:weekContentInput):String!
     updateTrainerWeekContentById(data:weekContentInput):String!
@@ -838,6 +847,7 @@ const trainerResolvers = {
       return 'Week Successfully updated'
     }
   },
+
   deleteWeek: async (_, { data }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === ROLES[1]) {
@@ -845,23 +855,27 @@ const trainerResolvers = {
         where: { tr_id: userId },
       })
       if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+
       const weekContents = await prisma.jmk_week_content.findMany({
         where: {
           week_id: data.week_id,
         },
       })
-      if (weekContents.length <= 0) {
-        await prisma.jmk_tr_week.delete({
-          where: {
-            week_id: data.week_id,
-          },
-        })
-        return 'Week Successfully deleted'
-      } else {
-        return `Week is full of content. Can't delete`
-      }
+
+      if (weekContents[0]) throw new ApolloError("Week is full of content. Can't delete")
+
+      const week = await prisma.jmk_tr_week.delete({
+        where: {
+          week_id: data.week_id,
+        },
+      })
+
+      if (!week) throw new ApolloError("something went wrong !");
+
+      return 'Week Successfully deleted'
     }
   },
+
   addTrainerWeekContentById: async (_, { data }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === ROLES[1]) {
@@ -939,19 +953,76 @@ const trainerResolvers = {
 }
 
 const trainerResolversQuery = {
+
   getWeekContentBasedonActiveSession: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
+
+    if (!userId) throw new ForbiddenError('user need to login');
+
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_id: userId },
     })
-    if (!trainer) throw new AuthenticationError('invalid trainer')
+
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+
+    let weeksData = [];
+
     const weeks = await prisma.jmk_tr_week.findMany({
       where: {
         crs_id: trainer.crs_id,
       },
-    })
-    return weeks
+    });
+
+    if (!weeks) throw new AuthenticationError('No Data !')
+
+    for (let index = 0; index < weeks.length; index++) {
+
+      const weekContent = await prisma.jmk_week_content.findMany({
+        where: {
+          week_id: weeks[index].week_id
+        },
+      });
+
+      if (weekContent) {
+        const totalNotes = weekContent.filter(content => content.type === "Notes").length;
+        const totalProjects = weekContent.filter(content => content.type === "Project").length;
+        const totalTests = weekContent.filter(content => content.type === "Test").length;
+        const totalVideos = weekContent.filter(content => content.type === "Video").length;
+
+        weeksData.push({
+          week_id: weeks[index].week_id,
+          title: weeks[index].title,
+          totalNotes: totalNotes ?? 0,
+          totalProjects: totalProjects ?? 0,
+          totalTests: totalTests ?? 0,
+          totalVideos: totalVideos ?? 0,
+        });
+      }
+    }
+    return weeksData
   },
+
+  getWeekDetailsById: async (_, { week_id }, { userId, role }) => {
+
+    if (!userId) throw new ForbiddenError('user need to login');
+
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+
+    const week = await prisma.jmk_tr_week.findFirst({
+      where: {
+        crs_id: trainer.crs_id,
+        week_id: week_id
+      },
+    });
+
+    if (!week) throw new AuthenticationError('No Data !')
+
+    return week
+  },
+
   getContentByWeekId: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const trainer = await prisma.jmktrinfo.findFirst({
