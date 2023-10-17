@@ -358,6 +358,7 @@ const trainerQuery = `
     getWeekContentBasedonActiveSession:[weekDetails]!
     getWeekDetailsById(week_id:Int!):Week
     getContentByWeekId(week_id:Int!):[jmkWeekContent]
+    getContentByContentId(content_id:Int!):jmkWeekContent
 
     getstudentTestSetForTrainer:[StudentTestSet!]!
     getstudentTestResultById(serial:Int!):StudentTestResult
@@ -367,9 +368,6 @@ const trainerQuery = `
     getQuestionModule:[QuestionModule]
     getQuestionByModuleId(mod_id:Int!):[Question!]!
     getQuestionByQuestionId(ques_id:Int!):QuestionAdmin!
-
-
-
 
 `
 
@@ -740,43 +738,58 @@ const trainerResolvers = {
 
   updateTrainerWeekContentById: async (_, { data }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
+
     if (role === ROLES[1]) {
+
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
       })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-      if (data.type !== 'Test') {
-        await prisma.jmk_week_content.update({
-          data: {
-            ...data,
-          },
-          where: {
-            content_id: data.content_id,
-          },
-        })
-      } else {
-        const testcontent = await prisma.jmk_week_content.update({
-          data: {
-            ...data,
-          },
-          where: {
-            content_id_id: data.content_id_id,
-            test_set_id: data.test_set_id,
-          },
-        })
 
-        const test = await prisma.jmk_test_set.create({
-          data: {
-            ...data,
-          },
-          where: {
-            content_id: testcontent.content_id,
-          },
-        })
-        return 'week test updated successfully'
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+
+      // trainer aceess validations
+      if (!data.content_id) throw new AuthenticationError('invalid request');
+      const oldWeekContent = await prisma.jmk_week_content.findFirst({ where: { content_id: data.content_id } });
+      if (!oldWeekContent) throw new AuthenticationError('invalid request');
+      const week = await prisma.jmk_tr_week.findFirst({ where: { week_id: oldWeekContent.week_id } });
+      if (!week) throw new AuthenticationError('invalid request');
+      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: week.crs_id } });
+      if (!course) throw new AuthenticationError('invalid request');
+      if (trainer.crs_id !== course.crs_id) throw new AuthenticationError('invalid access');
+
+      if (data.type) {
+        delete data.type;
       }
-      return 'Successfully updated content'
+      if (data.week_id) {
+        delete data.week_id;
+      }
+
+      if (data.type === 'Video' || data.type === 'Note') {
+        if (!data.video_url && data.project_url) {
+          data['video_url'] = data.project_url;
+          delete data.project_url;
+        } else {
+          // delete file 
+          if (oldWeekContent.video_url_key) {
+            await deleteImgToAWS(oldWeekContent.video_url_key)
+          }
+          // upload new file
+          let file;
+          file = await uploadImgToAWS(data.video_url, data.type === 'Video' ? 'videos/' : 'notes/');
+          if (!file.data) throw new ApolloError("Something went wrong!");
+          data['video_url'] = file?.data?.Location ?? null;
+          data['video_url_key'] = file?.data?.Key ?? '';
+        }
+      }
+
+      const weekContent = await prisma.jmk_week_content.update({ data: data, where: { content_id: data.content_id } });
+
+      if (!weekContent) throw new ApolloError('Something went wrong !');
+
+      return 'Successfully Created !'
     }
+
+    throw new AuthenticationError('invalid access !')
   },
 
   deleteTrainerWeekContentById: async (_, { week_id, content_id }, { userId, role }) => {
@@ -788,6 +801,8 @@ const trainerResolvers = {
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
       })
+
+      // need to add trainer crs relation validation -----
 
       if (!trainer) throw new AuthenticationError('invalid trainer credentials');
 
@@ -1079,6 +1094,40 @@ const trainerResolversQuery = {
     if (!contents) throw new ApolloError('No Data!')
 
     return contents
+  },
+
+  getContentByContentId: async (_, { content_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+
+    if (!trainer) throw new AuthenticationError('invalid trainer')
+
+    const content = await prisma.jmk_week_content.findFirst({
+      where: {
+        content_id: content_id,
+      },
+    });
+    if (!content) throw new AuthenticationError('No data found');
+
+    const week = await prisma.jmk_tr_week.findFirst({
+      where: {
+        week_id: content.week_id,
+      },
+    })
+    if (!week) throw new AuthenticationError('Invalid access');
+
+    const crs = await prisma.jmkcrsinfo.findFirst({
+      where: {
+        crs_id: week.crs_id,
+      },
+    })
+    if (!crs) throw new AuthenticationError('Invalid access');
+    if (crs.crs_id !== trainer.crs_id) throw new AuthenticationError('Invalid access')
+
+    return content
   },
 
   getAssignedSessions: async (_, args, { userId, role }) => {
