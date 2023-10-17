@@ -17,7 +17,7 @@ const trainerQueryTypesAndInputs = `
       Test
       Project
       Video
-      Notes
+      Note
     }
 
     input signinTrainerInput{
@@ -114,17 +114,18 @@ const trainerQueryTypesAndInputs = `
       description:String!
       week_id:Int!
      }
+
      input deleteWeekInput{
       week_id:Int!
      }
 
      input weekContentInput{
+      week_id:Int!
       title:String!
       description:String!
-      video_url:String
+      type: ContentTypes!
+      video_url:Upload
       project_url:String
-      type: ContentTypes
-      
       content_id:Int
       test: TestInput
      }
@@ -385,6 +386,9 @@ const trainerMutation = `
     addWeek(data:weekInput!):String!
     updateWeek(data:updateWeekInput!):String!
     deleteWeek(data:deleteWeekInput!):String!
+
+    addTrainerWeekContentById(data:weekContentInput):String!
+    updateTrainerWeekContentById(data:weekContentInput):String!
     
     addTrainerStudentFeedback(data:addTrainerStudentFeedbackInput!):String!
     updateTrainerStudentFeedback(data:updateTrainerStudentFeedbackInput!):String!
@@ -398,9 +402,6 @@ const trainerMutation = `
     updateQuestion(data:updateQuestionInput!):String!
 
     trainerEmailVerify(data: emailVerifyTrainer!): String!
-
-    addTrainerWeekContentById(data:weekContentInput):String!
-    updateTrainerWeekContentById(data:weekContentInput):String!
    
 `
 
@@ -633,6 +634,148 @@ const trainerResolvers = {
     return newTrainer
   },
 
+  addWeek: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+      const week = await prisma.jmk_tr_week.create({
+        data: {
+          ...data,
+          crs_id: trainer.crs_id,
+        },
+      })
+      if (!week) throw new ApolloError('Unable to create the week')
+      return 'Week Successfully added'
+    }
+  },
+
+  updateWeek: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+      const week = await prisma.jmk_tr_week.update({
+        data: {
+          ...data,
+        },
+        where: {
+          week_id: data.week_id,
+        },
+      })
+      if (!week) throw new ApolloError('No week Found !')
+      return 'Week Successfully updated'
+    }
+  },
+
+  deleteWeek: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+
+      const weekContents = await prisma.jmk_week_content.findMany({
+        where: {
+          week_id: data.week_id,
+        },
+      })
+
+      if (weekContents[0]) throw new ApolloError("Week is full of content. Can't delete")
+
+      const week = await prisma.jmk_tr_week.delete({
+        where: {
+          week_id: data.week_id,
+        },
+      })
+
+      if (!week) throw new ApolloError("something went wrong !");
+
+      return 'Week Successfully deleted'
+    }
+  },
+
+  addTrainerWeekContentById: async (_, { data }, { userId, role }) => {
+
+    if (!userId) throw new ForbiddenError('invalid token')
+
+    if (role === ROLES[1]) {
+
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+
+      if (data.type === 'Video' || data.type === 'Note') {
+        if (!data.video_url && data.project_url) {
+          data['video_url'] = data.project_url;
+          delete data.project_url;
+        } else {
+          let file;
+          file = await uploadImgToAWS(data.video_url, data.type === 'Video' ? 'videos/' : 'notes/');
+          if (!file.data) throw new ApolloError("Something went wrong!");
+          data['video_url'] = file?.data?.Location ?? null;
+          data['video_url_key'] = file?.data?.Key ?? '';
+        }
+      }
+
+      const weekContent = await prisma.jmk_week_content.create({ data });
+
+      if (!weekContent) throw new ApolloError('Something went wrong !');
+
+      return 'Successfully Created !'
+    }
+
+    throw new AuthenticationError('invalid access !')
+  },
+
+  updateTrainerWeekContentById: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+      if (data.type !== 'Test') {
+        await prisma.jmk_week_content.update({
+          data: {
+            ...data,
+          },
+          where: {
+            content_id: data.content_id,
+          },
+        })
+      } else {
+        const testcontent = await prisma.jmk_week_content.update({
+          data: {
+            ...data,
+          },
+          where: {
+            content_id_id: data.content_id_id,
+            test_set_id: data.test_set_id,
+          },
+        })
+
+        const test = await prisma.jmk_test_set.create({
+          data: {
+            ...data,
+          },
+          where: {
+            content_id: testcontent.content_id,
+          },
+        })
+        return 'week test updated successfully'
+      }
+      return 'Successfully updated content'
+    }
+  },
+
 
 
 
@@ -811,145 +954,7 @@ const trainerResolvers = {
     }
     throw new ForbiddenError('Bad request !!')
   },
-  addWeek: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === ROLES[1]) {
-      const trainer = await prisma.jmktrinfo.findFirst({
-        where: { tr_id: userId },
-      })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-      const week = await prisma.jmk_tr_week.create({
-        data: {
-          ...data,
-          crs_id: trainer.crs_id,
-        },
-      })
-      if (!week) throw new ApolloError('Unable to create the week')
-      return 'Week Successfully added'
-    }
-  },
-  updateWeek: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === ROLES[1]) {
-      const trainer = await prisma.jmktrinfo.findFirst({
-        where: { tr_id: userId },
-      })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-      const week = await prisma.jmk_tr_week.update({
-        data: {
-          ...data,
-        },
-        where: {
-          week_id: data.week_id,
-        },
-      })
-      if (!week) throw new ApolloError('No week Found !')
-      return 'Week Successfully updated'
-    }
-  },
 
-  deleteWeek: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === ROLES[1]) {
-      const trainer = await prisma.jmktrinfo.findFirst({
-        where: { tr_id: userId },
-      })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-
-      const weekContents = await prisma.jmk_week_content.findMany({
-        where: {
-          week_id: data.week_id,
-        },
-      })
-
-      if (weekContents[0]) throw new ApolloError("Week is full of content. Can't delete")
-
-      const week = await prisma.jmk_tr_week.delete({
-        where: {
-          week_id: data.week_id,
-        },
-      })
-
-      if (!week) throw new ApolloError("something went wrong !");
-
-      return 'Week Successfully deleted'
-    }
-  },
-
-  addTrainerWeekContentById: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === ROLES[1]) {
-      const trainer = await prisma.jmktrinfo.findFirst({
-        where: { tr_id: userId },
-      })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-      if (data.type !== 'Test') {
-        await prisma.jmk_week_content.create({
-          data: {
-            ...data,
-          },
-        })
-      } else {
-        const testcontent = await prisma.jmk_week_content.create({
-          data: {
-            title: data.title,
-            description: data.description,
-          },
-        })
-
-        const test = await prisma.jmk_test_set.create({
-          data: {
-            ...data,
-          },
-          where: {
-            content_id: testcontent.content_id,
-          },
-        })
-        return 'week test added successfully'
-      }
-      return 'Successfully added content'
-    }
-  },
-  updateTrainerWeekContentById: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === ROLES[1]) {
-      const trainer = await prisma.jmktrinfo.findFirst({
-        where: { tr_id: userId },
-      })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-      if (data.type !== 'Test') {
-        await prisma.jmk_week_content.update({
-          data: {
-            ...data,
-          },
-          where: {
-            content_id: data.content_id,
-          },
-        })
-      } else {
-        const testcontent = await prisma.jmk_week_content.update({
-          data: {
-            ...data,
-          },
-          where: {
-            content_id_id: data.content_id_id,
-            test_set_id: data.test_set_id,
-          },
-        })
-
-        const test = await prisma.jmk_test_set.create({
-          data: {
-            ...data,
-          },
-          where: {
-            content_id: testcontent.content_id,
-          },
-        })
-        return 'week test updated successfully'
-      }
-      return 'Successfully updated content'
-    }
-  },
 }
 
 const trainerResolversQuery = {
@@ -1025,15 +1030,21 @@ const trainerResolversQuery = {
 
   getContentByWeekId: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
+
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_id: userId },
     })
+
     if (!trainer) throw new AuthenticationError('invalid trainer')
+
     const contents = await prisma.jmk_week_content.findMany({
       where: {
         week_id: args.week_id,
       },
     })
+
+    if (!contents) throw new ApolloError('No Data!')
+
     return contents
   },
 

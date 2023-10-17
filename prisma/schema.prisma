@@ -41,15 +41,16 @@ model jmk_tr_week {
 }
 
 model jmk_week_content {
-  content_id  Int              @id @default(autoincrement())
-  title       String           @db.VarChar(100)
-  description String           @db.VarChar(1000)
-  type        jmk_content_type
-  week_id     Int
-  video_url   String?          @db.VarChar(1000)
-  project_url String?          @db.VarChar(1000)
-  date        DateTime         @default(now())
-  jmk_tr_week jmk_tr_week      @relation(fields: [week_id], references: [week_id])
+  content_id    Int              @id @default(autoincrement())
+  title         String           @db.VarChar(100)
+  description   String           @db.VarChar(1000)
+  type          jmk_content_type
+  week_id       Int
+  video_url     String?          @db.VarChar(1000)
+  video_url_key String?          @db.VarChar(1000)
+  project_url   String?          @db.VarChar(1000)
+  date          DateTime         @default(now())
+  jmk_tr_week   jmk_tr_week      @relation(fields: [week_id], references: [week_id])
 
   @@index([week_id], map: "jmk_week_content_week_id_fkey")
 }
@@ -933,5 +934,5 @@ enum jmk_content_type {
   Test
   Project
   Video
-  Notes
+  Note
 }
