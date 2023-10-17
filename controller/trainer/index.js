@@ -9,7 +9,7 @@ import { sendMail } from '../../utils/mailHandler.js'
 import registerrHTML from '../../utils/signup.js'
 import emailVerificationHTML from '../../utils/EmailVerification.js'
 import { ROLES } from '../../utils/helper.js'
-import { uploadImgToAWS } from '../../utils/imageHandler.js'
+import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 
 const trainerQueryTypesAndInputs = `
 
@@ -389,6 +389,9 @@ const trainerMutation = `
 
     addTrainerWeekContentById(data:weekContentInput):String!
     updateTrainerWeekContentById(data:weekContentInput):String!
+    deleteTrainerWeekContentById(week_id:Int!,content_id:Int!):String!
+
+
     
     addTrainerStudentFeedback(data:addTrainerStudentFeedbackInput!):String!
     updateTrainerStudentFeedback(data:updateTrainerStudentFeedbackInput!):String!
@@ -774,6 +777,36 @@ const trainerResolvers = {
       }
       return 'Successfully updated content'
     }
+  },
+
+  deleteTrainerWeekContentById: async (_, { week_id, content_id }, { userId, role }) => {
+
+    if (!userId) throw new ForbiddenError('invalid token')
+
+    if (role === ROLES[1]) {
+
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+
+      const weekContent = await prisma.jmk_week_content.findFirst({ where: { week_id, content_id } });
+
+      if (!weekContent) throw new AuthenticationError('invalid request !');
+
+      if (weekContent.video_url_key) {
+        await deleteImgToAWS(weekContent.video_url_key)
+      }
+
+      const deleteWeekContent = await prisma.jmk_week_content.delete({ where: { content_id } });
+
+      if (!deleteWeekContent) throw new ApolloError('Something went wrong !');
+
+      return 'Successfully Deleted !'
+    }
+
+    throw new AuthenticationError('invalid access !')
   },
 
 
