@@ -387,9 +387,6 @@ const developerMutation = `
     
     createAndUpdateTeacherQueSub(data:stdQuesSubInput!):String!
 
-    createAndUpdateQuestionVoteTeacher(data:quesAndAnsVoteInput!):String!
-
-    createQuesAnsTeacher(data:stdQuesAnsInput!):String!
     updateQuesAnsTeacher(data:stdQuesAnsInput!):String!
 `
 
@@ -829,27 +826,6 @@ const developerQueryResolvers = {
 }
 
 const developerMutationResolver = {
-  createQuesAnsTeacher: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const user = await prisma.jmkdevinfo.findFirst({
-      where: { developer_id: userId },
-    })
-    if (!user) throw new AuthenticationError('invalid user')
-    const question = await prisma.jmk_std_ques.findFirst({
-      where: {
-        ques_id: data.question_id,
-      },
-    })
-    if (!question) throw new ApolloError('invalid question_id')
-
-    const answer = await prisma.jmk_ques_ans.create({
-      data: { ...data, teacher_id: userId, user_type: 'Teacher' },
-    })
-
-    if (!answer) throw new ApolloError('Someting went wrong !')
-
-    return 'Successfully created'
-  },
   updateQuesAnsTeacher: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkdevinfo.findFirst({
@@ -873,67 +849,7 @@ const developerMutationResolver = {
 
     return 'Successfully updated !'
   },
-  createAndUpdateQuestionVoteTeacher: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const user = await prisma.jmkdevinfo.findFirst({
-      where: { developer_id: userId },
-    })
-    if (!user) throw new AuthenticationError('invalid user')
 
-    if (data.imp_type === 'Question') {
-      const oldVote = await prisma.jmk_ques_ans_imp.findFirst({
-        where: {
-          teacher_id: userId,
-          question_id: data.question_id,
-        },
-      })
-
-      if (oldVote) {
-        const vote = await prisma.jmk_ques_ans_imp.update({
-          data: { ...data },
-          where: { imp_id: oldVote.imp_id },
-        })
-
-        if (!vote) throw new ApolloError('Someting went wrong !')
-        return 'Successfully updated !'
-      }
-
-      const vote = await prisma.jmk_ques_ans_imp.create({
-        data: { ...data, user_type: 'Teacher', teacher_id: userId },
-      })
-
-      if (!vote) throw new ApolloError('Someting went wrong !')
-
-      return 'Successfully Created !'
-    }
-    if (data.imp_type === 'Answer') {
-      const oldVote = await prisma.jmk_ques_ans_imp.findFirst({
-        where: {
-          teacher_id: userId,
-          ans_id: data.ans_id,
-        },
-      })
-
-      if (oldVote) {
-        const vote = await prisma.jmk_ques_ans_imp.update({
-          data: { ...data },
-          where: { imp_id: oldVote.imp_id },
-        })
-
-        if (!vote) throw new ApolloError('Someting went wrong !')
-        return 'Successfully updated !'
-      }
-
-      const vote = await prisma.jmk_ques_ans_imp.create({
-        data: { ...data, user_type: 'Teacher', teacher_id: userId },
-      })
-
-      if (!vote) throw new ApolloError('Someting went wrong !')
-
-      return 'Successfully Created !'
-    }
-    throw new AuthenticationError('invalid !')
-  },
   createAndUpdateTeacherQueSub: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkdevinfo.findFirst({
