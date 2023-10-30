@@ -6,7 +6,6 @@ import {
 import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
 import { sendMail } from '../../utils/mailHandler.js'
-import registerrHTML from '../../utils/signup.js'
 import emailVerificationHTML from '../../utils/EmailVerification.js'
 import { ROLES, getRandomItemsFromArray } from '../../utils/helper.js'
 import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
@@ -34,11 +33,7 @@ const trainerQueryTypesAndInputs = `
         tr_password: String!
         tr_city: String
         tr_country: String
-        tr_main_tech1: String
-        tr_main_tech2: String
-        tr_main_tech3: String
         tr_dob: Date
-        tr_resume: Upload!
         tr_github: String
         tr_linkedin: String
      }
@@ -50,18 +45,20 @@ const trainerQueryTypesAndInputs = `
         tr_email: String
         tr_mobile: String
         tr_dob: String
-        tr_password: String
         tr_city: String
         tr_country: String
-        tr_main_tech1: String
-        tr_main_tech2: String
-        tr_main_tech3: String
         tr_github: String
         tr_linkedin: String
-        tr_resume: Upload
      }
 
+     input updateTrainerPicInput {
+      tr_pic: Upload!
+     }
 
+     input updateTrainerPasswordInput {
+      old_tr_password: String!
+      tr_password: String!
+     }
 
      input updateActiveSession {
       crs_id:Int!
@@ -149,7 +146,7 @@ const trainerQueryTypesAndInputs = `
       }
 
      type Trainer {
-        tr_id: ID!
+        tr_id: Int!
         tr_fname: String!
         tr_mname: String
         tr_lname: String!
@@ -157,12 +154,9 @@ const trainerQueryTypesAndInputs = `
         tr_mobile: String!
         tr_city: String
         tr_country: String
-        tr_main_tech1: String
-        tr_main_tech2: String
-        tr_main_tech3: String
         tr_dob: Date
-        tr_resume: String
         tr_github: String
+        tr_pic:String
         tr_linkedin: String
         crs_id: String!
      }
@@ -281,6 +275,9 @@ const trainerMutation = `
     signupTrainer(data:signupTrainerInput!):Token
     signinTrainer(data:signinTrainerInput!):Token
     updateTrainer(data:updateTrainerInput):Trainer!
+    updateTrainerPic(data:updateTrainerPicInput):Trainer!
+    updateTrainerPassword(data:updateTrainerPasswordInput):String!
+
 
     trainerEmailVerify(data: emailVerifyTrainer!): String!
 
@@ -509,27 +506,58 @@ const trainerResolvers = {
     })
     if (!trainer) throw new AuthenticationError('invalid trainer')
     const newTrainer = await prisma.jmktrinfo.update({
+      data,
+      where: { tr_id: userId },
+    })
+    if (!newTrainer) throw new Error('something went wrong!!')
+    return newTrainer
+  },
+
+  updateTrainerPic: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+    let file;
+
+    if (trainer.tr_pic_key) {
+      await deleteImgToAWS(trainer.tr_pic_key)
+    }
+
+    if (data.tr_pic) {
+      file = await uploadImgToAWS(data.tr_pic, 'trainer_profile_pics');
+      if (!file.data) throw new ApolloError("Something went wrong!");
+      data['tr_pic'] = file?.data?.Location ?? null;
+      data['tr_pic_key'] = file?.data?.Key ?? '';
+    }
+
+    const newTrainer = await prisma.jmktrinfo.update({
+      data,
+      where: { tr_id: userId },
+    })
+    if (!newTrainer) throw new Error('something went wrong!!')
+    return newTrainer
+  },
+
+  updateTrainerPassword: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+    if (!trainer) throw new AuthenticationError('invalid trainer')
+    if (trainer.tr_password !== data.old_tr_password) throw new AuthenticationError('old password didnt match !');
+    if (trainer.tr_password === data.tr_password) throw new AuthenticationError('old password new password cant be same !');
+    if (data.tr_password.length < 6) throw new AuthenticationError('password must be 6 char long !');
+
+    const newTrainer = await prisma.jmktrinfo.update({
       data: {
-        tr_fname: data.tr_fname,
-        tr_mname: data.tr_mname,
-        tr_lname: data.tr_lname,
-        tr_email: data.tr_email,
-        tr_mobile: data.tr_mobile,
-        tr_city: data.tr_city,
-        tr_country: data.tr_country,
-        tr_main_tech1: data.tr_main_tech1,
-        tr_main_tech2: data.tr_main_tech2,
-        tr_main_tech3: data.tr_main_tech3,
-        tr_github: data.tr_github,
-        tr_linkedin: data.tr_linkedin,
-        tr_resume: data.tr_resume,
-        tr_dob: data.tr_dob,
         tr_password: data.tr_password,
       },
       where: { tr_id: userId },
     })
     if (!newTrainer) throw new Error('something went wrong!!')
-    return newTrainer
+    return 'success'
   },
 
   addWeek: async (_, { data }, { userId, role }) => {

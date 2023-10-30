@@ -242,6 +242,8 @@ model jmktrinfo {
   tr_dob        DateTime?      @db.Date
   tr_verifyed   Boolean        @default(false)
   tr_password   String         @db.VarChar(16)
+  tr_pic        String?        @db.VarChar(500)
+  tr_pic_key    String?        @db.VarChar(500)
   tr_resume     String?        @db.VarChar(100)
   tr_github     String?        @db.VarChar(50)
   tr_linkedin   String?        @db.VarChar(50)
