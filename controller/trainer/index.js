@@ -269,6 +269,11 @@ const trainerQuery = `
 
     getQuestionAnsVoteForTrainer(question_id:Int,answer_id:Int):[quesAndAnsVote]
 
+
+
+    getAllRelatedCrsStdForTrainer:[studentAndLastMessage]
+    getStudentChatForTrainer(std_id:Int!):StudentChatHistory!
+
 `
 
 const trainerMutation = `
@@ -891,6 +896,7 @@ const trainerResolvers = {
 
     return 'Successfully created'
   },
+  
 }
 
 const trainerResolversQuery = {
@@ -1280,6 +1286,73 @@ const trainerResolversQuery = {
     }
     if (!vote) throw new ApolloError('No Data !')
     return vote
+  },
+
+  getAllRelatedCrsStdForTrainer: async (_, { std_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    if (role === ROLES[1]) {
+      const user = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!user) throw new AuthenticationError('invalid user credentials')
+      let students = []
+      let studentsData = await prisma.jmkstdinfo.findMany({ where: { crs_id: user.crs_id } })
+      if (!studentsData) throw new ForbiddenError('Empty Note !')
+      for (let index = 0; index < studentsData.length; index++) {
+        if (studentsData[index].std_id != userId) {
+          const message = await prisma.jmk_chats.findFirst({
+            where: {
+              OR: [
+                {
+                  sender_id: studentsData[index].std_id,
+                  receiver_id: userId
+                },
+                {
+                  sender_id: userId,
+                  receiver_id: studentsData[index].std_id
+                }
+              ]
+            },
+            orderBy: {
+              created_at: 'desc'
+            }
+          });
+          students.push({ student: { ...studentsData[index] }, message })
+        }
+      }
+      return students
+    }
+    throw new ForbiddenError('Bad request !!')
+  },
+
+  getStudentChatForTrainer: async (_, { std_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+
+    const student = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: std_id },
+    })
+
+    if (!trainer) throw new AuthenticationError('invalid req')
+    if (!student) throw new AuthenticationError('invalid req')
+
+    const chats = await prisma.jmk_chats.findMany({ where: { receiver_id: userId, sender_id: std_id, user_type: 'Student' } })
+    const myChats = await prisma.jmk_chats.findMany({ where: { receiver_id: std_id, sender_id: userId, user_type: 'Teacher' } })
+
+    let filterchat = [...chats, ...myChats]
+
+    const sortedMessages = filterchat.sort((a, b) => {
+      return new Date(a.created_at) - new Date(b.created_at);
+    });
+
+    return {
+      user: trainer,
+      student: student,
+      chat_history: sortedMessages
+    }
   },
 
 }

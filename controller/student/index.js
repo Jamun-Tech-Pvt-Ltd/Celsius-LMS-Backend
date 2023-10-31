@@ -1211,10 +1211,24 @@ const studentResolvers = {
     }
   },
 
-  createMessage: async (_, { data }, { userId }) => {
+  createMessage: async (_, { data }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token');
     if (!data.receiver_id) throw new ForbiddenError('receiver cant be null');
     if (!data.message) throw new ForbiddenError('message cant be empty');
+
+    if (role === ROLES[0]) {
+      const user = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      })
+      if (!user) throw new ForbiddenError('invalid user');
+    }
+
+    if (role === ROLES[1]) {
+      const user = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!user) throw new ForbiddenError('invalid user');
+    }
 
     if (data.chat_type === 'Image') {
       const imgData = await uploadImgToAWS(data.image, 'user_chat_files/')
@@ -1245,15 +1259,23 @@ const studentResolvers = {
     return message;
   },
 
-  isTypingMessage: async (_, { isTyping, receiver_id }, { userId }) => {
+  isTypingMessage: async (_, { isTyping, receiver_id }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token');
     if (!receiver_id) throw new ForbiddenError('receiver cant be null');
 
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: userId },
-    })
+    if (role === ROLES[0]) {
+      const user = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      })
+      if (!user) throw new ForbiddenError('invalid user');
+    }
 
-    if (!user) throw new AuthenticationError('invalid user')
+    if (role === ROLES[1]) {
+      const user = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!user) throw new ForbiddenError('invalid user');
+    }
 
     const receiverChannel = `channel_${userId}_${receiver_id}`;
 
@@ -1269,14 +1291,23 @@ const studentResolvers = {
     return 'Status changed';
   },
 
-  updateMessageSeen: async (_, { student_id }, { userId }) => {
+  updateMessageSeen: async (_, { student_id }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token');
     if (!student_id) throw new ForbiddenError('student_id cant be null');
 
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: userId },
-    })
-    if (!user) throw new ForbiddenError('invalid user');
+    if (role === ROLES[0]) {
+      const user = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      })
+      if (!user) throw new ForbiddenError('invalid user');
+    }
+
+    if (role === ROLES[1]) {
+      const user = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!user) throw new ForbiddenError('invalid user');
+    }
 
     const student = await prisma.jmkstdinfo.findFirst({
       where: { std_id: student_id },
@@ -1556,7 +1587,7 @@ const studentResolversQuery = {
     if (!student) throw new AuthenticationError('invalid student')
 
     const chats = await prisma.jmk_chats.findMany({ where: { receiver_id: userId, sender_id: std_id } })
-    const myChats = await prisma.jmk_chats.findMany({ where: { receiver_id: std_id, sender_id: userId } })
+    const myChats = await prisma.jmk_chats.findMany({ where: { receiver_id: std_id, sender_id: userId, user_type: 'Student' } })
 
     let filterchat = [...chats, ...myChats]
 

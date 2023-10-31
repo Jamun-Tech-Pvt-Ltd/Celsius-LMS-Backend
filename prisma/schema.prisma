@@ -892,6 +892,14 @@ model jmk_chat_group {
   created_at DateTime                    @default(now())
 }
 
+model jmk_std_faq {
+  faq_id       Int      @id @default(autoincrement())
+  business_id  Int?
+  faq_question String?  @db.VarChar(100)
+  faq_answer   String?  @db.VarChar(5000)
+  created_at   DateTime @default(now())
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
