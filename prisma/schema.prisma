@@ -249,6 +249,7 @@ model jmktrinfo {
   tr_linkedin   String?        @db.VarChar(50)
   tr_resume_key String?        @db.VarChar(100)
   crs_id        Int
+  lastSeen      DateTime       @default(now())
   jmktrcrsinfo  jmktrcrsinfo[]
 }
 
@@ -874,22 +875,29 @@ model jmk_chats {
 }
 
 model jmk_group_chats {
-  chat_id    Int                         @id @default(autoincrement())
-  group_id   Int
-  sender_id  Int
-  isSeen     Boolean                     @default(false)
-  user_type  jmk_ques_ans_user_type_enum
-  chat_type  jmk_chat_type_enum          @default(Text)
-  created_at DateTime                    @default(now())
-  message    String                      @db.VarChar(1000)
+  chat_id     Int                         @id @default(autoincrement())
+  receiver_id Int
+  sender_id   Int
+  user_type   jmk_ques_ans_user_type_enum
+  chat_type   jmk_chat_type_enum          @default(Text)
+  created_at  DateTime                    @default(now())
+  message     String                      @db.VarChar(1000)
+  isSeen      Boolean                     @default(false)
 }
 
 model jmk_chat_group {
-  group_id   Int                         @id @default(autoincrement())
-  user_id    Int?
-  teacher_id Int?
-  user_type  jmk_ques_ans_user_type_enum
-  created_at DateTime                    @default(now())
+  group_id   Int      @id @default(autoincrement())
+  group_name String
+  crs_id     Int
+  teacher_id Int
+  lastSeen   DateTime @default(now())
+  created_at DateTime @default(now())
+}
+
+model jmk_chat_group_student {
+  group_id   Int      @id @default(autoincrement())
+  std_id     Int
+  created_at DateTime @default(now())
 }
 
 model jmk_std_faq {

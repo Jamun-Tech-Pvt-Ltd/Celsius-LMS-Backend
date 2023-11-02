@@ -353,15 +353,6 @@ const studentQueryTypesAndInputs = `
       updated_at: Date!
    }
 
-   type Student {
-    std_id:Int!
-    std_fname:String! 
-    std_mname:String 
-    std_lname:String! 
-    std_pic:String
-    lastSeen:Date!
-   }
-
    type Chat {
     chat_id:Int!
     receiver_id:Int! 
@@ -379,9 +370,50 @@ const studentQueryTypesAndInputs = `
     chat_history:[Chat]
    }
 
-   type studentAndLastMessage {
-    student: Student
+   type studentChatList {
+    trainer: TrainerDetails
+    students: [studentDetails]
+    groups: [groupDetails]
+   }
+    
+   type TrainerDetails {
+    trainer:TrainerData
     message: Chat
+   }
+
+   type TrainerData{
+    tr_id:Int!
+    tr_fname:String! 
+    tr_mname:String 
+    tr_lname:String! 
+    tr_pic:String
+    lastSeen:Date!
+   }
+
+   type studentDetails {
+    student:Student
+    message: Chat
+   }
+
+   type Student {
+    std_id:Int!
+    std_fname:String! 
+    std_mname:String 
+    std_lname:String! 
+    std_pic:String
+    lastSeen:Date!
+   }
+
+   type groupDetails {
+    group:groupData
+    message: Chat
+   }
+
+   type groupData {
+    group_id:Int!
+    group_name:String! 
+    teacher_id:String!
+    lastSeen:Date!
    }
 
    type typing {
@@ -433,7 +465,7 @@ const studentQuery = `
 
     getStdCrsRelatedQuesInfo:[stdCrsRelatedQuesInfo]!
 
-    getAllRelatedCrsStd:[studentAndLastMessage]
+    getStuentChatList:studentChatList
 
     getStudentChats(std_id:Int!):StudentChatHistory!
 `
@@ -1466,7 +1498,7 @@ const studentResolversQuery = {
     throw new ForbiddenError('Bad request !!')
   },
 
-  getAllRelatedCrsStd: async (_, args, { userId, role }) => {
+  getStuentChatList: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     if (role === ROLES[0]) {
       const user = await prisma.jmkstdinfo.findFirst({
@@ -1474,8 +1506,9 @@ const studentResolversQuery = {
       })
       if (!user) throw new AuthenticationError('invalid user credentials')
       let students = []
-      let studentsData = await prisma.jmkstdinfo.findMany({ where: { crs_id: user.crs_id } })
-      if (!studentsData) throw new ForbiddenError('Empty Note !')
+      let studentsData = await prisma.jmkstdinfo.findMany({ where: { crs_id: user.crs_id } });
+
+      if (!studentsData) throw new ForbiddenError('Empty !');
       for (let index = 0; index < studentsData.length; index++) {
         if (studentsData[index].std_id != userId) {
           const message = await prisma.jmk_chats.findFirst({
@@ -1497,8 +1530,60 @@ const studentResolversQuery = {
           });
           students.push({ student: { ...studentsData[index] }, message })
         }
+      };
+
+      const stdCrsTrainer = await prisma.jmktrcrsinfo.findFirst({ where: { crs_id: user.crs_id } });
+      const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: stdCrsTrainer.tr_id } });
+
+      if (!trainer) throw new ForbiddenError('invalid course !');
+
+      const trainerDetails = {
+        tr_id: trainer.tr_id,
+        tr_fname: trainer.tr_fname,
+        tr_mname: trainer.tr_mname,
+        tr_lname: trainer.tr_lname,
+        tr_pic: trainer.tr_pic,
+        lastSeen: new Date(),
       }
-      return students
+
+      const trainerMessage = await prisma.jmk_chats.findFirst({
+        where: {
+          OR: [
+            {
+              sender_id: trainer.tr_id,
+              receiver_id: userId
+            },
+            {
+              sender_id: userId,
+              receiver_id: trainer.tr_id,
+            }
+          ]
+        },
+        orderBy: {
+          created_at: 'desc'
+        }
+      });
+
+      const groups = [];
+      const myGroups = await prisma.jmk_chat_group_student.findMany({ where: { std_id: userId } });
+      if (myGroups?.[0]) {
+        for (let index = 0; index < myGroups.length; index++) {
+          const group = await prisma.jmk_chat_group.findFirst({ where: { group_id: myGroups[index].group_id } });
+          const message = await prisma.jmk_group_chats.findFirst({
+            where: { receiver_id: group.group_id },
+            orderBy: {
+              created_at: 'desc'
+            }
+          });
+          if (message) {
+            groups.push({ group, message })
+          } else {
+            groups.push({ group })
+          }
+        };
+      }
+
+      return { students, trainer: { trainer: trainerDetails, message: trainerMessage }, groups }
     }
     throw new ForbiddenError('Bad request !!')
   },

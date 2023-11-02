@@ -269,9 +269,7 @@ const trainerQuery = `
 
     getQuestionAnsVoteForTrainer(question_id:Int,answer_id:Int):[quesAndAnsVote]
 
-
-
-    getAllRelatedCrsStdForTrainer:[studentAndLastMessage]
+    getAllRelatedCrsStdForTrainer:studentChatList
     getStudentChatForTrainer(std_id:Int!):StudentChatHistory!
 
 `
