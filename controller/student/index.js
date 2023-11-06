@@ -140,6 +140,7 @@ const studentQueryTypesAndInputs = `
      input createMessageInput{
       receiver_id:Int!
       user_type:String!
+      chat_profile_type: String!
       message:String!
       chat_type:String!
       image:Upload
@@ -514,8 +515,8 @@ const studentMutation = `
     isTypingMessage(isTyping:Boolean!, receiver_id:Int!):String!
 
     createMessage(data:createMessageInput!):Chat
-
-    updateMessageSeen(student_id:Int!):String!
+ 
+    updateMessageSeen(id:Int!, type:String!):String!
 `
 
 const studentResolvers = {
@@ -1251,6 +1252,7 @@ const studentResolvers = {
     if (!userId) throw new ForbiddenError('invalid token');
     if (!data.receiver_id) throw new ForbiddenError('receiver cant be null');
     if (!data.message) throw new ForbiddenError('message cant be empty');
+    if (!data.chat_profile_type) throw new ForbiddenError('chat_profile_type cant be empty');
 
     if (role === ROLES[0]) {
       const user = await prisma.jmkstdinfo.findFirst({
@@ -1273,26 +1275,47 @@ const studentResolvers = {
       delete data.image
     }
 
+    if (data.chat_profile_type !== 'group') {
+      const message = await prisma.jmk_chats.create({
+        data: {
+          receiver_id: data.receiver_id,
+          sender_id: userId,
+          user_type: data.user_type,
+          chat_type: data.chat_type,
+          message: data.message
+        }
+      });
 
-    const message = await prisma.jmk_chats.create({
-      data: {
-        receiver_id: data.receiver_id,
-        sender_id: userId,
-        user_type: data.user_type,
-        chat_type: data.chat_type,
-        message: data.message
+      if (!message) throw new ApolloError('Something went wrong, try again!');
+
+      const receiverChannel = `channel_${userId}_${data.receiver_id}`;
+
+      if (receiverChannel) {
+        pubsub.publish(receiverChannel, { newMessage: message });
       }
-    });
+      return message;
+    } else {
+      const myGroup = await prisma.jmk_chat_group_student.findFirst({ where: { std_id: userId, group_id: data.receiver_id } });
+      if (!myGroup) throw new ApolloError('invalid access !');
+      const message = await prisma.jmk_group_chats.create({
+        data: {
+          receiver_id: data.receiver_id,
+          sender_id: userId,
+          user_type: data.user_type,
+          chat_type: data.chat_type,
+          message: data.message
+        }
+      });
 
-    if (!message) throw new ApolloError('Something went wrong, try again!');
+      if (!message) throw new ApolloError('Something went wrong, try again!');
 
-    const receiverChannel = `channel_${userId}_${data.receiver_id}`;
+      const receiverChannel = `channel_${userId}_${data.receiver_id}`;
 
-    if (receiverChannel) {
-      pubsub.publish(receiverChannel, { newMessage: message });
+      if (receiverChannel) {
+        pubsub.publish(receiverChannel, { newMessage: message });
+      }
+      return message;
     }
-
-    return message;
   },
 
   isTypingMessage: async (_, { isTyping, receiver_id }, { userId, role }) => {
@@ -1327,9 +1350,10 @@ const studentResolvers = {
     return 'Status changed';
   },
 
-  updateMessageSeen: async (_, { student_id }, { userId, role }) => {
+  updateMessageSeen: async (_, { id, type }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token');
-    if (!student_id) throw new ForbiddenError('student_id cant be null');
+    if (!id) throw new ForbiddenError('id cant be null');
+    if (!type) throw new ForbiddenError('type cant be null');
 
     if (role === ROLES[0]) {
       const user = await prisma.jmkstdinfo.findFirst({
@@ -1345,35 +1369,78 @@ const studentResolvers = {
       if (!user) throw new ForbiddenError('invalid user');
     }
 
-    const student = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: student_id },
-    })
-    if (!student) throw new ForbiddenError('invalid');
-
-    const oldChats = await prisma.jmk_chats.findMany({
-      where: {
-        receiver_id: userId,
-        sender_id: student_id,
-        isSeen: false
-      }
-    })
-
-    if (!oldChats[0]) return 'Nothing to update !'
-
-    for (let index = 0; index < oldChats.length; index++) {
-      await prisma.jmk_chats.update({
-        data: {
-          isSeen: true
-        }, where: {
-          chat_id: oldChats[index].chat_id
-        }
-      });
+    if (type === 'student') {
+      const student = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: id },
+      })
+      if (!student) throw new ForbiddenError('invalid');
+    } else if (type === 'trainer') {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: id },
+      })
+      if (!trainer) throw new ForbiddenError('invalid');
+    } else {
+      const mygroup = await prisma.jmk_chat_group_student.findFirst({ where: { std_id: userId, group_id: id } })
+      const group = await prisma.jmk_chat_group.findFirst({
+        where: { group_id: id },
+      })
+      if (!mygroup) throw new ForbiddenError('invalid');
+      if (!group) throw new ForbiddenError('invalid');
     }
 
-    const receiverChannel = `message_seen_${userId}_${student_id}`;
+    if (type !== "group") {
+      const oldChats = await prisma.jmk_chats.findMany({
+        where: {
+          receiver_id: userId,
+          sender_id: id,
+          isSeen: false
+        }
+      })
 
-    if (receiverChannel) {
-      pubsub.publish(receiverChannel, { messageSeen: "allMessage" });
+      if (!oldChats[0]) return 'Nothing to update !'
+
+      for (let index = 0; index < oldChats.length; index++) {
+        await prisma.jmk_chats.update({
+          data: {
+            isSeen: true
+          }, where: {
+            chat_id: oldChats[index].chat_id
+          }
+        });
+      }
+
+      const receiverChannel = `message_seen_${userId}_${id}`;
+
+      if (receiverChannel) {
+        pubsub.publish(receiverChannel, { messageSeen: "allMessage" });
+      }
+
+    } else {
+
+      const oldChats = await prisma.jmk_group_chats.findMany({
+        where: {
+          receiver_id: id,
+          isSeen: false
+        }
+      })
+
+      if (!oldChats[0]) return 'Nothing to update !'
+
+      for (let index = 0; index < oldChats.length; index++) {
+        await prisma.jmk_group_chats.update({
+          data: {
+            isSeen: true
+          }, where: {
+            chat_id: oldChats[index].chat_id
+          }
+        });
+      }
+
+      const receiverChannel = `message_seen_${userId}_${id}`;
+
+      if (receiverChannel) {
+        pubsub.publish(receiverChannel, { messageSeen: "allMessage" });
+      }
     }
 
     return "success";
@@ -1700,8 +1767,8 @@ const studentResolversQuery = {
       });
       if (!teacher) throw new AuthenticationError('invalid trainer')
 
-      const chats = await prisma.jmk_chats.findMany({ where: { receiver_id: userId, sender_id: chatId } })
-      const myChats = await prisma.jmk_chats.findMany({ where: { receiver_id: chatId, sender_id: userId, user_type: 'Teacher' } })
+      const chats = await prisma.jmk_chats.findMany({ where: { receiver_id: userId, sender_id: chatId, user_type: 'Teacher' } })
+      const myChats = await prisma.jmk_chats.findMany({ where: { receiver_id: chatId, sender_id: userId, user_type: 'Student' } })
 
       let filterchat = [...chats, ...myChats]
 
