@@ -362,11 +362,15 @@ const studentQueryTypesAndInputs = `
     isSeen: Boolean!
     user_type:String!
     chat_type:String!
+    student: Student
+    trainer: TrainerData
    }
 
    type StudentChatHistory {
     user:Student!
-    student:Student!
+    student:Student
+    teacher:TrainerData
+    group: groupData
     chat_history:[Chat]
    }
 
@@ -467,7 +471,7 @@ const studentQuery = `
 
     getStuentChatList:studentChatList
 
-    getStudentChats(std_id:Int!):StudentChatHistory!
+    getStudentChats(chatId:Int!,chatType:String!):StudentChatHistory!
 `
 
 const studentMutation = `
@@ -1657,34 +1661,104 @@ const studentResolversQuery = {
     return weekContents
   },
 
-  getStudentChats: async (_, { std_id }, { userId, role }) => {
+  getStudentChats: async (_, { chatId, chatType }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
 
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
     })
 
-    const student = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: std_id },
-    })
-
     if (!user) throw new AuthenticationError('invalid user')
-    if (!student) throw new AuthenticationError('invalid student')
 
-    const chats = await prisma.jmk_chats.findMany({ where: { receiver_id: userId, sender_id: std_id } })
-    const myChats = await prisma.jmk_chats.findMany({ where: { receiver_id: std_id, sender_id: userId, user_type: 'Student' } })
+    if (chatType === 'student') {
+      const student = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: chatId },
+      });
+      if (!student) throw new AuthenticationError('invalid student')
 
-    let filterchat = [...chats, ...myChats]
+      const chats = await prisma.jmk_chats.findMany({ where: { receiver_id: userId, sender_id: chatId } })
+      const myChats = await prisma.jmk_chats.findMany({ where: { receiver_id: chatId, sender_id: userId, user_type: 'Student' } })
 
-    const sortedMessages = filterchat.sort((a, b) => {
-      return new Date(a.created_at) - new Date(b.created_at);
-    });
+      let filterchat = [...chats, ...myChats]
 
-    return {
-      user: user,
-      student: student,
-      chat_history: sortedMessages
+      const sortedMessages = filterchat.sort((a, b) => {
+        return new Date(a.created_at) - new Date(b.created_at);
+      });
+
+      return {
+        user: user,
+        student: student,
+        teacher: null,
+        group: null,
+        chat_history: sortedMessages
+      }
     }
+
+    if (chatType === 'trainer') {
+      const teacher = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: chatId },
+      });
+      if (!teacher) throw new AuthenticationError('invalid trainer')
+
+      const chats = await prisma.jmk_chats.findMany({ where: { receiver_id: userId, sender_id: chatId } })
+      const myChats = await prisma.jmk_chats.findMany({ where: { receiver_id: chatId, sender_id: userId, user_type: 'Teacher' } })
+
+      let filterchat = [...chats, ...myChats]
+
+      const sortedMessages = filterchat.sort((a, b) => {
+        return new Date(a.created_at) - new Date(b.created_at);
+      });
+
+      return {
+        user: user,
+        teacher: teacher,
+        student: null,
+        group: null,
+        chat_history: sortedMessages
+      }
+    }
+
+    if (chatType === 'group') {
+
+      const mygroup = await prisma.jmk_chat_group_student.findFirst({
+        where: { std_id: userId, group_id: chatId },
+      });
+
+      if (!mygroup) throw new AuthenticationError('Not have access');
+
+      const group = await prisma.jmk_chat_group.findFirst({
+        where: { group_id: chatId },
+      });
+
+      if (!group) throw new AuthenticationError('invalid group');
+
+      const chats = await prisma.jmk_group_chats.findMany({ where: { receiver_id: chatId } });
+
+      let filterchat = [];
+
+      for (let index = 0; index < chats.length; index++) {
+        if (chats[index].user_type === 'Student') {
+          const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: chats[index].sender_id } });
+          filterchat.push({ ...chats[index], student })
+        } else {
+          const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: chats[index].sender_id } });
+          filterchat.push({ ...chats[index], trainer })
+        }
+      }
+
+      const sortedMessages = filterchat.sort((a, b) => {
+        return new Date(a.created_at) - new Date(b.created_at);
+      });
+
+      return {
+        user: user,
+        teacher: null,
+        student: null,
+        group: group,
+        chat_history: sortedMessages
+      }
+    };
+    throw new AuthenticationError('invalid request');
   },
 
   // diss panel
