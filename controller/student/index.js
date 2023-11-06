@@ -1641,7 +1641,7 @@ const studentResolversQuery = {
         for (let index = 0; index < myGroups.length; index++) {
           const group = await prisma.jmk_chat_group.findFirst({ where: { group_id: myGroups[index].group_id } });
           const message = await prisma.jmk_group_chats.findFirst({
-            where: { receiver_id: group.group_id },
+            where: { receiver_id: group?.group_id },
             orderBy: {
               created_at: 'desc'
             }
@@ -1649,7 +1649,9 @@ const studentResolversQuery = {
           if (message) {
             groups.push({ group, message })
           } else {
-            groups.push({ group })
+            if (group) {
+              groups.push({ group })
+            }
           }
         };
       }

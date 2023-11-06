@@ -895,7 +895,8 @@ model jmk_chat_group {
 }
 
 model jmk_chat_group_student {
-  group_id   Int      @id @default(autoincrement())
+  serial     Int  @id @default(autoincrement())
+  group_id   Int      
   std_id     Int
   created_at DateTime @default(now())
 }
