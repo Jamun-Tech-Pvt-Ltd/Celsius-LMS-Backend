@@ -427,7 +427,7 @@ const studentQueryTypesAndInputs = `
    }
 
   type Subscription{
-    newMessage(receiver_id: Int!, user_id:Int!):Chat
+    newMessage(receiver_id: Int!, user_id:Int!, subsType: String!):Chat
   }
 
   type Subscription{
@@ -1295,8 +1295,16 @@ const studentResolvers = {
       }
       return message;
     } else {
-      const myGroup = await prisma.jmk_chat_group_student.findFirst({ where: { std_id: userId, group_id: data.receiver_id } });
-      if (!myGroup) throw new ApolloError('invalid access !');
+      if (role === ROLES[0]) {
+        const myGroup = await prisma.jmk_chat_group_student.findFirst({ where: { std_id: userId, group_id: data.receiver_id } });
+        if (!myGroup) throw new ApolloError('invalid access !');
+      }
+
+      if (role === ROLES[1]) {
+        const myGroup = await prisma.jmk_chat_group.findFirst({ where: { teacher_id: userId, group_id: data.receiver_id } });
+        if (!myGroup) throw new ApolloError('invalid access !');
+      }
+
       const message = await prisma.jmk_group_chats.create({
         data: {
           receiver_id: data.receiver_id,
@@ -1307,9 +1315,17 @@ const studentResolvers = {
         }
       });
 
+      if (message.user_type === 'Student') {
+        const getStdDetails = await prisma.jmkstdinfo.findFirst({ where: { std_id: message.sender_id } })
+        message['student'] = getStdDetails;
+      } else {
+        const getTrDetails = await prisma.jmktrinfo.findFirst({ where: { tr_id: message.sender_id } })
+        message['trainer'] = getTrDetails;
+      }
+
       if (!message) throw new ApolloError('Something went wrong, try again!');
 
-      const receiverChannel = `channel_${userId}_${data.receiver_id}`;
+      const receiverChannel = `channel_group_${data.receiver_id}`;
 
       if (receiverChannel) {
         pubsub.publish(receiverChannel, { newMessage: message });
@@ -1380,11 +1396,18 @@ const studentResolvers = {
       })
       if (!trainer) throw new ForbiddenError('invalid');
     } else {
-      const mygroup = await prisma.jmk_chat_group_student.findFirst({ where: { std_id: userId, group_id: id } })
+      if (role === ROLES[0]) {
+        const mygroup = await prisma.jmk_chat_group_student.findFirst({ where: { std_id: userId, group_id: id } });
+        if (!mygroup) throw new ForbiddenError('invalid');
+      } else if (role === ROLES[1]) {
+        const mygroup = await prisma.jmk_chat_group.findFirst({ where: { teacher_id: userId, group_id: id } });
+        if (!mygroup) throw new ForbiddenError('invalid');
+      } else {
+        throw new ForbiddenError('No aceess');
+      }
       const group = await prisma.jmk_chat_group.findFirst({
         where: { group_id: id },
       })
-      if (!mygroup) throw new ForbiddenError('invalid');
       if (!group) throw new ForbiddenError('invalid');
     }
 
@@ -1416,7 +1439,6 @@ const studentResolvers = {
       }
 
     } else {
-
       const oldChats = await prisma.jmk_group_chats.findMany({
         where: {
           receiver_id: id,
@@ -1995,8 +2017,13 @@ const studentResolversQuery = {
 const subscription = {
   Subscription: {
     newMessage: {
-      subscribe: (_, { receiver_id, user_id }) => {
-        const receiverChannel = `channel_${receiver_id}_${user_id}`
+      subscribe: (_, { receiver_id, user_id, subsType }) => {
+        let receiverChannel;
+        if (subsType === 'group') {
+          receiverChannel = `channel_${subsType}_${receiver_id}`
+        } else {
+          receiverChannel = `channel_${receiver_id}_${user_id}`
+        }
         return pubsub.asyncIterator(receiverChannel);
       }
     },
