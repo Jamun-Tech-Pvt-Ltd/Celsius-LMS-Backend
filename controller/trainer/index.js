@@ -145,6 +145,15 @@ const trainerQueryTypesAndInputs = `
         std_password:String
       }
 
+      input createGroupChatInput {
+        group_name:String!
+        students: [addGroupChatStudent!]!
+      }
+
+      input addGroupChatStudent {
+        std_id:Int!
+      }
+
      type Trainer {
         tr_id: Int!
         tr_fname: String!
@@ -300,6 +309,8 @@ const trainerMutation = `
     createAndUpdateQuestionVoteTrainer(data:quesAndAnsVoteInput!):String!
 
     createQuesAnsTrainer(data:stdQuesAnsInput!):String!
+
+    createGroupChat(data:createGroupChatInput!):String!
 
 `
 
@@ -891,6 +902,35 @@ const trainerResolvers = {
     })
 
     if (!answer) throw new ApolloError('Someting went wrong !')
+
+    return 'Successfully created'
+  },
+
+  createGroupChat: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user');
+
+    const newGroup = await prisma.jmk_chat_group.create({
+      data: {
+        teacher_id: userId,
+        group_name: data.group_name,
+        crs_id: user.crs_id,
+      }
+    })
+
+    if (!newGroup) throw new ApolloError('something went wrong !')
+
+    for (let index = 0; index < data.students.length; index++) {
+      await prisma.jmk_chat_group_student.create({
+        data: {
+          group_id: newGroup.group_id,
+          std_id: data.students[index].std_id
+        }
+      });
+    }
 
     return 'Successfully created'
   },
