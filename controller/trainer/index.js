@@ -167,7 +167,7 @@ const trainerQueryTypesAndInputs = `
         tr_github: String
         tr_pic:String
         tr_linkedin: String
-        crs_id: String!
+        crs_id: String
      }
 
      type TrainerStudent {
