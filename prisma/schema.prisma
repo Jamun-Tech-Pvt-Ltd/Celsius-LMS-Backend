@@ -15,11 +15,11 @@ model jmkcrsinfo {
   crs_rate        Int?
   crs_ins         String?        @db.VarChar(200)
   crs_type        String         @db.VarChar(200)
-  crs_code        String?        @db.VarChar(40)
   crs_nxt_st_date DateTime?      @db.Date
   crs_image       String?        @db.VarChar(1000)
   crs_image_key   String?        @db.VarChar(1000)
   cid             Int?
+  crs_code        String?        @db.VarChar(40)
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]
   jmktrcrsinfo    jmktrcrsinfo[]
@@ -42,9 +42,9 @@ model jmk_week_content {
   type          jmk_content_type
   week_id       Int
   video_url     String?          @db.VarChar(1000)
-  video_url_key String?          @db.VarChar(1000)
   project_url   String?          @db.VarChar(1000)
   date          DateTime         @default(now())
+  video_url_key String?          @db.VarChar(1000)
   jmk_tr_week   jmk_tr_week      @relation(fields: [week_id], references: [week_id])
 
   @@index([week_id], map: "jmk_week_content_week_id_fkey")
@@ -109,11 +109,11 @@ model jmkstdinfo {
   std_add_street   String?        @db.VarChar(50)
   std_add_city     String?        @db.VarChar(50)
   std_add_ward_no  Int?
-  std_add_district String?        @db.VarChar(50)
   std_add_province String?        @db.VarChar(100)
   std_add_zone     String?        @db.VarChar(100)
-  std_country      String?        @db.VarChar(100)
   lastSeen         DateTime       @default(now())
+  std_add_district String?        @db.VarChar(50)
+  std_country      String?        @db.VarChar(100)
   jmkgrvinfo       jmkgrvinfo[]
   jmkcrsinfo       jmkcrsinfo?    @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
   jmkcrsmain       jmkcrsmain?    @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsmain_crsmain_id_fk")
@@ -229,13 +229,13 @@ model jmktrinfo {
   tr_dob        DateTime?      @db.Date
   tr_verifyed   Boolean        @default(false)
   tr_password   String         @db.VarChar(16)
-  tr_pic        String?        @db.VarChar(500)
-  tr_pic_key    String?        @db.VarChar(500)
   tr_resume     String?        @db.VarChar(100)
   tr_github     String?        @db.VarChar(50)
   tr_linkedin   String?        @db.VarChar(50)
   tr_resume_key String?        @db.VarChar(100)
-  crs_id        Int
+  crs_id        Int?
+  tr_pic        String?        @db.VarChar(500)
+  tr_pic_key    String?        @db.VarChar(500)
   lastSeen      DateTime       @default(now())
   jmktrcrsinfo  jmktrcrsinfo[]
 }
@@ -855,37 +855,37 @@ model jmk_chats {
   receiver_id Int
   sender_id   Int
   user_type   jmk_ques_ans_user_type_enum
-  chat_type   jmk_chat_type_enum          @default(Text)
   created_at  DateTime                    @default(now())
   message     String                      @db.VarChar(1000)
   isSeen      Boolean                     @default(false)
+  chat_type   jmk_chat_type_enum          @default(Text)
 }
 
 model jmk_group_chats {
   chat_id     Int                         @id @default(autoincrement())
-  receiver_id Int
   sender_id   Int
   user_type   jmk_ques_ans_user_type_enum
-  chat_type   jmk_chat_type_enum          @default(Text)
   created_at  DateTime                    @default(now())
   message     String                      @db.VarChar(1000)
   isSeen      Boolean                     @default(false)
+  chat_type   jmk_chat_type_enum          @default(Text)
+  receiver_id Int
 }
 
 model jmk_chat_group {
   group_id   Int      @id @default(autoincrement())
+  teacher_id Int
+  created_at DateTime @default(now())
   group_name String
   crs_id     Int
-  teacher_id Int
   lastSeen   DateTime @default(now())
-  created_at DateTime @default(now())
 }
 
 model jmk_chat_group_student {
-  serial     Int      @id @default(autoincrement())
   group_id   Int
   std_id     Int
   created_at DateTime @default(now())
+  serial     Int      @id @default(autoincrement())
 }
 
 model jmk_std_faq {

@@ -127,6 +127,13 @@ const adminQueryTypesAndInputs = `
         std_verifyed: Boolean!
         join_courses: [UserCourseAdmin]
      }
+
+     type trainer_join_courses {
+      serial: Int!
+      tr_id: Int!
+      crs_id: Int!
+      crs_name: String!
+    }
   
      type AdminTrainer {
         tr_id: ID!
@@ -147,11 +154,11 @@ const adminQueryTypesAndInputs = `
         tr_github:String
         tr_linkedin:String
         tr_resume_key:String
-        
+        join_courses: [trainer_join_courses]
      }
 
-     type devTechDet{
 
+     type devTechDet{
       tech_stack:String
       tech_stack_exp:String
       tech_last_used:String
@@ -428,8 +435,22 @@ const adminQueryTypesAndInputs = `
      }
   
      input updateTrainerFromDashboard {
-        tr_id: Int!
+        tr_id: Int
+        tr_fname: String
+        tr_mname: String
+        tr_lname: String
+        tr_mobile: String
+        tr_email: String
+        tr_dob:Date
+        tr_password: String
+        tr_github: String
+        tr_linkedin: String
         tr_verifyed:Boolean!
+     }
+
+     input assignTrainerCourseFromDashboard {
+        tr_id:Int!
+        crs_id:Int!
      }
 
      input createNewUserInput {
@@ -580,6 +601,9 @@ const adminMutation = `
     updateStudentCourseFromAdmin(data:updateStudentCourseFromAdminInput):String!
 
     updateTrainerFromDashboard(data:updateTrainerFromDashboard):String!
+    createTrainerFromDashboard(data:updateTrainerFromDashboard):String!
+    assignTrainerCourseFromDashboard(data:assignTrainerCourseFromDashboard):String!
+    removeTrainerCourseFromDashboard(data:assignTrainerCourseFromDashboard):String!
     updateDeveloperFromDashboard(data:updateDeveloperFromDashboard ):String!
 
     createStaticCourse(data:createStaticCourseInput):Int!
@@ -644,7 +668,6 @@ const adminResolvers = {
 
   deleteBlog: async (_, data, { userId, role }) => {
     if (!userId) return new AuthenticationError("Invalid Token");
-    console.log(data)
     const toDelete = await prisma.jmkblog.findFirst({
       where: {
         blog_id: data.blog_id
@@ -717,9 +740,6 @@ const adminResolvers = {
 
       const name = data.blog_heading;
       const formattedName = name.toLowerCase().replace(/ /g, '-');
-      console.log(formattedName);
-
-
       const blog = await prisma.jmkblog.create({
         data: {
           ...data,
@@ -739,8 +759,6 @@ const adminResolvers = {
   },
 
   signinAdmin: async (_, { data }) => {
-    console.log(data)
-
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_email: data.usr_email },
     })
@@ -895,6 +913,72 @@ const adminResolvers = {
     })
 
     if (!trainer) throw new AuthenticationError('Something went wrong')
+
+    return 'success'
+  },
+
+  createTrainerFromDashboard: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+
+    if (!admin) throw new AuthenticationError('invalid admin')
+
+    const checkEmail = await prisma.jmktrinfo.findFirst({
+      where: { tr_email: data.tr_email },
+    });
+
+    if (checkEmail) throw new AuthenticationError('trainer already exist with that email');
+
+    const trainer = await prisma.jmktrinfo.create({ data: { ...data }, })
+
+    if (!trainer) throw new AuthenticationError('Something went wrong')
+
+    return 'success'
+  },
+
+  assignTrainerCourseFromDashboard: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+
+    if (!admin) throw new AuthenticationError('invalid admin')
+
+    const checkCourse = await prisma.jmktrcrsinfo.findFirst({
+      where: { crs_id: data.crs_id, tr_id: data.tr_id },
+    });
+
+    if (checkCourse) throw new AuthenticationError('already assign');
+
+    const trainerCourse = await prisma.jmktrcrsinfo.create({ data: { ...data }, })
+
+    if (!trainerCourse) throw new AuthenticationError('Something went wrong')
+
+    return 'success'
+  },
+
+  removeTrainerCourseFromDashboard: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+
+    if (!admin) throw new AuthenticationError('invalid admin')
+
+    const checkCourse = await prisma.jmktrcrsinfo.findFirst({
+      where: { crs_id: data.crs_id, tr_id: data.tr_id },
+    });
+
+    if (!checkCourse) throw new AuthenticationError('invalid course');
+
+    const trainerCourse = await prisma.jmktrcrsinfo.delete({ where: { serial: checkCourse.serial } })
+
+    if (!trainerCourse) throw new AuthenticationError('Something went wrong')
 
     return 'success'
   },
@@ -1544,15 +1628,15 @@ const adminResolversQuery = {
       let students = []
       const student = await prisma.jmkstdinfo.findMany()
       for (let index = 0; index < student.length; index++) {
-        if (student[index].crsmain_id) {
-          const course = await prisma.jmkcrsmain.findFirst({
-            where: { crsmain_id: student[index].crsmain_id },
+        if (student[index].crs_id) {
+          const course = await prisma.jmkcrsinfo.findFirst({
+            where: { crs_id: student[index].crs_id },
           })
           if (course) {
             students.push({
               ...student[index],
-              crs_type: course.crsmain_type,
-              crs_name: course.crsmain_title,
+              crs_type: course.crs_type,
+              crs_name: course.crs_name,
             })
           } else {
             students.push({
@@ -1594,7 +1678,7 @@ const adminResolversQuery = {
             crs_rate: course.crsmain_rate,
             crs_type: course.crsmain_type,
           })
-        }1
+        } 1
       }
 
       const mergestudent = {
@@ -1627,9 +1711,24 @@ const adminResolversQuery = {
     if (admin.usr_role === 'admin') {
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: args.tr_id },
-      })
+      });
 
-      return trainer
+      let join_courses = []
+      const join_courses_data = await prisma.jmktrcrsinfo.findMany({
+        where: { tr_id: trainer.tr_id },
+        include: { 'jmkcrsinfo': 'crs_name' }
+      });
+
+      for (let index = 0; index < join_courses_data.length; index++) {
+        join_courses.push({
+          serial: join_courses_data[index].serial,
+          tr_id: join_courses_data[index].tr_id,
+          crs_id: join_courses_data[index].jmkcrsinfo.crs_id,
+          crs_name: join_courses_data[index].jmkcrsinfo.crs_name
+        })
+      }
+
+      return { ...trainer, join_courses }
     }
     throw new AuthenticationError('invalid access')
   },

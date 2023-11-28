@@ -499,7 +499,6 @@ const trainerResolvers = {
       { userId: newTrainer.tr_id, purpose: 'Trainer Verification' },
       process.env.JWT_SECRET_KEY
     )
-    // await sendMail(data.tr_email, 'Successfully Register ', registerrHTML)
 
     await sendMail(
       newTrainer.tr_email,
