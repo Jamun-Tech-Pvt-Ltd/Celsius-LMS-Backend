@@ -474,11 +474,12 @@ model jmkcrsmain {
   jmkstdinfo        jmkstdinfo[]
 }
 
-model jmkconsulfaq {
-  serial   Int    @id @default(autoincrement())
-  question String @db.VarChar(200)
-  answer   String @db.VarChar(2000)
-  cid      Int
+model jmkfaq {
+  faq_id     Int          @id @default(autoincrement())
+  question   String       @db.VarChar(200)
+  answer     String       @db.VarChar(2000)
+  created_at DateTime     @default(now())
+  type       jmk_faq_type
 }
 
 model jmkdevprojdet {
@@ -888,14 +889,6 @@ model jmk_chat_group_student {
   serial     Int      @id @default(autoincrement())
 }
 
-model jmk_std_faq {
-  faq_id       Int      @id @default(autoincrement())
-  business_id  Int?
-  faq_question String?  @db.VarChar(100)
-  faq_answer   String?  @db.VarChar(5000)
-  created_at   DateTime @default(now())
-}
-
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
@@ -941,4 +934,10 @@ enum jmk_content_type {
   Project
   Video
   Note
+}
+
+enum jmk_faq_type {
+  Student
+  Trainer
+  Jamuntek
 }

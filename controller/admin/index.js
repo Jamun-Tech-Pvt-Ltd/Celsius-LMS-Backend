@@ -29,6 +29,13 @@ const adminQueryTypesAndInputs = `
         usr_code:String
     }
 
+    input faqInput {
+      faq_id:Int
+      question: String!
+      answer: String!
+      type: String!
+    }
+
     input updateStudentFromAdminInput {
         std_id: Int!
         std_fname: String!
@@ -588,6 +595,7 @@ const adminQuery = `
 
     getPayments:[studentreceipt]
 
+    getFaqs:[Faq!]!
 
 `
 
@@ -642,6 +650,10 @@ const adminMutation = `
     deleteBlog(blog_id: Int!): String
     addBlog(data:AddJmkBlogInput):  String
     updateStatus(data: updateJmkBlogStatus!): String
+
+    createAndUpdateFaq(data:faqInput):String!
+    deleteFaqById(faq_id:Int!):String!
+
 
 `
 
@@ -1580,6 +1592,40 @@ const adminResolvers = {
 
     throw new ApolloError('No such project exist')
   },
+
+  createAndUpdateFaq: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin');
+
+    if (data.faq_id) {
+      const faq = await prisma.jmkfaq.update({ data, where: { faq_id: data.faq_id } });
+      if (!faq) throw new ApolloError('someting went wrong');
+      return 'updated'
+    } else {
+      const faq = await prisma.jmkfaq.findFirst({ where: { question: data.question, type: data.type } });
+      if (faq) throw new ApolloError('Already exist');
+      const newFaq = await prisma.jmkfaq.create({ data });
+      if (!newFaq) throw new ApolloError('someting went wrong');
+      return 'created'
+    }
+  },
+
+  deleteFaqById: async (_, { faq_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin');
+
+    const faq = await prisma.jmkfaq.delete({ where: { faq_id } });
+    if (!faq) throw new ApolloError('someting went wrong');
+    return 'deleted'
+
+  },
+
 }
 
 const adminResolversQuery = {
@@ -2352,6 +2398,17 @@ const adminResolversQuery = {
       }
     }
     return registeredEvents
+  },
+
+  getFaqs: async (_, { args }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const faq = await prisma.jmkfaq.findMany();
+    if (!faq) throw new ApolloError('Data Not Found')
+    return faq
   },
 }
 

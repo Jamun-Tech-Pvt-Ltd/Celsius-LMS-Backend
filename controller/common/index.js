@@ -125,6 +125,13 @@ input createCourseInput {
       created_at:Date
   }
 
+  type Faq {
+    faq_id: Int!
+    question: String!
+    answer: String!
+    type: String!
+    created_at: Date!
+  }
 
 `
 
@@ -135,6 +142,8 @@ const commonQuery = `
     getContactInfo:[ContactInfoType!]
     getAllActiveBlogs:[JmkALlBlog]
     getBlogBySlug(blog_slug:String!):JmkBlog!
+    getFaqByType(type:String):[Faq!]!
+    getFaqById(faq_id:Int!):Faq!
 `
 
 const commonMutation = `
@@ -359,6 +368,22 @@ const commonResolversQuery = {
     })
     if (!blog) throw new ApolloError('Data Not Found')
     return blog
+  },
+  getFaqByType: async (_, { type }) => {
+    if (!type) throw new ForbiddenError('faq type is required !')
+    const faq = await prisma.jmkfaq.findMany({
+      where: { type },
+    })
+    if (!faq) throw new ApolloError('Data Not Found')
+    return faq
+  },
+  getFaqById: async (_, { faq_id }) => {
+    if (!faq_id) throw new ForbiddenError('faq id is required !')
+    const faq = await prisma.jmkfaq.findFirst({
+      where: { faq_id },
+    })
+    if (!faq) throw new ApolloError('Data Not Found')
+    return faq
   },
 }
 
