@@ -889,6 +889,20 @@ model jmk_chat_group_student {
   serial     Int      @id @default(autoincrement())
 }
 
+model jmk_web_details {
+  serial Int    @id @default(autoincrement())
+  phone  String
+  phone1 String
+  email  String
+}
+
+model jmk_web_modal {
+  serial  Int     @id @default(autoincrement())
+  status  Boolean
+  img     String
+  img_key String
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green

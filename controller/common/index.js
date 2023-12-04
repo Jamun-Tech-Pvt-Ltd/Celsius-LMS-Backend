@@ -87,9 +87,9 @@ input createCourseInput {
      }
 
      type ContactInfoType{
-      serial:Int!
-      email_address:String!
-      contact_number:String!
+      phone:String!
+      phone1:String!
+      email:String!
      }
   
      type Question {
@@ -133,13 +133,18 @@ input createCourseInput {
     created_at: Date!
   }
 
+  type webModal {
+    status: Boolean!
+    img: String!
+  }
+
 `
 
 const commonQuery = `
     getAllCourseList:[Course!]!
     getCourseById(crs_id:Int!):Course!
     getAllConsultancyInfo:[ConsultancyInfo]
-    getContactInfo:[ContactInfoType!]
+    getContactInfo:ContactInfoType!
     getAllActiveBlogs:[JmkALlBlog]
     getBlogBySlug(blog_slug:String!):JmkBlog!
     getFaqByType(type:String):[Faq!]!
@@ -301,8 +306,12 @@ const commonResolvers = {
 
 const commonResolversQuery = {
   getContactInfo: async () => {
-    const info = await prisma.contactinfo.findMany({})
-    return info
+    const info = await prisma.jmk_web_details.findMany({});
+    if(info?.[0]){
+      return info[0]
+    }else {
+      throw new ApolloError('Info not found !!')
+    }
   },
   getAllCourseList: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')

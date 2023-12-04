@@ -525,12 +525,22 @@ const adminQueryTypesAndInputs = `
       reg_phone:String
      }
 
-     input contactInfoUpdate{
+     input contactInfoUpdate {
       serial:Int!
       email_address:String!
       contact_number:String!
      }
 
+     input web_details {
+      phone: String
+      phone1: String
+      email: String
+    }
+
+    input web_modal {
+      status: Boolean
+      img: Upload
+    }
 
      type UserCourseAdmin {
       std_id:Int!
@@ -597,6 +607,9 @@ const adminQuery = `
 
     getFaqs:[Faq!]!
 
+    getWebModal:webModal!
+
+
 `
 
 const adminMutation = `
@@ -654,7 +667,10 @@ const adminMutation = `
     createAndUpdateFaq(data:faqInput):String!
     deleteFaqById(faq_id:Int!):String!
 
+    createAndUpdateWebDetails(data:web_details!):String!
 
+    createAndUpdateModal(data:web_modal!):String!
+    
 `
 
 const adminResolvers = {
@@ -1626,6 +1642,64 @@ const adminResolvers = {
 
   },
 
+  createAndUpdateWebDetails: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin');
+
+    const webDetails = await prisma.jmk_web_details.findFirst();
+
+    if (!webDetails) {
+      const webDetailsCreate = await prisma.jmk_web_details.create({ data });
+      if (!webDetailsCreate) throw new ApolloError('someting went wrong');
+      return 'create'
+    } else {
+      const webDetailsUpdate = await prisma.jmk_web_details.update({ data, where: { serial: webDetails.serial } });
+      if (!webDetailsUpdate) throw new ApolloError('someting went wrong');
+      return 'updated'
+    }
+
+  },
+
+  createAndUpdateModal: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+
+    if (!admin) throw new AuthenticationError('invalid admin');
+
+    const webModal = await prisma.jmk_web_modal.findFirst();
+
+    let file
+    if (data.img) {
+      if (webModal?.img_key) {
+        await deleteImgToAWS(webModal?.img_key)
+      }
+      file = await uploadImgToAWS(data.img, 'web_modal/');
+      data['img'] = file?.data?.Location ?? null;
+      data['img_key'] = file?.data?.key ?? '';
+      if (!file.data) throw new ApolloError('Something went wrong !');
+    } else {
+      data['img'] = webModal.img;
+      data['img_key'] = webModal.img_key;
+    }
+
+    if (!webModal) {
+      const webModalCreate = await prisma.jmk_web_modal.create({ data });
+      if (!webModalCreate) throw new ApolloError('someting went wrong');
+      return 'create'
+    } else {
+      const webModalUpdate = await prisma.jmk_web_modal.update({ data, where: { serial: webModal.serial } });
+      if (!webModalUpdate) throw new ApolloError('someting went wrong');
+      return 'updated'
+    }
+
+  },
+
 }
 
 const adminResolversQuery = {
@@ -2410,6 +2484,18 @@ const adminResolversQuery = {
     if (!faq) throw new ApolloError('Data Not Found')
     return faq
   },
+
+  getWebModal: async (_, { args }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    const modal = await prisma.jmk_web_modal.findFirst();
+    if (!modal) throw new ApolloError('Data Not Found')
+    return modal
+  },
+
 }
 
 export {
