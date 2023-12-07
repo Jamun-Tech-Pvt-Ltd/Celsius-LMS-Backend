@@ -769,8 +769,8 @@ const studentResolvers = {
     })
     if (!user) throw new AuthenticationError('invalid user')
     if (!course) throw new ApolloError('Bad Request')
-    if (userCourse.crs_id) throw new ApolloError("Great news! The course you requested has been approved and is now available on our platform. If you have any further questions or if there's anything else you'd like to learn, please don't hesitate to ask. We're here to support your learning journey!")
-    if (!userCourse.crs_id) throw new ApolloError("Thank you for your interest, but it looks like you've already requested this course. If you have any other course suggestions or questions, feel free to reach out. We're here to assist you!")
+    if (userCourse?.crs_id) throw new ApolloError("Great news! The course you requested has been approved and is now available on our platform. If you have any further questions or if there's anything else you'd like to learn, please don't hesitate to ask. We're here to support your learning journey!");
+    if (userCourse && !userCourse?.crs_id) throw new ApolloError("Thank you for your interest, but it looks like you've already requested this course. If you have any other course suggestions or questions, feel free to reach out. We're here to assist you!")
     await prisma.jmkstdcrsinfo.create({
       data: {
         crsmain_id: parseInt(data.crsmain_id),
