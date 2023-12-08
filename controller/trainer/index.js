@@ -1358,7 +1358,7 @@ const trainerResolversQuery = {
         }
       };
       const groups = [];
-      const myGroups = await prisma.jmk_chat_group.findMany({ where: { teacher_id: userId } });
+      const myGroups = await prisma.jmk_chat_group.findMany({ where: { teacher_id: userId, crs_id: user.crs_id } });
       if (myGroups?.[0]) {
         for (let index = 0; index < myGroups.length; index++) {
           const group = await prisma.jmk_chat_group.findFirst({ where: { group_id: myGroups[index].group_id } });
