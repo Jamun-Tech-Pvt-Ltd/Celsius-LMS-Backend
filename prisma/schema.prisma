@@ -903,6 +903,18 @@ model jmk_web_modal {
   img_key String
 }
 
+model jmk_web_career {
+  serial               Int      @id @default(autoincrement())
+  title                String
+  description          String
+  department          String
+  employment_type      String
+  employment_structure String
+  location             String
+  created_at           DateTime @default(now())
+  status               Boolean
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green

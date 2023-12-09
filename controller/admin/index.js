@@ -542,6 +542,17 @@ const adminQueryTypesAndInputs = `
       img: Upload
     }
 
+    input career_input {
+      serial:Int
+      title:String!
+      description:String!
+      department:String!
+      employment_type:String!
+      employment_structure:String!
+      location:String!
+      status:Boolean!
+    }
+
      type UserCourseAdmin {
       std_id:Int!
       serial:Int!
@@ -556,6 +567,18 @@ const adminQueryTypesAndInputs = `
       crs_complete:String
       crs_complete_date:Date
       std_crs_verirfy:Boolean
+     }
+
+     type Career {
+      serial:Int!
+      title:String!
+      description:String!
+      department:String!
+      employment_type:String!
+      employment_structure:String!
+      location:String!
+      created_at:Date!
+      status:Boolean!
      }
 
 `
@@ -609,6 +632,7 @@ const adminQuery = `
 
     getWebModal:webModal!
 
+    getAllCareer: [Career!]!
 
 `
 
@@ -670,6 +694,10 @@ const adminMutation = `
     createAndUpdateWebDetails(data:web_details!):String!
 
     createAndUpdateModal(data:web_modal!):String!
+
+    createAndUpdateCareer(data:career_input!):String!
+
+    deleteCareer(serial:Int!):String!
     
 `
 
@@ -1700,6 +1728,41 @@ const adminResolvers = {
 
   },
 
+  createAndUpdateCareer: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+
+    if (!admin) throw new AuthenticationError('invalid admin');
+
+    if (data.serial) {
+      const oldCareer = await prisma.jmk_web_career.findFirst({ where: { serial: data.serial } });
+      if (!oldCareer) throw new ForbiddenError('invalid career id');
+      const updateCareer = await prisma.jmk_web_career.update({ data, where: { serial: oldCareer.serial } });
+      if (!updateCareer) throw new ApolloError('someting went wrong');
+      return 'updated'
+    } else {
+      const career = await prisma.jmk_web_career.create({ data });
+      if (!career) throw new ApolloError('someting went wrong');
+      return 'create'
+    }
+  },
+
+  deleteCareer: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin');
+
+    const career = await prisma.jmk_web_career.delete({ where: { serial } });
+    if (!career) throw new ApolloError('someting went wrong');
+    return 'deleted'
+
+  },
+
 }
 
 const adminResolversQuery = {
@@ -2494,6 +2557,17 @@ const adminResolversQuery = {
     const modal = await prisma.jmk_web_modal.findFirst();
     if (!modal) throw new ApolloError('Data Not Found')
     return modal
+  },
+
+  getAllCareer: async (_, { args }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const careers = await prisma.jmk_web_career.findMany();
+    if (!careers) throw new ApolloError('Data Not Found')
+    return careers
   },
 
 }

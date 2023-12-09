@@ -6,7 +6,7 @@ import { trainerResolvers, trainerResolversQuery } from './controller/trainer/in
 import { studentResolvers, studentResolversQuery, subscription } from './controller/student/index.js'
 import { commonResolvers, commonResolversQuery } from './controller/common/index.js'
 import { adminResolvers, adminResolversQuery } from './controller/admin/index.js'
-import { jamuntekResolvers } from './controller/jamuntek/index.js'
+import { jamuntekResolvers, jamuntekResolversQuery } from './controller/jamuntek/index.js'
 import { employerMutationResolver, employerQueryResolver } from './controller/employer/index.js';
 
 
@@ -22,6 +22,7 @@ const resolvers = {
     ...studentResolversQuery,
     ...adminResolversQuery,
     ...employerQueryResolver,
+    ...jamuntekResolversQuery
   },
 
   Mutation: {

@@ -1,4 +1,4 @@
-import { ApolloError, AuthenticationError } from 'apollo-server-express'
+import { ApolloError } from 'apollo-server-express'
 import prisma from '../../database.js'
 import { sendMail } from '../../utils/mailHandler.js'
 import demoRequestHTML from '../../utils/demoRequest.js'
@@ -44,9 +44,20 @@ const jamuntekQueryTypesAndInputs = `
         rate: String!
     }
 
+    type CareerPage {
+      serial:Int!
+      title:String!
+      description:String!
+      department:String!
+      employment_type:String!
+      employment_structure:String!
+      location:String!
+     }
+
 `
 
 const jamuntekQuery = `
+   getAllCareerPage: [CareerPage!]!
 
 
 `
@@ -109,7 +120,13 @@ const jamuntekResolvers = {
   },
 }
 
-const jamuntekResolversQuery = {}
+const jamuntekResolversQuery = {
+  getAllCareerPage: async (_, { args }, { userId, role }) => {
+    const careers = await prisma.jmk_web_career.findMany({ where: { status: true } });
+    if (!careers) throw new ApolloError('Data Not Found')
+    return careers
+  },
+}
 
 export {
   jamuntekQueryTypesAndInputs,
