@@ -1190,7 +1190,7 @@ const studentResolvers = {
       await prisma.jmk_std_test_ans.create({
         data: {
           std_id: userId,
-          content_id: question.content_id,
+          content_id: questionCheck.content_id,
           test_set_id: data[index].test_set_id,
           std_ans: data[index].std_ans
         }
@@ -1200,7 +1200,7 @@ const studentResolvers = {
     const updateJmkWeekTest = await prisma.jmk_std_test_result.create({
       data: {
         std_id: userId,
-        content_id: question.content_id,
+        content_id: questionCheck.content_id,
         test_complete: true,
         score: `${score}/${data.length}`
       }
