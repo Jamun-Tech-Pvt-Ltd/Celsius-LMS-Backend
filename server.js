@@ -16,6 +16,7 @@ import typeDefs from './typeDefs.js'
 import resolvers from './resolvers.js'
 import { ROLES } from './utils/helper.js';
 import { updateStdActiveDate } from './controller/student/index.js';
+import { updateTrainerActiveDate } from './controller/trainer/index.js';
 
 new PrismaClient();
 
@@ -36,6 +37,9 @@ const context = ({ req }) => {
       );
       if (role === ROLES[0]) {
         updateStdActiveDate(userId)
+      }
+      if (role === ROLES[1]) {
+        updateTrainerActiveDate(userId)
       }
       if (userId && role) return { userId, role };
     } catch (error) {

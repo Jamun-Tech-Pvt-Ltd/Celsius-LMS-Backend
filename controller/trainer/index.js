@@ -1453,7 +1453,16 @@ const trainerResolversQuery = {
     };
     throw new AuthenticationError('invalid request');
   },
+}
 
+const updateTrainerActiveDate = async (userId) => {
+  await prisma.jmktrinfo.update({
+    data: {
+      lastSeen: new Date()
+    }, where: {
+      tr_id: userId
+    }
+  })
 }
 
 export {
@@ -1462,4 +1471,5 @@ export {
   trainerMutation,
   trainerResolvers,
   trainerResolversQuery,
+  updateTrainerActiveDate
 }
