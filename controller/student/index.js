@@ -1661,17 +1661,17 @@ const studentResolversQuery = {
       const myGroups = await prisma.jmk_chat_group_student.findMany({ where: { std_id: userId } });
       if (myGroups?.[0]) {
         for (let index = 0; index < myGroups.length; index++) {
-          const group = await prisma.jmk_chat_group.findFirst({ where: { group_id: myGroups[index].group_id } });
-          const message = await prisma.jmk_group_chats.findFirst({
-            where: { receiver_id: group?.group_id },
-            orderBy: {
-              created_at: 'desc'
-            }
-          });
-          if (message) {
-            groups.push({ group, message })
-          } else {
-            if (group) {
+          const group = await prisma.jmk_chat_group.findFirst({ where: { group_id: myGroups[index].group_id, crs_id: user.crs_id } });
+          if (group) {
+            const message = await prisma.jmk_group_chats.findFirst({
+              where: { receiver_id: group?.group_id },
+              orderBy: {
+                created_at: 'desc'
+              }
+            });
+            if (message) {
+              groups.push({ group, message })
+            } else {
               groups.push({ group })
             }
           }
