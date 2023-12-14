@@ -1173,11 +1173,11 @@ const studentResolvers = {
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
     })
-    if (!user) throw new AuthenticationError('invalid user')
+    if (!user) throw new AuthenticationError('invalid user');
+    if (!data[0].test_set_id) throw new AuthenticationError('invalid submit');
 
-    const question = await prisma.jmk_test_set.findFirst({ where: { test_set_id: data[0].jmk_test_set } })
+    const question = await prisma.jmk_test_set.findFirst({ where: { test_set_id: data[0].test_set_id } })
     if (!question) throw new ApolloError('Invalid !')
-
 
     let score = 0;
 
@@ -1190,7 +1190,7 @@ const studentResolvers = {
       await prisma.jmk_std_test_ans.create({
         data: {
           std_id: userId,
-          content_id: questionCheck.content_id,
+          content_id: question.content_id,
           test_set_id: data[index].test_set_id,
           std_ans: data[index].std_ans
         }
@@ -1200,7 +1200,7 @@ const studentResolvers = {
     const updateJmkWeekTest = await prisma.jmk_std_test_result.create({
       data: {
         std_id: userId,
-        content_id: questionCheck.content_id,
+        content_id: question.content_id,
         test_complete: true,
         score: `${score}/${data.length}`
       }
