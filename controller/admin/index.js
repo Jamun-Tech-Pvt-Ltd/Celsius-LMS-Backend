@@ -634,6 +634,8 @@ const adminQuery = `
 
     getAllCareer: [Career!]!
 
+    getCareer(serial:Int!): Career!
+
 `
 
 const adminMutation = `
@@ -2568,6 +2570,17 @@ const adminResolversQuery = {
     const careers = await prisma.jmk_web_career.findMany();
     if (!careers) throw new ApolloError('Data Not Found')
     return careers
+  },
+
+  getCareer: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const career = await prisma.jmk_web_career.findFirst({ where: { serial } });
+    if (!career) throw new ApolloError('Data Not Found')
+    return career
   },
 
 }
