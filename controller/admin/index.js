@@ -2270,11 +2270,11 @@ const adminResolversQuery = {
         count: trainers ?? 0,
         link: '/trainer',
       },
-      {
-        name: 'Developers',
-        count: developers ?? 0,
-        link: '/developer',
-      },
+      // {
+      //   name: 'Developers',
+      //   count: developers ?? 0,
+      //   link: '/developer',
+      // },
       {
         name: 'Users',
         count: users ?? 0,
