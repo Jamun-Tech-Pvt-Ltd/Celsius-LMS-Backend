@@ -195,7 +195,11 @@ const trainerQueryTypesAndInputs = `
      type TrainerDashboard {
         students: Int
         courses: Int
+        weeks: Int
         videos: Int
+        files: Int
+        projects: Int
+        tests: Int
      }
 
      type sessionDetail{
@@ -1094,32 +1098,29 @@ const trainerResolversQuery = {
   getTrainerDashboard: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     if (role === ROLES[1]) {
-      let students = 0
-      let videos = 0
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
       })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-      const trainerCourses = await prisma.jmktrcrsinfo.findMany({
-        where: {
-          tr_id: userId,
-        },
-      })
-      for (let index = 0; index < trainerCourses.length; index++) {
-        const total_videos = await prisma.jmkvidinfo.count({
-          where: { crs_id: trainerCourses[index].crs_id },
-        })
-        const total_student = await prisma.jmkstdcrsinfo.count({
-          where: { crs_id: trainerCourses[index].crs_id },
-        })
-        if (total_videos) {
-          videos += total_videos
-        }
-        if (total_student) {
-          students += total_student
-        }
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      let videos = 0;
+      let files = 0;
+      let projects = 0;
+      let tests = 0;
+      const weeks = await prisma.jmk_tr_week.count({ where: { crs_id: trainer.crs_id } });
+      const currentWeeks = await prisma.jmk_tr_week.findMany({ where: { crs_id: trainer.crs_id } });
+      const courses = await prisma.jmktrcrsinfo.count({ where: { tr_id: userId, } });
+      const students = await prisma.jmkstdcrsinfo.count({ where: { crs_id: trainer.crs_id, } });
+      for (let index = 0; index < currentWeeks.length; index++) {
+        const videosCount = await prisma.jmk_week_content.count({ where: { type: 'Video', week_id: currentWeeks[index].week_id } });
+        const filesCount = await prisma.jmk_week_content.count({ where: { type: 'Note', week_id: currentWeeks[index].week_id } });
+        const projectsCount = await prisma.jmk_week_content.count({ where: { type: 'Project', week_id: currentWeeks[index].week_id } });
+        const testsCount = await prisma.jmk_week_content.count({ where: { type: 'Test', week_id: currentWeeks[index].week_id } });
+        videos = +videosCount;
+        files = +filesCount;
+        projects = +projectsCount;
+        tests = +testsCount;
       }
-      return { students, videos, courses: trainerCourses.length }
+      return { students, weeks, videos, files, projects, tests, courses }
     }
   },
 

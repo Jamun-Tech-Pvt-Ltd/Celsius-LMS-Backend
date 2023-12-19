@@ -1968,8 +1968,8 @@ const studentResolversQuery = {
             totalUpvote = +1
           }
         })
-        const user = await prisma.jmkdevinfo.findFirst({ where: { developer_id: answersData[index].teacher_id } })
-        answers.push({ ...answersData[index], user_fname: user.developer_fname, user_mname: user.developer_mname, user_lname: user.developer_lname, user_pic: '', user_role: "Teacher", totalUpvote })
+        const user = await prisma.jmktrinfo.findFirst({ where: { tr_id: answersData[index].teacher_id } })
+        answers.push({ ...answersData[index], user_fname: user.tr_fname, user_mname: user.tr_mname, user_lname: user.tr_lname, user_pic: user.tr_pic, user_role: "Teacher", totalUpvote })
       }
     }
 
