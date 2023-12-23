@@ -1503,17 +1503,24 @@ const studentResolversQuery = {
       const user = await prisma.jmkstdinfo.findFirst({
         where: { std_id: userId },
       })
-      const organization = await prisma.jmkconsulinfo.findFirst({
-        where: {
-          serial: user.cid,
-        },
-      })
       if (!user) throw new AuthenticationError('invalid user credentials')
       const feedback = await prisma.jmkgrvinfo.findMany({
         where: { std_id: userId },
       })
+      if (user.cid) {
+        const organization = await prisma.jmkconsulinfo.findFirst({
+          where: {
+            serial: user.cid,
+          },
+        })
+        if (!organization) throw new AuthenticationError('invalid user')
+        if (organization) {
+          if (!feedback[0]) return { ...user, acc_type: organization.acc_type }
+          return { ...user, feedback, acc_type: organization.acc_type }
+        }
+      }
       if (!feedback[0]) return user
-      return { ...user, feedback, acc_type: organization.acc_type }
+      return { ...user, feedback }
     }
     throw new ForbiddenError('Bad request !!')
   },
