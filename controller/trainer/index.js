@@ -398,7 +398,7 @@ const trainerResolvers = {
 
     const stdCrs = await prisma.jmkstdcrsinfo.create({
       data: {
-        crsmain_id: 59,
+        crsmain_id: 2,
         crs_start_dt: new Date(),
         std_id: newStudent.std_id,
         crs_complete: data.crs_complete,
