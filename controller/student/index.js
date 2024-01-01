@@ -622,7 +622,7 @@ const studentResolvers = {
     if (!course) throw new AuthenticationError('invalid course')
 
     const newUser = await prisma.jmkstdinfo.create({
-      data: { ...userNew, std_join_dt: new Date() },
+      data: { ...userNew, crs_id: 59, std_join_dt: new Date() },
     })
 
     if (userNew.crsmain_id) {
