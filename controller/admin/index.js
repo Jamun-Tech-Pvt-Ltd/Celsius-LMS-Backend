@@ -853,12 +853,12 @@ const adminResolvers = {
     )
     await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
     await sendMail(
-      'riwaz@jamuntek.com',
+      'riwaz@jaamun.com',
       'New Admin Created !',
       newUserSignupNotification(newUser, course.crs_name)
     )
     await sendMail(
-      'jenish@jamuntek.com',
+      'laxman@jaamun.com',
       'New Admin Created !',
       newUserSignupNotification(newUser, course.crs_name)
     )
