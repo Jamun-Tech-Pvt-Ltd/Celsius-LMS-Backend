@@ -59,7 +59,6 @@ const jamuntekQueryTypesAndInputs = `
 const jamuntekQuery = `
    getAllCareerPage: [CareerPage!]!
 
-
 `
 
 const jamuntekMutation = `

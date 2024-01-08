@@ -115,8 +115,8 @@ model jmkstdinfo {
   std_add_district String?        @db.VarChar(50)
   std_country      String?        @db.VarChar(100)
   jmkgrvinfo       jmkgrvinfo[]
-  jmkcrsinfo       jmkcrsinfo?    @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
-  jmkcrsmain       jmkcrsmain?    @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkcrsmain_crsmain_id_fk")
+  jmkcrsinfo       jmkcrsinfo?    @relation(fields: [crs_id], references: [crs_id], onDelete: Cascade, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
+  jmkcrsmain       jmkcrsmain?    @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade, onUpdate: NoAction, map: "jmkcrsmain_crsmain_id_fk")
   jmkstdreview     jmkstdreview[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
