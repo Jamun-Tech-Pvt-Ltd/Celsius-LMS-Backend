@@ -217,9 +217,9 @@ const commonResolvers = {
         where: { crs_id: data.crs_id },
       })
       if (!crs) throw new ApolloError('invalid course')
-      await deleteImgToAWS(crs.crs_image_key)
       let file
       if (data.crs_image) {
+        await deleteImgToAWS(crs.crs_image_key)
         file = await uploadImgToAWS(data.crs_image, 'courses/')
         if (!file.data) throw new ApolloError('Someting went wrong !')
       }
@@ -307,9 +307,9 @@ const commonResolvers = {
 const commonResolversQuery = {
   getContactInfo: async () => {
     const info = await prisma.jmk_web_details.findMany({});
-    if(info?.[0]){
+    if (info?.[0]) {
       return info[0]
-    }else {
+    } else {
       throw new ApolloError('Info not found !!')
     }
   },
