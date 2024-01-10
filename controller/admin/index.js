@@ -581,6 +581,20 @@ const adminQueryTypesAndInputs = `
       status:Boolean!
      }
 
+     type StudentCourseRequest {
+      std_id: Int!
+      crsmain_id: Int!
+      crsmain_title: String!
+      crsmain_type: String!
+      crsmain_duration: Int!
+      createdAt: Date!
+      std_fname: String!
+      std_lname: String!
+      std_mname: String
+      std_email: String!
+      std_verifyed:Boolean!
+     }
+
 `
 
 const adminQuery = `
@@ -635,6 +649,8 @@ const adminQuery = `
     getAllCareer: [Career!]!
 
     getCareer(serial:Int!): Career!
+
+    getStudentCourseRequest: [StudentCourseRequest]
 
 `
 
@@ -1078,7 +1094,6 @@ const adminResolvers = {
     let file
     if (data.crsmain_img_url !== null) {
       await deleteImgToAWS(selectedStaticCourse?.crsmain_img_key)
-
       file = await uploadImgToAWS(data.crsmain_img_url, 'webimages/')
       if (!file.data) throw new ApolloError('Something went wrong !')
     }
@@ -1780,7 +1795,7 @@ const adminResolversQuery = {
   getBlogs: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === 'admin') {
-      const blogs = await prisma.jmkblog.findMany();
+      const blogs = await prisma.jmkblog.findMany({ orderBy: { created_at: 'desc' } });
       return blogs;
     }
   },
@@ -1811,7 +1826,7 @@ const adminResolversQuery = {
     if (!admin) throw new AuthenticationError('invalid admin credentials')
     if (admin.usr_role === 'admin') {
       let students = []
-      const student = await prisma.jmkstdinfo.findMany()
+      const student = await prisma.jmkstdinfo.findMany({ orderBy: { std_join_dt: 'desc' } })
       for (let index = 0; index < student.length; index++) {
         if (student[index].crs_id) {
           const course = await prisma.jmkcrsinfo.findFirst({
@@ -1882,7 +1897,7 @@ const adminResolversQuery = {
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
     if (admin.usr_role === 'admin') {
-      const trainers = await prisma.jmktrinfo.findMany()
+      const trainers = await prisma.jmktrinfo.findMany({ orderBy: { createdAt: 'desc' } })
       return trainers
     }
   },
@@ -2192,7 +2207,7 @@ const adminResolversQuery = {
     if (!admin) throw new AuthenticationError('invalid admin credentials')
     if (admin.usr_role === 'admin') {
       //let trainers = [];
-      const staticCourses = await prisma.jmkcrsmain.findMany()
+      const staticCourses = await prisma.jmkcrsmain.findMany({ orderBy: { created_at: 'desc' } })
 
       return staticCourses
     }
@@ -2300,7 +2315,7 @@ const adminResolversQuery = {
       where: { usr_id: userId, usr_role: role },
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
-    const allUser = await prisma.jmkuserinfo.findMany()
+    const allUser = await prisma.jmkuserinfo.findMany({ orderBy: { created_at: 'desc' } })
     return allUser
   },
 
@@ -2317,7 +2332,7 @@ const adminResolversQuery = {
   },
 
   getAllEvents: async (_, args, { userId, role }) => {
-    const allEvents = await prisma.jmkevents.findMany()
+    const allEvents = await prisma.jmkevents.findMany({ orderBy: { event_date: 'desc' } })
     return allEvents
   },
 
@@ -2338,7 +2353,7 @@ const adminResolversQuery = {
     // if (!userId) throw new ForbiddenError('invalid token');
     // const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, usr_role: role } })
     // if (!admin) throw new AuthenticationError("invalid admin credentials")
-    const allRegisteredUsers = await prisma.jmkeventreg.findMany()
+    const allRegisteredUsers = await prisma.jmkeventreg.findMany({ orderBy: { reg_date: 'desc' } })
     return allRegisteredUsers
   },
 
@@ -2355,6 +2370,7 @@ const adminResolversQuery = {
         where: {
           crsmain_id: upCourse[i].crsmain_id,
         },
+        orderBy: { created_at: 'desc' }
       })
       if (mainCourse) {
         upcoming.push({
@@ -2518,7 +2534,7 @@ const adminResolversQuery = {
       where: { usr_id: userId, usr_role: role },
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
-    const events = await prisma.jmkeventreg.findMany({})
+    const events = await prisma.jmkeventreg.findMany({ orderBy: { reg_date: 'desc' } })
     const registeredEvents = []
     if (events) {
       for (let event in events) {
@@ -2567,7 +2583,7 @@ const adminResolversQuery = {
       where: { usr_id: userId, usr_role: role },
     });
     if (!admin) throw new AuthenticationError('invalid admin credentials');
-    const careers = await prisma.jmk_web_career.findMany();
+    const careers = await prisma.jmk_web_career.findMany({ orderBy: { created_at: 'desc' } });
     if (!careers) throw new ApolloError('Data Not Found')
     return careers
   },
@@ -2581,6 +2597,40 @@ const adminResolversQuery = {
     const career = await prisma.jmk_web_career.findFirst({ where: { serial } });
     if (!career) throw new ApolloError('Data Not Found')
     return career
+  },
+
+  getStudentCourseRequest: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const data = [];
+    const requestCourse = await prisma.jmkstdcrsinfo.findMany({ where: { crs_id: null }, take: 100, orderBy: { createdAt: 'desc' } });
+    for (let index = 0; index < requestCourse.length; index++) {
+      if (requestCourse[index].std_id && requestCourse[index].crsmain_id) {
+        const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: requestCourse[index].std_id } });
+        const crs = await prisma.jmkcrsmain.findFirst({ where: { crsmain_id: requestCourse[index].crsmain_id } });
+        if (std && crs) {
+          data.push({
+            std_id: std.std_id,
+            crsmain_id: crs.crsmain_id,
+            crs_name: std.crs_name,
+            std_fname: std.std_fname,
+            std_lname: std.std_lname,
+            std_mname: std.std_mname,
+            std_email: std.std_email,
+            std_verifyed: std.std_verifyed,
+            crsmain_title: crs.crsmain_title,
+            crsmain_type: crs.crsmain_type,
+            crsmain_duration: crs.crsmain_duration,
+            createdAt: requestCourse[index].createdAt
+          })
+        }
+      }
+    }
+    if (!data) throw new ApolloError('Data Not Found')
+    return data
   },
 
 }
