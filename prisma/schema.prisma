@@ -237,6 +237,7 @@ model jmktrinfo {
   tr_pic        String?        @db.VarChar(500)
   tr_pic_key    String?        @db.VarChar(500)
   lastSeen      DateTime       @default(now())
+  createdAt     DateTime       @default(now())
   jmktrcrsinfo  jmktrcrsinfo[]
 }
 
@@ -252,6 +253,7 @@ model jmkstdcrsinfo {
   crs_complete      Boolean?  @default(false)
   crs_complete_date DateTime? @db.Date
   crsmain_id        Int?
+  createdAt         DateTime  @default(now())
 }
 
 model jmkquesans {
@@ -350,16 +352,17 @@ model jmkcrsovw {
 }
 
 model jmkuserinfo {
-  usr_id       Int     @id @default(autoincrement())
-  usr_code     String? @db.VarChar(10)
-  usr_email    String? @db.VarChar(30)
-  usr_password String? @db.VarChar(20)
-  usr_role     String? @default("admin") @db.VarChar(20)
-  usr_fname    String? @db.VarChar(20)
-  usr_mname    String? @db.VarChar(20)
-  usr_lname    String? @db.VarChar(20)
-  usr_img_url  String? @db.VarChar(100)
-  usr_img_key  String? @db.VarChar(100)
+  usr_id       Int       @id @default(autoincrement())
+  usr_code     String?   @db.VarChar(10)
+  usr_email    String?   @db.VarChar(30)
+  usr_password String?   @db.VarChar(20)
+  usr_role     String?   @default("admin") @db.VarChar(20)
+  usr_fname    String?   @db.VarChar(20)
+  usr_mname    String?   @db.VarChar(20)
+  usr_lname    String?   @db.VarChar(20)
+  usr_img_url  String?   @db.VarChar(100)
+  usr_img_key  String?   @db.VarChar(100)
+  created_at   DateTime? @default(now())
 }
 
 model jmkdevinfo {
@@ -470,6 +473,7 @@ model jmkcrsmain {
   crsmain_img_key   String?                     @db.VarChar(1000)
   cramain_seo_desc  String?                     @db.VarChar(100)
   cramain_seo_title String?                     @db.VarChar(50)
+  created_at        DateTime                    @default(now())
   jmkcrsdet         jmkcrsdet[]
   jmkstdinfo        jmkstdinfo[]
 }
