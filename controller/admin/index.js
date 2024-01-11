@@ -582,6 +582,7 @@ const adminQueryTypesAndInputs = `
      }
 
      type StudentCourseRequest {
+      id:Int!
       std_id: Int!
       crsmain_id: Int!
       crsmain_title: String!
@@ -2606,13 +2607,14 @@ const adminResolversQuery = {
     });
     if (!admin) throw new AuthenticationError('invalid admin credentials');
     const data = [];
-    const requestCourse = await prisma.jmkstdcrsinfo.findMany({ where: { crs_id: null }, take: 100, orderBy: { createdAt: 'desc' } });
+    const requestCourse = await prisma.jmkstdcrsinfo.findMany({ where: { crs_id: null }, take: 200, orderBy: { createdAt: 'desc' } });
     for (let index = 0; index < requestCourse.length; index++) {
       if (requestCourse[index].std_id && requestCourse[index].crsmain_id) {
         const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: requestCourse[index].std_id } });
         const crs = await prisma.jmkcrsmain.findFirst({ where: { crsmain_id: requestCourse[index].crsmain_id } });
         if (std && crs) {
           data.push({
+            id: requestCourse[index].serial,
             std_id: std.std_id,
             crsmain_id: crs.crsmain_id,
             crs_name: std.crs_name,
