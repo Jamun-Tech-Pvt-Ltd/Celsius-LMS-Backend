@@ -443,13 +443,31 @@ model jmkconsuluserinfo {
 }
 
 model jmkcrsdet {
-  crsdet_id        Int        @id @default(autoincrement())
-  crsmain_id       Int
-  crsdet_title     String?    @db.VarChar(1000)
-  crsdet_sub_title String?    @db.VarChar(1000)
-  jmkcrsmain       jmkcrsmain @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade)
+  crsdet_id   Int        @id @default(autoincrement())
+  crsmain_id  Int
+  topic       String     @db.VarChar(500)
+  description String     @db.LongText
+  jmkcrsmain  jmkcrsmain @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade)
 
   @@index([crsmain_id], map: "jmkcrsdet_crsmain_id_fkey")
+}
+
+model jmkcrsLearing {
+  serial     Int        @id @default(autoincrement())
+  crsmain_id Int
+  title      String     @db.VarChar(1000)
+  jmkcrsmain jmkcrsmain @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade)
+
+  @@index([crsmain_id], map: "jmkcrsLearing_crsmain_id_fkey")
+}
+
+model jmkcrsTiming {
+  serial     Int        @id @default(autoincrement())
+  crsmain_id Int
+  time       String     @db.VarChar(1000)
+  jmkcrsmain jmkcrsmain @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade)
+
+  @@index([crsmain_id], map: "jmkcrsTiming_crsmain_id_fkey")
 }
 
 model jmkcrsupcom {
@@ -461,21 +479,27 @@ model jmkcrsupcom {
 }
 
 model jmkcrsmain {
-  crsmain_id        Int                         @id @default(autoincrement())
-  crsmain_overview  String?                     @db.Text
-  crsmain_duration  Int?
-  cramain_del_mod   jmkcrsmain_cramain_del_mod?
-  crsmain_img_url   String?                     @db.VarChar(255)
-  crsmain_rate      Int?
-  crsmain_desc      String?                     @db.Text
-  crsmain_title     String?                     @db.VarChar(100)
-  crsmain_type      String?
-  crsmain_img_key   String?                     @db.VarChar(1000)
-  cramain_seo_desc  String?                     @db.VarChar(100)
-  cramain_seo_title String?                     @db.VarChar(50)
-  created_at        DateTime                    @default(now())
+  crsmain_id        Int             @id @default(autoincrement())
+  title             String          @db.VarChar(100)
+  category          String          @db.VarChar(50)
+  crsmain_img_url   String?         @db.VarChar(255)
+  crsmain_img_key   String?         @db.VarChar(1000)
+  rate              Int
+  duration          Int
+  short_description String
+  description       String          @db.LongText
+  requirements      String          @db.LongText
+  start_date        DateTime
+  label             String
+  lavel             String
+  language          String
+  cramain_seo_desc  String          @db.VarChar(100)
+  cramain_seo_title String          @db.VarChar(50)
+  created_at        DateTime        @default(now())
   jmkcrsdet         jmkcrsdet[]
   jmkstdinfo        jmkstdinfo[]
+  jmkcrsLearing     jmkcrsLearing[]
+  jmkcrsTiming      jmkcrsTiming[]
 }
 
 model jmkfaq {
@@ -919,6 +943,15 @@ model jmk_web_career {
   status               Boolean
 }
 
+model jmk_crs_categories {
+  serial      Int      @id @default(autoincrement())
+  title       String
+  description String   @db.LongText
+  icon        String
+  icon_key    String
+  created_at  DateTime @default(now())
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
@@ -937,12 +970,6 @@ enum jmk_ques_ans_user_type_enum {
 enum jmk_ques_ans_imp_type_enum {
   Question
   Answer
-}
-
-enum jmkcrsmain_cramain_del_mod {
-  Remote
-  Physical
-  Online
 }
 
 enum jmkmktgdev_mktg_status {
