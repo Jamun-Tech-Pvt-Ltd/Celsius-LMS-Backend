@@ -44,6 +44,22 @@ const jamuntekQueryTypesAndInputs = `
         rate: String!
     }
 
+    type CourseForCat {
+      crsmain_id:Int!
+      category: String!
+      title: String!
+      description: String!
+      crsmain_img_url: String!
+      duration: Int!
+      label: String!
+      language: String!
+      lavel: String!
+      rate: Int!
+      start_date: String!
+      short_description: String!
+      timing: [String!]!
+    }
+
     type CareerPage {
       serial:Int!
       title:String!
@@ -54,10 +70,17 @@ const jamuntekQueryTypesAndInputs = `
       location:String!
      }
 
+     type CategoryAndCourse {
+      category: CourseCategory
+      courses: [CourseForCat]
+     }
+
 `
 
 const jamuntekQuery = `
    getAllCareerPage: [CareerPage!]!
+   getCategoryAndCourse: [CategoryAndCourse]
+   getDynamicCourseById(crsmain_id:Int!): staticCourse!
 
 `
 
@@ -125,6 +148,43 @@ const jamuntekResolversQuery = {
     if (!careers) throw new ApolloError('Data Not Found')
     return careers
   },
+
+  getCategoryAndCourse: async (_) => {
+    const categories = await prisma.jmk_crs_categories.findMany();
+    if (!categories) throw new ApolloError('Data not found');
+    const sendData = [];
+    for (let index = 0; index < categories.length; index++) {
+      const courses = []
+      const coursesData = await prisma.jmkcrsmain.findMany({ where: { category: categories[index].title } });
+      for (let index = 0; index < coursesData.length; index++) {
+        const course = coursesData[index];
+        let timing = await prisma.jmkcrsTiming.findMany({ where: { crsmain_id: course.crsmain_id } });
+        timing = timing.map(i => i.time)
+        courses.push({ ...course, timing })
+      }
+      sendData.push({
+        category: categories[index],
+        courses: courses
+      })
+    }
+
+    if (!sendData) throw new Error('No Data Found')
+    return sendData
+  },
+
+  getDynamicCourseById: async (_, { crsmain_id }, { userId, role }) => {
+    if (!crsmain_id) throw new ApolloError('Data Not Found');
+    const staticCourse = await prisma.jmkcrsmain.findFirst({
+      where: { crsmain_id },
+    })
+    if (!staticCourse) throw new ApolloError('No data found')
+    const curriculum = await prisma.jmkcrsdet.findMany({ where: { crsmain_id: staticCourse.crsmain_id }, select: { topic: true, description: true } });
+    let learning = await prisma.jmkcrsLearing.findMany({ where: { crsmain_id: staticCourse.crsmain_id } });
+    learning = learning.map(i => i.title)
+    let timing = await prisma.jmkcrsTiming.findMany({ where: { crsmain_id: staticCourse.crsmain_id } });
+    timing = timing.map(i => i.time)
+    return ({ ...staticCourse, learning, curriculum, timing })
+  }
 }
 
 export {
