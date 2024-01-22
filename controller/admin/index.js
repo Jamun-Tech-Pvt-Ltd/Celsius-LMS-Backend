@@ -2264,19 +2264,16 @@ const adminResolversQuery = {
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
     if (admin.usr_role === 'admin') {
-      // let courses = [];
-      // const staticCourses = await prisma.jmkcrsmain.findMany({ orderBy: { created_at: 'desc' } })
-      // for (let index = 0; index < staticCourses.length; index++) {
-      //   const curriculum = await prisma.jmkcrsdet.findMany({ where: { crsmain_id: staticCourses[index].crsmain_id }, select: { topic: true, description: true } });
-      //   let learning = await prisma.jmkcrsLearing.findMany({ where: { crsmain_id: staticCourses[index].crsmain_id } });
-      //   learning = learning.map(i => i.title)
-      //   let timing = await prisma.jmkcrsTiming.findMany({ where: { crsmain_id: staticCourses[index].crsmain_id } });
-      //   timing = timing.map(i => i.time)
-      //   courses.push({ ...staticCourses[index], learning, curriculum, timing })
-      // }
+      let courses = [];
       const staticCourses = await prisma.jmkcrsmain.findMany({ orderBy: { created_at: 'desc' } })
-      if (!staticCourses[0]) throw new ApolloError('No data found')
-      return staticCourses
+      for (let index = 0; index < staticCourses.length; index++) {
+        let timing = await prisma.jmkcrsTiming.findMany({ where: { crsmain_id: staticCourses[index].crsmain_id } });
+        timing = timing.map(i => i.time)
+        courses.push({ ...staticCourses[index], timing })
+      }
+      // const staticCourses = await prisma.jmkcrsmain.findMany({ orderBy: { created_at: 'desc' } })
+      if (!courses[0]) throw new ApolloError('No data found')
+      return courses
     }
     throw new AuthenticationError('invalid access')
   },
