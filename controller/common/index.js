@@ -5,8 +5,6 @@ import {
 } from 'apollo-server-express'
 import prisma from '../../database.js'
 import { ROLES } from '../../utils/helper.js'
-import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
-
 
 const commonQueryTypesAndInputs = `
 
@@ -23,27 +21,29 @@ input createUpdateCourseVideoInput {
 
 input createCourseInput {
     crs_name: String!
-    crs_desc: String
-    crs_duration: Int
-    crs_rate: Int
-    crs_ins: String
-    crs_code:String
+    crs_desc: String!
+    crs_duration: Int!
+    crs_rate: Int!
+    crs_ins: String!
     crs_type: String!
-    crs_nxt_st_date: Date
-    crs_image: Upload
+    crs_nxt_st_date: Date!
+    crs_image: String!
+    lavel: String!
+    time: String!
  }
 
  input updateCourseInput {
-    crs_id: Int!
-    crs_name: String
-    crs_desc: String
-    crs_duration: Int
-    crs_rate: Int
-    crs_ins: String
-    crs_code:String
-    crs_type: String
-    crs_image: Upload
-    crs_nxt_st_date: Date
+  crs_id: Int!
+  crs_name: String!
+  crs_desc: String!
+  crs_duration: Int!
+  crs_rate: Int!
+  crs_ins: String!
+  crs_type: String!
+  crs_nxt_st_date: Date!
+  crs_image: String!
+  lavel: String!
+  time: String!
  }
 
  input deleteCourseInput {
@@ -57,15 +57,15 @@ input createCourseInput {
     type Course {
         crs_id: ID!
         crs_name: String!
-        crs_desc: String
-        crs_duration: String
-        crs_rate: String
-        crs_ins: String
-        crs_code:String
+        crs_desc: String!
+        crs_duration: String!
+        crs_rate: String!
+        crs_ins: String!
         crs_type: String!
-        crs_nxt_st_date:Date
+        crs_nxt_st_date:Date!
         crs_image:String
-        crs_code: String
+        time:String
+        lavel:String
     }
 
     type PublicCourse {
@@ -152,7 +152,7 @@ const commonQuery = `
 `
 
 const commonMutation = `
-    createCourse(data:createCourseInput!):Course
+    createCourse(data:createCourseInput!):String!
     updateCourse(data:updateCourseInput!):String!
     deleteCourse(data:deleteCourseInput):String
 `
@@ -167,41 +167,9 @@ const commonResolvers = {
         where: { usr_id: userId, usr_role: role },
       })
       if (!admin) throw new AuthenticationError('invalid admin')
-      let file
-      if (data.crs_image) {
-        file = await uploadImgToAWS(data.crs_image, 'courses/')
-        if (!file.data) throw new ApolloError('Someting went wrong !')
-      }
-      const newCourse = await prisma.jmkcrsinfo.create({
-        data: {
-          ...data,
-          crs_image: file?.data?.Location ?? null,
-          crs_image_key: file?.data?.key ?? '',
-        },
-      })
+      const newCourse = await prisma.jmkcrsinfo.create({ data })
       if (!newCourse) throw new ApolloError('something went wrong !')
-      return newCourse
-    }
-    if (role === access[1]) {
-      const consultancy = await prisma.jmkconsulinfo.findFirst({
-        where: { serial: userId },
-      })
-      if (!consultancy) throw new AuthenticationError('invalid consultancy')
-      let file
-      if (data.crs_image) {
-        file = await uploadImgToAWS(data.crs_image, 'courses/')
-        if (!file.data) throw new ApolloError('Someting went wrong !')
-      }
-      const newCourse = await prisma.jmkcrsinfo.create({
-        data: {
-          ...data,
-          crs_image: file?.data?.Location ?? null,
-          crs_image_key: file?.data?.key ?? '',
-          cid: userId,
-        },
-      })
-      if (!newCourse) throw new ApolloError('something went wrong !')
-      return newCourse
+      return 'Success'
     }
     throw new AuthenticationError('invalid access')
   },
@@ -217,47 +185,8 @@ const commonResolvers = {
         where: { crs_id: data.crs_id },
       })
       if (!crs) throw new ApolloError('invalid course')
-      let file
-      if (data.crs_image) {
-        await deleteImgToAWS(crs.crs_image_key)
-        file = await uploadImgToAWS(data.crs_image, 'courses/')
-        if (!file.data) throw new ApolloError('Someting went wrong !')
-      }
       const course = await prisma.jmkcrsinfo.update({
-        data: {
-          ...data,
-          crs_image: file?.data?.Location ?? crs.crs_image,
-          crs_image_key: file?.data?.key ?? crs.crs_image_key,
-        },
-        where: {
-          crs_id: parseInt(data.crs_id),
-        },
-      })
-      if (!course) throw new ApolloError('something went wrong !')
-      return 'success'
-    }
-    if (role === ROLES[2]) {
-      const consultancy = await prisma.jmkconsulinfo.findFirst({
-        where: { serial: userId },
-      })
-      if (!consultancy) throw new AuthenticationError('invalid consultancy')
-      const crs = await prisma.jmkcrsinfo.findFirst({
-        where: { crs_id: data.crs_id, cid: userId },
-      })
-      if (!crs) throw new ApolloError('invalid course')
-      await deleteImgToAWS(crs.crs_image_key)
-      let file
-      if (data.crs_image) {
-        file = await uploadImgToAWS(data.crs_image, 'courses/')
-        if (!file.data) throw new ApolloError('Someting went wrong !')
-      }
-      const course = await prisma.jmkcrsinfo.update({
-        data: {
-          ...data,
-          crs_image: file?.data?.Location ?? null,
-          crs_image_key: file?.data?.key ?? '',
-          cid: userId,
-        },
+        data: { ...data },
         where: {
           crs_id: parseInt(data.crs_id),
         },
@@ -275,27 +204,9 @@ const commonResolvers = {
         where: { usr_id: userId, usr_role: role },
       })
       if (!admin) throw new AuthenticationError('invalid admin')
-      const crs = await prisma.jmkcrsinfo.findFirst({
-        where: { crs_id: data.crs_id },
-      })
-      await deleteImgToAWS(crs.crs_image_key)
+      // later validate for delete
       const course = await prisma.jmkcrsinfo.delete({
         where: { crs_id: data.crs_id },
-      })
-      if (!course) throw new ApolloError('something went wrong !')
-      return 'success'
-    }
-    if (role === ROLES[2]) {
-      const consultancy = await prisma.jmkconsulinfo.findFirst({
-        where: { serial: userId },
-      })
-      if (!consultancy) throw new AuthenticationError('invalid consultancy')
-      const crs = await prisma.jmkcrsinfo.findFirst({
-        where: { crs_id: data.crs_id, cid: userId },
-      })
-      await deleteImgToAWS(crs.crs_image_key)
-      const course = await prisma.jmkcrsinfo.delete({
-        where: { crs_id: crs.crs_id },
       })
       if (!course) throw new ApolloError('something went wrong !')
       return 'success'

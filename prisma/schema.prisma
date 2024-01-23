@@ -20,6 +20,8 @@ model jmkcrsinfo {
   crs_image_key   String?        @db.VarChar(1000)
   cid             Int?
   crs_code        String?        @db.VarChar(40)
+  lavel           String?        @db.VarChar(200)
+  time            String?        @db.VarChar(200)
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]
   jmktrcrsinfo    jmktrcrsinfo[]

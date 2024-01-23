@@ -1140,7 +1140,7 @@ const adminResolvers = {
 
     if (data.crsmain_img_url !== null) {
       await deleteImgToAWS(selectedStaticCourse?.crsmain_img_key)
-      const file = await uploadImgToAWS(data.crsmain_img_url, 'webimages/')
+      const file = await uploadImgToAWS(data.crsmain_img_url, 'static_course_images/')
       if (!file.data) throw new ApolloError('Something went wrong !')
       data["crsmain_img_url"] = file.data.Location;
       data["crsmain_img_key"] = file.data.key;
