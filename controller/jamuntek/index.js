@@ -3,6 +3,7 @@ import prisma from '../../database.js'
 import { sendMail } from '../../utils/mailHandler.js'
 import demoRequestHTML from '../../utils/demoRequest.js'
 import contackFormHTML from '../../utils/contackForm.js'
+import { getRandomItemsFromArray } from '../../utils/helper.js'
 
 const jamuntekQueryTypesAndInputs = `
     input demoRequestInput {
@@ -75,12 +76,18 @@ const jamuntekQueryTypesAndInputs = `
       courses: [CourseForCat]
      }
 
+     type PopularAndUpcoming {
+      popularCourse: [staticCourse!]
+      upcomingCourse: [staticCourse!]
+     }
+
 `
 
 const jamuntekQuery = `
    getAllCareerPage: [CareerPage!]!
    getCategoryAndCourse: [CategoryAndCourse]
    getDynamicCourseById(crsmain_id:Int!): staticCourse!
+   getPopularAndUpcomingCourse: PopularAndUpcoming!
 
 `
 
@@ -184,6 +191,27 @@ const jamuntekResolversQuery = {
     let timing = await prisma.jmkcrsTiming.findMany({ where: { crsmain_id: staticCourse.crsmain_id } });
     timing = timing.map(i => i.time)
     return ({ ...staticCourse, learning, curriculum, timing })
+  },
+
+  getPopularAndUpcomingCourse: async (_, { args }, { userId, role }) => {
+    const staticCourse = await prisma.jmkcrsmain.findMany()
+    if (!staticCourse) throw new ApolloError('No data found');
+    let upcomingCourse = []
+    let popularCourse = []
+    const popularCourseRendom = await getRandomItemsFromArray(staticCourse, 8)
+    for (let index = 0; index < staticCourse.length; index++) {
+      let timing = await prisma.jmkcrsTiming.findMany({ where: { crsmain_id: staticCourse[index].crsmain_id } });
+      timing = timing.map(i => i.time)
+      if (new Date(staticCourse[index].start_date).getTime() > Date.now()) {
+        upcomingCourse.push({ ...staticCourse[index], timing })
+      }
+    }
+    for (let index = 0; index < popularCourseRendom.length; index++) {
+      let timing = await prisma.jmkcrsTiming.findMany({ where: { crsmain_id: popularCourseRendom[index].crsmain_id } });
+      timing = timing.map(i => i.time)
+      popularCourse.push({ ...popularCourseRendom[index], timing })
+    }
+    return ({ popularCourse, upcomingCourse })
   }
 }
 
