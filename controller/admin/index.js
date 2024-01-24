@@ -550,6 +550,14 @@ const adminQueryTypesAndInputs = `
       icon: Upload
      }
 
+     input testimonialInput{
+      serial:Int
+      std_name:String!
+      crs_name:String!
+      testimonial:String!
+      std_img:Upload
+     }
+
      type UserCourseAdmin {
       std_id:Int!
       serial:Int!
@@ -599,6 +607,15 @@ const adminQueryTypesAndInputs = `
       description: String!
       icon: String!
       created_at: Date!
+     }
+
+     type Testimonial {
+      serial:Int!
+      std_name:String!
+      crs_name:String!
+      testimonial:String!
+      std_img:String!
+      created_at:Date!
      }
 `
 
@@ -658,8 +675,10 @@ const adminQuery = `
     getStudentCourseRequest: [StudentCourseRequest]
 
     getCourseCategories: [CourseCategory]
-
     getCourseCategory(serial:Int!): CourseCategory
+
+    getTestimonials: [Testimonial]
+    getTestimonial(serial:Int!): Testimonial
 
 `
 
@@ -724,7 +743,9 @@ const adminMutation = `
     deleteCareer(serial:Int!):String!
 
     createAndUpdateCourseCategory(data:CourseCategoryInput!):String!
-  
+
+    createAndUpdateTestimonial(data:testimonialInput):String!
+    deleteTestimonialById(serial:Int!):String!
 `
 
 const adminResolvers = {
@@ -1813,8 +1834,8 @@ const adminResolvers = {
     if (!admin) throw new AuthenticationError('invalid admin credentials');
     if (!data.serial) {
       if (!data.icon) throw new ApolloError('icon is required');
-      let file = await uploadImgToAWS(data.icon, 'category_icon/')
-      if (!file.data) throw new ApolloError('Something went wrong !')
+      let file = await uploadImgToAWS(data.icon, 'category_icon/');
+      if (!file.data) throw new ApolloError('Something went wrong !');
       data.icon = file?.data?.Location;
       data.icon_key = file?.data?.key;
       const newCategory = await prisma.jmk_crs_categories.create({ data });
@@ -1838,6 +1859,51 @@ const adminResolvers = {
     return "success"
   },
 
+  createAndUpdateTestimonial: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin');
+    if (data.serial) {
+      const oldTestimonial = await prisma.jmk_testimonial.findFirst({ where: { serial: data.serial } });
+      if (!oldTestimonial) throw new ApolloError('invalid id');
+      if (data.std_img) {
+        await deleteImgToAWS(oldTestimonial.std_img_key);
+        let file = await uploadImgToAWS(data.std_img, 'testimonial_images/');
+        if (!file.data) throw new ApolloError('Something went wrong !');
+        data.std_img = file?.data?.Location;
+        data.std_img_key = file?.data?.key;
+      } else {
+        data.std_img = oldTestimonial.std_img;
+        data.std_img_key = oldTestimonial.std_img_key;
+      }
+      const testimonial = await prisma.jmk_testimonial.update({ data, where: { serial: data.serial } });
+      if (!testimonial) throw new ApolloError('someting went wrong');
+      return 'updated'
+    } else {
+      if (!data.std_img) throw new ApolloError('image is required');
+      let file = await uploadImgToAWS(data.std_img, 'testimonial_images/');
+      if (!file.data) throw new ApolloError('Something went wrong !');
+      data.std_img = file?.data?.Location;
+      data.std_img_key = file?.data?.key;
+      const newTestimonial = await prisma.jmk_testimonial.create({ data });
+      if (!newTestimonial) throw new ApolloError('someting went wrong');
+      return 'created'
+    }
+  },
+
+  deleteTestimonialById: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin');
+    const testimonial = await prisma.jmk_testimonial.delete({ where: { serial } });
+    await deleteImgToAWS(testimonial.std_img_key);
+    if (!testimonial) throw new ApolloError('someting went wrong');
+    return 'deleted'
+  },
 }
 
 const adminResolversQuery = {
@@ -2705,6 +2771,29 @@ const adminResolversQuery = {
     const category = await prisma.jmk_crs_categories.findFirst({ where: { serial } });
     if (!category) throw new ApolloError('Data Not Found')
     return category
+  },
+
+
+  getTestimonials: async (_, { args }, { userId, role }) => {
+    // if (!userId) throw new ForbiddenError('invalid token');
+    // const admin = await prisma.jmkuserinfo.findFirst({
+    //   where: { usr_id: userId, usr_role: role },
+    // });
+    // if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const testimonials = await prisma.jmk_testimonial.findMany({ orderBy: { created_at: 'desc' } });
+    if (!testimonials) throw new ApolloError('Data Not Found')
+    return testimonials
+  },
+
+  getTestimonial: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const testimonial = await prisma.jmk_testimonial.findFirst({ where: { serial } });
+    if (!testimonial) throw new ApolloError('Data Not Found')
+    return testimonial
   },
 }
 

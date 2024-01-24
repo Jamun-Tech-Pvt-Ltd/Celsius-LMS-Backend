@@ -512,6 +512,16 @@ model jmkfaq {
   type       jmk_faq_type
 }
 
+model jmk_testimonial {
+  serial      Int      @id @default(autoincrement())
+  std_name    String   @db.VarChar(200)
+  crs_name    String   @db.VarChar(200)
+  created_at  DateTime @default(now())
+  std_img     String   @db.VarChar(500)
+  std_img_key String   @db.VarChar(500)
+  testimonial String   @db.LongText
+}
+
 model jmkdevprojdet {
   serial          Int       @id @default(autoincrement())
   developer_id    Int?
