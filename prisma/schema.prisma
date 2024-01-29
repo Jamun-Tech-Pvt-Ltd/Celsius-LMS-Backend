@@ -964,6 +964,22 @@ model jmk_crs_categories {
   created_at  DateTime @default(now())
 }
 
+model jmk_services {
+  serial      Int      @id @default(autoincrement())
+  title       String
+  description String   @db.LongText
+  icon        String
+  icon_key    String
+  created_at  DateTime @default(now())
+}
+
+model jmk_policy {
+  serial           Int      @id @default(autoincrement())
+  shot_description String   @db.VarChar(1000)
+  description      String   @db.LongText
+  created_at       DateTime @default(now())
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
