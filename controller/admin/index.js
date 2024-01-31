@@ -570,6 +570,12 @@ const adminQueryTypesAndInputs = `
       description: String!
      }
 
+     input PartnerInput {
+      serial:Int
+      title:String!
+      icon:Upload
+     }
+
      type UserCourseAdmin {
       std_id:Int!
       serial:Int!
@@ -643,6 +649,13 @@ const adminQueryTypesAndInputs = `
       shot_description:String!
       description:String!
      }
+
+     type Partner {
+      serial:Int!
+      title:String!
+      icon:String!
+      created_at:Date!
+     }
 `
 
 const adminQuery = `
@@ -708,6 +721,9 @@ const adminQuery = `
 
     getServices:[Service]
     getService(serial:Int!): Service
+
+    getPartners:[Partner]
+    getPartner(serial:Int!): Partner
 
     getPolicy: Policy
 `
@@ -781,6 +797,9 @@ const adminMutation = `
     deleteServiceById(serial:Int!):String!
 
     createAndUpdatePolicy(data:policyInput):String!
+
+    createAndUpdatePartner(data:PartnerInput):String!
+    deletePartnerById(serial:Int!):String!
 `
 
 const adminResolvers = {
@@ -1979,9 +1998,9 @@ const adminResolvers = {
       where: { usr_id: userId, usr_role: role },
     })
     if (!admin) throw new AuthenticationError('invalid admin');
-    const testimonial = await prisma.jmk_services.delete({ where: { serial } });
-    await deleteImgToAWS(testimonial.std_img_key);
-    if (!testimonial) throw new ApolloError('someting went wrong');
+    const service = await prisma.jmk_services.delete({ where: { serial } });
+    await deleteImgToAWS(service.std_img_key);
+    if (!service) throw new ApolloError('someting went wrong');
     return 'deleted'
   },
 
@@ -2000,6 +2019,51 @@ const adminResolvers = {
       if (!updatePolicy) throw new ApolloError('invalid id')
     }
     return "success"
+  },
+
+  createAndUpdatePartner: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    if (!data.serial) {
+      if (!data.icon) throw new ApolloError('icon is required');
+      let file = await uploadImgToAWS(data.icon, 'partner_icon/');
+      if (!file.data) throw new ApolloError('Something went wrong !');
+      data.icon = file?.data?.Location;
+      data.icon_key = file?.data?.key;
+      const newPartner = await prisma.jmk_partner_ui.create({ data });
+      if (!newPartner) throw new ApolloError('Someting went wrong')
+    } else {
+      const partner = await prisma.jmk_partner_ui.findFirst({ where: { serial: data.serial } });
+      if (!partner) throw new ApolloError('invalid id');
+      if (data.icon) {
+        await deleteImgToAWS(partner.icon_key)
+        let file = await uploadImgToAWS(data.icon, 'partner_icon/')
+        if (!file.data) throw new ApolloError('Something went wrong !')
+        data.icon = file?.data?.Location;
+        data.icon_key = file?.data?.key;
+      } else {
+        data.icon = partner.icon;
+        data.icon_key = partner.icon_key;
+      }
+      const updatePartner = await prisma.jmk_partner_ui.update({ where: { serial: data.serial }, data });
+      if (!updatePartner) throw new ApolloError('invalid id')
+    }
+    return "success"
+  },
+
+  deletePartnerById: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin');
+    const partner = await prisma.jmk_partner_ui.delete({ where: { serial } });
+    await deleteImgToAWS(partner.icon_key);
+    if (!partner) throw new ApolloError('someting went wrong');
+    return 'deleted'
   },
 }
 
@@ -2924,6 +2988,28 @@ const adminResolversQuery = {
     const policy = await prisma.jmk_policy.findFirst();
     if (!policy) throw new ApolloError('Data Not Found')
     return policy
+  },
+
+  getPartners: async (_, { args }, { userId, role }) => {
+    // if (!userId) throw new ForbiddenError('invalid token');
+    // const admin = await prisma.jmkuserinfo.findFirst({
+    //   where: { usr_id: userId, usr_role: role },
+    // });
+    // if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const partners = await prisma.jmk_partner_ui.findMany({ orderBy: { created_at: 'desc' } });
+    if (!partners) throw new ApolloError('Data Not Found')
+    return partners
+  },
+
+  getPartner: async (_, { serial }, { userId, role }) => {
+    // if (!userId) throw new ForbiddenError('invalid token');
+    // const admin = await prisma.jmkuserinfo.findFirst({
+    //   where: { usr_id: userId, usr_role: role },
+    // });
+    // if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const partner = await prisma.jmk_partner_ui.findFirst({ where: { serial } });
+    if (!partner) throw new ApolloError('Data Not Found')
+    return partner
   },
 }
 

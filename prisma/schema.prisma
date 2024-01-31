@@ -980,6 +980,14 @@ model jmk_policy {
   created_at       DateTime @default(now())
 }
 
+model jmk_partner_ui {
+  serial     Int      @id @default(autoincrement())
+  title      String   @db.VarChar(1000)
+  icon       String
+  icon_key   String
+  created_at DateTime @default(now())
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
