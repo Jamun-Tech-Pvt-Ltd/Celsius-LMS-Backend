@@ -39,6 +39,11 @@ const studentQueryTypesAndInputs = `
         std_email: String!
         std_password: String!
         std_birth_dt: Date
+        std_institute: String
+        std_company: String
+        std_payment_type: String
+        std_payment_option: String
+        std_payment_amount: Int
         std_remark:String
         crsmain_id:Int
         std_add_house_no:String
@@ -574,80 +579,55 @@ const studentResolvers = {
     // this logic use on multiple pannels
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_email: userNew.std_email },
-    })
-    if (user)
-      throw new AuthenticationError('user already exist with that email')
+    });
 
-    if (role === ROLES[2]) {
-      const course = await prisma.jmkcrsinfo.findFirst({
-        where: {
-          crs_id: userNew.crs_id,
-          cid: userId,
-        },
-      })
-      if (!course) throw new AuthenticationError('invalid course')
-
-      const newUser = await prisma.jmkstdinfo.create({
-        data: {
-          ...userNew,
-          cid: userId,
-        },
-      })
-
-      await prisma.jmkstdcrsinfo.create({
-        data: {
-          crs_id: userNew.crs_id,
-          crs_start_dt: userNew.crs_ecp_st_d,
-          std_id: newUser.std_id,
-        },
-      })
-
-      const token = jwt.sign(
-        { userId: newUser.std_id, role: ROLES[0] },
-        process.env.JWT_SECRET_KEY
-      )
-      await sendMail(
-        newUser.std_email,
-        'Registration Completed',
-        studentMailVerificationHTML(token)
-      )
-      return { token }
-    }
+    if (user) throw new AuthenticationError('user already exist with that email')
 
     const course = await prisma.jmkcrsmain.findFirst({
       where: {
         crsmain_id: userNew.crsmain_id,
       },
     })
+
     if (!course) throw new AuthenticationError('invalid course')
 
+    const { std_payment_type, std_payment_option, std_payment_amount, ...rest } = userNew;
+
     const newUser = await prisma.jmkstdinfo.create({
-      data: { ...userNew, crs_id: 59, std_join_dt: new Date() },
+      data: { ...rest, crs_id: 59, std_join_dt: new Date() },
     })
 
     if (userNew.crsmain_id) {
       await prisma.jmkstdcrsinfo.create({
         data: {
           crsmain_id: userNew.crsmain_id,
-          crs_start_dt: userNew.crs_ecp_st_d,
+          crs_start_dt: course.start_date,
           std_id: newUser.std_id,
+          payment_type: std_payment_type,
+          payment_option: std_payment_option,
+          amt_paid: std_payment_amount,
+          amt_due: course.rate - std_payment_amount
         },
-      })
+      })   
     }
+
     const token = jwt.sign(
       { userId: newUser.std_id, role: ROLES[0] },
       process.env.JWT_SECRET_KEY
     )
+
     await sendMail(
       newUser.std_email,
       'Successfully Register ',
       registerrHTML(token, userNew.std_fname)
     )
+
     await sendMail(
       'riwaz@jaamun.com',
       'New User Singup Notification',
       newUserSignupNotification(newUser, course.crs_name)
     )
+
     return { token }
   },
 
