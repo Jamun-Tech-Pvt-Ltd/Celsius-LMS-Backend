@@ -254,6 +254,7 @@ model jmkstdcrsinfo {
   payment_type      String?
   payment_option    String?
   time              String?
+  ref_id            String?
   discount          Int?
   amt_paid          Int?
   amt_due           Int?
