@@ -52,6 +52,7 @@ const studentQueryTypesAndInputs = `
         std_add_ward_no:Int
         std_add_district:String
         std_add_province:String
+        time:String
         std_add_zone:String
         std_country:String
         crs_id:Int
@@ -591,7 +592,7 @@ const studentResolvers = {
 
     if (!course) throw new AuthenticationError('invalid course')
 
-    const { std_payment_type, std_payment_option, std_payment_amount, ...rest } = userNew;
+    const { std_payment_type, std_payment_option, std_payment_amount, time, ...rest } = userNew;
 
     const newUser = await prisma.jmkstdinfo.create({
       data: { ...rest, crs_id: 59, std_join_dt: new Date() },
@@ -606,9 +607,10 @@ const studentResolvers = {
           payment_type: std_payment_type,
           payment_option: std_payment_option,
           amt_paid: std_payment_amount,
-          amt_due: course.rate - std_payment_amount
+          amt_due: course.rate - std_payment_amount,
+          time,
         },
-      })   
+      })
     }
 
     const token = jwt.sign(

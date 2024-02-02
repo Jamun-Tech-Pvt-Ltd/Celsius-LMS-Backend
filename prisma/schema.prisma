@@ -253,6 +253,7 @@ model jmkstdcrsinfo {
   std_crs_verirfy   Boolean   @default(false)
   payment_type      String?
   payment_option    String?
+  time              String?
   discount          Int?
   amt_paid          Int?
   amt_due           Int?
