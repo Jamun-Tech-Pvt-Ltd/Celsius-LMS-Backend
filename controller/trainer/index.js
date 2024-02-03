@@ -30,6 +30,7 @@ const trainerQueryTypesAndInputs = `
         tr_lname: String!
         tr_mobile: String!
         tr_email: String!
+        tr_resume: Upload
         tr_password: String
         tr_city: String
         tr_country: String
