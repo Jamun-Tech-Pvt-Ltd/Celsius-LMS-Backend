@@ -232,7 +232,7 @@ model jmktrinfo {
   tr_country    String?        @db.VarChar(50)
   tr_dob        DateTime?      @db.Date
   tr_verifyed   Boolean        @default(false)
-  tr_password   String         @db.VarChar(16)
+  tr_password   String?        @db.VarChar(16)
   tr_resume     String?        @db.VarChar(100)
   tr_github     String?        @db.VarChar(200)
   tr_linkedin   String?        @db.VarChar(200)
