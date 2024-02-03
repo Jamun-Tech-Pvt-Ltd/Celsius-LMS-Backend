@@ -30,13 +30,26 @@ const trainerQueryTypesAndInputs = `
         tr_lname: String!
         tr_mobile: String!
         tr_email: String!
-        tr_password: String!
+        tr_password: String
         tr_city: String
         tr_country: String
         tr_dob: Date
         tr_github: String
         tr_linkedin: String
+        tr_role: String
+        tr_remark: String
      }
+
+     input signupPartnerInput{
+      pr_fname: String!
+      pr_lname: String!
+      pr_mobile: String!
+      pr_email: String!
+      pr_company: String!
+      pr_company_site: String
+      pr_role: String!
+      pr_remark: String
+    }
 
      input updateTrainerInput {
         tr_fname: String
@@ -289,6 +302,7 @@ const trainerQuery = `
 
 const trainerMutation = `
     signupTrainer(data:signupTrainerInput!):Token
+    signupPartner(data:signupPartnerInput!):String!
     signinTrainer(data:signinTrainerInput!):Token
     updateTrainer(data:updateTrainerInput):Trainer!
     updateTrainerPic(data:updateTrainerPicInput):Trainer!
@@ -480,7 +494,7 @@ const trainerResolvers = {
     return { token }
   },
 
-  signupTrainer: async (_, { data }) => {
+  signupTrainer: async (_, { data }, { userId }) => {
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_email: data.tr_email },
     })
@@ -497,6 +511,7 @@ const trainerResolvers = {
         ...data,
         tr_resume: file?.data?.Location ?? '',
         tr_resume_key: file?.data?.key ?? '',
+        tr_label: userId ? 'internal' : 'external'
       },
     })
     const token = jwt.sign(
@@ -514,6 +529,16 @@ const trainerResolvers = {
       )
     )
     return { token }
+  },
+
+  signupPartner: async (_, { data }) => {
+    const partner = await prisma.jmkpartnerReq.findFirst({
+      where: { tr_email: data.tr_email },
+    })
+    if (partner) throw new AuthenticationError('Partner already exist with that email')
+    const newPartner = await prisma.jmkpartnerReq.create({ data });
+    if (!newPartner) throw new ApolloError('Something went wrong')
+    return 'success'
   },
 
   updateTrainer: async (_, { data }, { userId }) => {

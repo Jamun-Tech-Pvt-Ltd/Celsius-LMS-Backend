@@ -95,8 +95,6 @@ model jmkstdinfo {
   std_lname        String         @db.VarChar(20)
   std_email        String         @db.VarChar(30)
   std_mobile       String         @db.VarChar(15)
-  std_institute    String?        @db.VarChar(200)
-  std_company      String?        @db.VarChar(200)
   std_join_dt      DateTime?      @default(dbgenerated("(curdate())")) @db.Date
   std_birth_dt     DateTime?      @db.Date
   std_high_ql      String?        @db.VarChar(40)
@@ -118,6 +116,8 @@ model jmkstdinfo {
   lastSeen         DateTime       @default(now())
   std_add_district String?        @db.VarChar(50)
   std_country      String?        @db.VarChar(100)
+  std_company      String?        @db.VarChar(200)
+  std_institute    String?        @db.VarChar(200)
   jmkgrvinfo       jmkgrvinfo[]
   jmkcrsinfo       jmkcrsinfo?    @relation(fields: [crs_id], references: [crs_id], onDelete: Cascade, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
   jmkcrsmain       jmkcrsmain?    @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade, onUpdate: NoAction, map: "jmkcrsmain_crsmain_id_fk")
@@ -234,15 +234,31 @@ model jmktrinfo {
   tr_verifyed   Boolean        @default(false)
   tr_password   String         @db.VarChar(16)
   tr_resume     String?        @db.VarChar(100)
-  tr_github     String?        @db.VarChar(50)
-  tr_linkedin   String?        @db.VarChar(50)
+  tr_github     String?        @db.VarChar(200)
+  tr_linkedin   String?        @db.VarChar(200)
   tr_resume_key String?        @db.VarChar(100)
   crs_id        Int?
   tr_pic        String?        @db.VarChar(500)
   tr_pic_key    String?        @db.VarChar(500)
   lastSeen      DateTime       @default(now())
   createdAt     DateTime       @default(now())
+  tr_label      String         @default("external") @db.VarChar(20)
+  tr_remark     String?        @db.VarChar(1000)
+  tr_role       String?        @db.VarChar(200)
   jmktrcrsinfo  jmktrcrsinfo[]
+}
+
+model jmkpartnerReq {
+  pr_id           Int      @id @default(autoincrement())
+  pr_fname        String   @db.VarChar(30)
+  pr_lname        String   @db.VarChar(30)
+  pr_mobile       String?  @db.VarChar(15)
+  pr_email        String?  @db.VarChar(30)
+  pr_company      String   @db.VarChar(200)
+  pr_company_site String?  @db.VarChar(200)
+  pr_role         String   @db.VarChar(200)
+  pr_remark       String?  @db.VarChar(1000)
+  createdAt       DateTime @default(now())
 }
 
 model jmkstdcrsinfo {
@@ -251,10 +267,6 @@ model jmkstdcrsinfo {
   crs_start_dt      DateTime? @db.Date
   std_id            Int?
   std_crs_verirfy   Boolean   @default(false)
-  payment_type      String?
-  payment_option    String?
-  time              String?
-  ref_id            String?
   discount          Int?
   amt_paid          Int?
   amt_due           Int?
@@ -262,6 +274,10 @@ model jmkstdcrsinfo {
   crs_complete_date DateTime? @db.Date
   crsmain_id        Int?
   createdAt         DateTime  @default(now())
+  payment_option    String?
+  payment_type      String?
+  time              String?
+  ref_id            String?
 }
 
 model jmkquesans {
@@ -453,8 +469,8 @@ model jmkconsuluserinfo {
 model jmkcrsdet {
   crsdet_id   Int        @id @default(autoincrement())
   crsmain_id  Int
-  topic       String     @db.VarChar(500)
   description String     @db.LongText
+  topic       String     @db.VarChar(500)
   jmkcrsmain  jmkcrsmain @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade)
 
   @@index([crsmain_id], map: "jmkcrsdet_crsmain_id_fkey")
@@ -488,26 +504,26 @@ model jmkcrsupcom {
 
 model jmkcrsmain {
   crsmain_id        Int             @id @default(autoincrement())
-  title             String          @db.VarChar(100)
-  category          String          @db.VarChar(50)
   crsmain_img_url   String?         @db.VarChar(255)
   crsmain_img_key   String?         @db.VarChar(1000)
-  rate              Int
-  duration          Int
-  short_description String
-  description       String          @db.LongText
-  requirements      String          @db.LongText
-  start_date        DateTime
-  label             String
-  lavel             String
-  language          String
   cramain_seo_desc  String          @db.VarChar(100)
   cramain_seo_title String          @db.VarChar(50)
   created_at        DateTime        @default(now())
-  jmkcrsdet         jmkcrsdet[]
-  jmkstdinfo        jmkstdinfo[]
+  category          String          @db.VarChar(50)
+  description       String          @db.LongText
+  duration          Int
+  label             String
+  language          String
+  lavel             String
+  rate              Int
+  short_description String
+  start_date        DateTime
+  title             String          @db.VarChar(100)
+  requirements      String          @db.LongText
   jmkcrsLearing     jmkcrsLearing[]
   jmkcrsTiming      jmkcrsTiming[]
+  jmkcrsdet         jmkcrsdet[]
+  jmkstdinfo        jmkstdinfo[]
 }
 
 model jmkfaq {
@@ -966,8 +982,8 @@ model jmk_crs_categories {
   title       String
   description String   @db.LongText
   icon        String
-  icon_key    String
   created_at  DateTime @default(now())
+  icon_key    String
 }
 
 model jmk_services {
