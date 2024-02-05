@@ -130,6 +130,9 @@ const adminQueryTypesAndInputs = `
         crsmain_title:String
         std_status: String
         std_paidup: String
+        std_company: String
+        std_institute: String
+        std_remark: String
         std_due: String
         std_verifyed: Boolean!
         join_courses: [UserCourseAdmin]
@@ -156,7 +159,7 @@ const adminQueryTypesAndInputs = `
         tr_main_tech3:String
         tr_dob: String
         tr_verifyed:Boolean
-        tr_password:String!
+        tr_password:String
         tr_resume:String
         tr_github:String
         tr_linkedin:String
@@ -582,14 +585,18 @@ const adminQueryTypesAndInputs = `
       crsmain_id:Int
       crs_id:Int
       crs_start_dt:Date
-      crs_rate:String
-      crsmain_title:String
+      rate:String
+      title:String
       discount: String
       amt_paid:String
       amt_due:String
       crs_complete:String
       crs_complete_date:Date
       std_crs_verirfy:Boolean
+      payment_option:String
+      payment_type:String
+      time:String
+      ref_id:String
      }
 
      type Career {
@@ -2159,11 +2166,11 @@ const adminResolversQuery = {
           })
           join_courses.push({
             ...joinCourses[index],
-            crsmain_title: course.crsmain_title,
-            crs_rate: course.crsmain_rate,
-            crs_type: course.crsmain_type,
+            title: course.title,
+            rate: course.rate,
+            type: course.label,
           })
-        } 1
+        }
       }
 
       const mergestudent = {
@@ -2447,22 +2454,11 @@ const adminResolversQuery = {
           crsmain_id: course.crsmain_id,
         },
         select: {
-          crsmain_title: true,
+          title: true,
+          rate:true
         },
       })
       return { ...course, ...selectedCourse }
-    }
-    if (role === ROLES[2]) {
-      const consultancy = await prisma.jmkconsulinfo.findFirst({
-        where: { serial: userId },
-      })
-      if (!consultancy)
-        throw new AuthenticationError('invalid consultancy credentials')
-      const course = await prisma.jmkstdcrsinfo.findFirst({
-        where: { serial: args.serial },
-      })
-      if (!course) throw new ApolloError('crs not fund !!')
-      return course
     }
     throw new AuthenticationError('invalid access')
   },
@@ -2900,9 +2896,9 @@ const adminResolversQuery = {
             std_mname: std.std_mname,
             std_email: std.std_email,
             std_verifyed: std.std_verifyed,
-            crsmain_title: crs.crsmain_title,
-            crsmain_type: crs.crsmain_type,
-            crsmain_duration: crs.crsmain_duration,
+            crsmain_title: crs.title,
+            crsmain_type: crs.label,
+            crsmain_duration: crs.duration,
             createdAt: requestCourse[index].createdAt
           })
         }

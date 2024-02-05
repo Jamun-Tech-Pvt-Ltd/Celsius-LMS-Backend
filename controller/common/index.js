@@ -145,6 +145,7 @@ const commonQuery = `
     getCourseById(crs_id:Int!):Course!
     getAllConsultancyInfo:[ConsultancyInfo]
     getContactInfo:ContactInfoType!
+    getPopupModal: webModal
     getAllActiveBlogs:[JmkALlBlog]
     getBlogBySlug(blog_slug:String!):JmkBlog!
     getFaqByType(type:String):[Faq!]!
@@ -223,6 +224,11 @@ const commonResolversQuery = {
     } else {
       throw new ApolloError('Info not found !!')
     }
+  },
+  getPopupModal: async (_, { args }) => {
+    const modal = await prisma.jmk_web_modal.findFirst({ where: { status: true } });
+    if (!modal) throw new ApolloError('Data Not Found')
+    return modal
   },
   getAllCourseList: async (_, args, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
