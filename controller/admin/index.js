@@ -163,7 +163,9 @@ const adminQueryTypesAndInputs = `
         tr_resume:String
         tr_github:String
         tr_linkedin:String
-        tr_resume_key:String
+        tr_role:String
+        tr_label:String
+        tr_remark:String
         join_courses: [trainer_join_courses]
      }
 
@@ -445,6 +447,8 @@ const adminQueryTypesAndInputs = `
         tr_password: String
         tr_github: String
         tr_linkedin: String
+        tr_role: String
+        tr_remark: String
         tr_verifyed:Boolean!
      }
 
@@ -1095,11 +1099,9 @@ const adminResolvers = {
     });
 
     if (checkEmail) throw new AuthenticationError('trainer already exist with that email');
-
+    data['tr_label'] = 'internal';
     const trainer = await prisma.jmktrinfo.create({ data: { ...data }, })
-
     if (!trainer) throw new AuthenticationError('Something went wrong')
-
     return 'success'
   },
 
