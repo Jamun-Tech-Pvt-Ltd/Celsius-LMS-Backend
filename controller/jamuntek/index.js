@@ -45,6 +45,29 @@ const jamuntekQueryTypesAndInputs = `
         rate: String!
     }
 
+    input signupPartnerInput{
+      pr_fname: String!
+      pr_lname: String!
+      pr_mobile: String!
+      pr_email: String!
+      pr_company: String!
+      pr_company_site: String
+      pr_role: String!
+      pr_remark: String
+    }
+
+    input jobReqInput{
+      fname: String!
+      lname: String!
+      mobile: String!
+      email: String!
+      linkedin: String!
+      career_id: Int!
+      role: String!
+      resume: Upload!
+      remark: String
+    }
+
     type CourseForCat {
       crsmain_id:Int!
       category: String!
@@ -92,11 +115,12 @@ const jamuntekQuery = `
 `
 
 const jamuntekMutation = `
-
     demoRequest(data:demoRequestInput):String
     contactForm(data:contactFormInput):String
     businessForm(data:businessFormInput):String
     jamuntekReview(data:jamuntekReviewInput):String
+    signupPartner(data:signupPartnerInput!):String!
+    jobReq(data:jobReqInput!):String!
 
 `
 
@@ -145,6 +169,31 @@ const jamuntekResolvers = {
       },
     })
     if (!jamuntekReview) throw new Error('something went wrong!!')
+    return 'success'
+  },
+
+  signupPartner: async (_, { data }) => {
+    const partner = await prisma.jmkpartnerReq.findFirst({
+      where: { tr_email: data.tr_email },
+    })
+    if (partner) throw new AuthenticationError('Partner already exist with that email')
+    const newPartner = await prisma.jmkpartnerReq.create({ data });
+    if (!newPartner) throw new ApolloError('Something went wrong')
+    return 'success'
+  },
+
+  jobReq: async (_, { data }) => {
+    const jobReq = await prisma.jmkjobReq.findFirst({
+      where: { career_id: data.career_id, email: data.email },
+    })
+    if (jobReq) throw new AuthenticationError('Job Request already exist with that email')
+    if (!data.resume) throw new ApolloError('Resume is Required')
+    const file = await uploadImgToAWS(data.crsmain_img_url, 'static_course_images/')
+    if (!file.data) throw new ApolloError('Something went wrong !');
+    data.resume = file?.data?.Location;
+    data.resume_key = file?.data?.key;
+    const newJobReq = await prisma.jmkjobReq.create({ data });
+    if (!newJobReq) throw new ApolloError('Something went wrong')
     return 'success'
   },
 }

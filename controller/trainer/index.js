@@ -41,17 +41,6 @@ const trainerQueryTypesAndInputs = `
         tr_remark: String
      }
 
-     input signupPartnerInput{
-      pr_fname: String!
-      pr_lname: String!
-      pr_mobile: String!
-      pr_email: String!
-      pr_company: String!
-      pr_company_site: String
-      pr_role: String!
-      pr_remark: String
-    }
-
      input updateTrainerInput {
         tr_fname: String
         tr_mname: String
@@ -303,7 +292,6 @@ const trainerQuery = `
 
 const trainerMutation = `
     signupTrainer(data:signupTrainerInput!):Token
-    signupPartner(data:signupPartnerInput!):String!
     signinTrainer(data:signinTrainerInput!):Token
     updateTrainer(data:updateTrainerInput):Trainer!
     updateTrainerPic(data:updateTrainerPicInput):Trainer!
@@ -530,16 +518,6 @@ const trainerResolvers = {
       )
     )
     return { token }
-  },
-
-  signupPartner: async (_, { data }) => {
-    const partner = await prisma.jmkpartnerReq.findFirst({
-      where: { tr_email: data.tr_email },
-    })
-    if (partner) throw new AuthenticationError('Partner already exist with that email')
-    const newPartner = await prisma.jmkpartnerReq.create({ data });
-    if (!newPartner) throw new ApolloError('Something went wrong')
-    return 'success'
   },
 
   updateTrainer: async (_, { data }, { userId }) => {

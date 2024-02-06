@@ -667,6 +667,32 @@ const adminQueryTypesAndInputs = `
       icon:String!
       created_at:Date!
      }
+
+     type PartnerReq {
+        pr_id:Int!
+        pr_fname: String!
+        pr_lname: String!
+        pr_mobile: String!
+        pr_email: String!
+        pr_company: String!
+        pr_company_site: String
+        pr_role: String!
+        pr_remark: String
+     }
+
+     type jobReq {
+      serial:Int!
+      fname: String!
+      lname: String!
+      mobile: String!
+      email: String!
+      linkedin: String!
+      career_id: Int!
+      role: String!
+      resume: String!
+      remark: String
+      career: Career
+    }
 `
 
 const adminQuery = `
@@ -735,6 +761,12 @@ const adminQuery = `
 
     getPartners:[Partner]
     getPartner(serial:Int!): Partner
+
+    getPartnerShipReq:[PartnerReq]
+    getPartnerShipReqById(serial:Int!): PartnerReq
+
+    getJobReqs:[jobReq]
+    getJobReqById(serial:Int!): jobReq
 
     getPolicy: Policy
 `
@@ -2457,7 +2489,7 @@ const adminResolversQuery = {
         },
         select: {
           title: true,
-          rate:true
+          rate: true
         },
       })
       return { ...course, ...selectedCourse }
@@ -3009,7 +3041,52 @@ const adminResolversQuery = {
     if (!partner) throw new ApolloError('Data Not Found')
     return partner
   },
+
+  getPartnerShipReq: async (_, { args }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const partners = await prisma.jmkpartnerReq.findMany({ orderBy: { createdAt: 'desc' } });
+    if (!partners) throw new ApolloError('Data Not Found')
+    return partners
+  },
+
+  getPartnerShipReqById: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const partner = await prisma.jmkpartnerReq.findFirst({ where: { pr_id: serial } });
+    if (!partner) throw new ApolloError('Data Not Found')
+    return partner
+  },
+
+  getJobReqs: async (_, { args }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const jonReq = await prisma.jmkjobReq.findMany({ orderBy: { createdAt: 'desc' }, include: { career: true } });
+    if (!jonReq) throw new ApolloError('Data Not Found')
+    return jonReq
+  },
+
+  getJobReqById: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId, usr_role: role },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const jonReq = await prisma.jmkjobReq.findFirst({ where: { serial }, orderBy: { createdAt: 'desc' }, include: { career: true } });
+    if (!jonReq) throw new ApolloError('Data Not Found')
+    return jonReq
+  },
 }
+
 
 export {
   adminQueryTypesAndInputs,

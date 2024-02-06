@@ -261,6 +261,22 @@ model jmkpartnerReq {
   createdAt       DateTime @default(now())
 }
 
+model jmkjobReq {
+  serial     Int            @id @default(autoincrement())
+  fname      String         @db.VarChar(30)
+  lname      String         @db.VarChar(30)
+  mobile     String         @db.VarChar(15)
+  email      String         @db.VarChar(50)
+  linkedin   String         @db.VarChar(200)
+  role       String         @db.VarChar(50)
+  remark     String?        @db.VarChar(1000)
+  resume_key String         @db.VarChar(200)
+  resume     String         @db.VarChar(200)
+  career_id  Int
+  career     jmk_web_career @relation(fields: [career_id], references: [serial])
+  createdAt  DateTime       @default(now())
+}
+
 model jmkstdcrsinfo {
   serial            Int       @id @default(autoincrement())
   crs_id            Int?
@@ -966,15 +982,16 @@ model jmk_web_modal {
 }
 
 model jmk_web_career {
-  serial               Int      @id @default(autoincrement())
+  serial               Int         @id @default(autoincrement())
   title                String
-  description          String   @db.LongText
+  description          String      @db.LongText
   department           String
   employment_type      String
   employment_structure String
   location             String
-  created_at           DateTime @default(now())
+  created_at           DateTime    @default(now())
   status               Boolean
+  jmkjobReq            jmkjobReq[]
 }
 
 model jmk_crs_categories {
