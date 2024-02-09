@@ -189,7 +189,7 @@ const jamuntekResolvers = {
     })
     if (jobReq) throw new AuthenticationError('Job Request already exist with that email')
     if (!data.resume) throw new ApolloError('Resume is Required')
-    const file = await uploadImgToAWS(data.crsmain_img_url, 'static_course_images/')
+    const file = await uploadImgToAWS(data.resume, 'job_resume/')
     if (!file.data) throw new ApolloError('Something went wrong !');
     data.resume = file?.data?.Location;
     data.resume_key = file?.data?.key;
