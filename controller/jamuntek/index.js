@@ -4,6 +4,7 @@ import { sendMail } from '../../utils/mailHandler.js'
 import demoRequestHTML from '../../utils/demoRequest.js'
 import contackFormHTML from '../../utils/contackForm.js'
 import { getRandomItemsFromArray } from '../../utils/helper.js'
+import { uploadImgToAWS } from '../../utils/imageHandler.js'
 
 const jamuntekQueryTypesAndInputs = `
     input demoRequestInput {
