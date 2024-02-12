@@ -75,7 +75,7 @@ const jamuntekQueryTypesAndInputs = `
       title: String!
       description: String!
       crsmain_img_url: String!
-      duration: Int!
+      duration: Float!
       label: String!
       language: String!
       lavel: String!

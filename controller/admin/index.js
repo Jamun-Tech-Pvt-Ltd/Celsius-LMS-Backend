@@ -238,7 +238,7 @@ const adminQueryTypesAndInputs = `
         cramain_seo_desc: String!
         cramain_seo_title: String!
         crsmain_img_url: String!
-        duration: Int!
+        duration: Float!
         label: String!
         language: String!
         lavel: String!
@@ -297,7 +297,7 @@ const adminQueryTypesAndInputs = `
       crsmain_id: Int!
       serial: Int!
       crsmain_title: String
-      crsmain_duration: Int
+      crsmain_duration: Float
       crsmain_type: String
      }
 
@@ -400,7 +400,7 @@ const adminQueryTypesAndInputs = `
         cramain_seo_desc: String!
         cramain_seo_title: String!
         crsmain_img_url: Upload
-        duration: Int!
+        duration: Float!
         label: String!
         language: String!
         lavel: String!
@@ -621,7 +621,7 @@ const adminQueryTypesAndInputs = `
       crsmain_id: Int!
       crsmain_title: String!
       crsmain_type: String!
-      crsmain_duration: Int!
+      crsmain_duration: Float!
       createdAt: Date!
       std_fname: String!
       std_lname: String!
@@ -2683,7 +2683,7 @@ const adminResolversQuery = {
       if (mainCourse) {
         upcoming.push({
           ...upCourse[i],
-          crsmain_title: mainCourse.crsmain_title,
+          crsmain_title: mainCourse.title,
           crsmain_duration: mainCourse.crsmain_duration,
           crsmain_type: mainCourse.crsmain_type,
         })
@@ -2716,7 +2716,7 @@ const adminResolversQuery = {
     })
     return {
       ...upCourse,
-      crsmain_title: mainCourse.crsmain_title,
+      crsmain_title: mainCourse.title,
       crsmain_duration: mainCourse.crsmain_duration,
       crsmain_type: mainCourse.crsmain_type,
     }

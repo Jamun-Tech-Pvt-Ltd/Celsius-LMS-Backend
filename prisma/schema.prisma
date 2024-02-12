@@ -11,7 +11,7 @@ model jmkcrsinfo {
   crs_id          Int            @id @default(autoincrement())
   crs_name        String         @db.VarChar(200)
   crs_desc        String         @db.VarChar(1000)
-  crs_duration    Int?
+  crs_duration    Float?
   crs_rate        Int?
   crs_ins         String?        @db.VarChar(200)
   crs_type        String         @db.VarChar(200)
@@ -273,8 +273,10 @@ model jmkjobReq {
   resume_key String         @db.VarChar(200)
   resume     String         @db.VarChar(200)
   career_id  Int
-  career     jmk_web_career @relation(fields: [career_id], references: [serial])
   createdAt  DateTime       @default(now())
+  career     jmk_web_career @relation(fields: [career_id], references: [serial])
+
+  @@index([career_id], map: "jmkjobReq_career_id_fkey")
 }
 
 model jmkstdcrsinfo {
