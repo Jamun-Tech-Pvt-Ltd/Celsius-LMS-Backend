@@ -527,7 +527,7 @@ model jmkcrsmain {
   created_at        DateTime        @default(now())
   category          String          @db.VarChar(50)
   description       String          @db.LongText
-  duration          Int
+  duration          Float
   label             String
   language          String
   lavel             String
