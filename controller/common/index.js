@@ -66,6 +66,7 @@ input createCourseInput {
         crs_image:String
         time:String
         lavel:String
+        isDeleted:Boolean!
     }
 
     type PublicCourse {
@@ -205,9 +206,9 @@ const commonResolvers = {
         where: { usr_id: userId, usr_role: role },
       })
       if (!admin) throw new AuthenticationError('invalid admin')
-      // later validate for delete
-      const course = await prisma.jmkcrsinfo.delete({
+      const course = await prisma.jmkcrsinfo.update({
         where: { crs_id: data.crs_id },
+        data: { isDeleted: true }
       })
       if (!course) throw new ApolloError('something went wrong !')
       return 'success'

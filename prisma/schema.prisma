@@ -22,6 +22,7 @@ model jmkcrsinfo {
   crs_code        String?        @db.VarChar(40)
   lavel           String?        @db.VarChar(200)
   time            String?        @db.VarChar(200)
+  isDeleted       Boolean        @default(false)
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]
   jmktrcrsinfo    jmktrcrsinfo[]
@@ -537,6 +538,7 @@ model jmkcrsmain {
   short_description String
   start_date        DateTime
   title             String          @db.VarChar(100)
+  isDeleted         Boolean         @default(false)
   requirements      String          @db.LongText
   jmkcrsLearing     jmkcrsLearing[]
   jmkcrsTiming      jmkcrsTiming[]

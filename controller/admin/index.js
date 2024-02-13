@@ -248,6 +248,7 @@ const adminQueryTypesAndInputs = `
         learning: [String!]!
         timing: [String!]!
         curriculum: [courseCurriculum!]!
+        isDeleted:Boolean
       }
      
      type totalCount{
@@ -1327,34 +1328,39 @@ const adminResolvers = {
 
     const crs = await prisma.jmkcrsmain.findFirst({
       where: { crsmain_id: data.crsmain_id },
-    })
-
-    await deleteImgToAWS(crs?.crsmain_img_key);
-    const deleteStaticCourse = await prisma.jmkcrsmain.delete({
-      where: { crsmain_id: data.crsmain_id },
-    })
-
-    const staticCourseDetails = await prisma.jmkcrsdet.findMany({
-      where: { crsmain_id: data.crsmain_id },
     });
 
-    const staticCourseLearning = await prisma.jmkcrsLearing.findMany({
+    const updatecrs = await prisma.jmkcrsmain.update({
       where: { crsmain_id: data.crsmain_id },
+      data: { isDeleted: true }
     })
 
-    for (let index = 0; index < staticCourseDetails.length; index++) {
-      await prisma.jmkcrsdet.delete({
-        where: { crsdet_id: staticCourseDetails[index].crsdet_id },
-      })
-    }
+    // await deleteImgToAWS(crs?.crsmain_img_key);
+    // const deleteStaticCourse = await prisma.jmkcrsmain.delete({
+    //   where: { crsmain_id: data.crsmain_id },
+    // })
 
-    for (let index = 0; index < staticCourseLearning.length; index++) {
-      await prisma.jmkcrsLearing.delete({
-        where: { serial: staticCourseLearning[index].serial },
-      })
-    }
+    // const staticCourseDetails = await prisma.jmkcrsdet.findMany({
+    //   where: { crsmain_id: data.crsmain_id },
+    // });
 
-    if (!deleteStaticCourse) throw new ApolloError('something went wrong !')
+    // const staticCourseLearning = await prisma.jmkcrsLearing.findMany({
+    //   where: { crsmain_id: data.crsmain_id },
+    // })
+
+    // for (let index = 0; index < staticCourseDetails.length; index++) {
+    //   await prisma.jmkcrsdet.delete({
+    //     where: { crsdet_id: staticCourseDetails[index].crsdet_id },
+    //   })
+    // }
+
+    // for (let index = 0; index < staticCourseLearning.length; index++) {
+    //   await prisma.jmkcrsLearing.delete({
+    //     where: { serial: staticCourseLearning[index].serial },
+    //   })
+    // }
+
+    if (!updatecrs) throw new ApolloError('something went wrong !')
     return 'Success'
   },
 

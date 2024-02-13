@@ -212,7 +212,7 @@ const jamuntekResolversQuery = {
     const sendData = [];
     for (let index = 0; index < categories.length; index++) {
       const courses = []
-      const coursesData = await prisma.jmkcrsmain.findMany({ where: { category: categories[index].title } });
+      const coursesData = await prisma.jmkcrsmain.findMany({ where: { category: categories[index].title, isDeleted: false } });
       for (let index = 0; index < coursesData.length; index++) {
         const course = coursesData[index];
         let timing = await prisma.jmkcrsTiming.findMany({ where: { crsmain_id: course.crsmain_id } });
@@ -232,7 +232,7 @@ const jamuntekResolversQuery = {
   getDynamicCourseById: async (_, { crsmain_id }, { userId, role }) => {
     if (!crsmain_id) throw new ApolloError('Data Not Found');
     const staticCourse = await prisma.jmkcrsmain.findFirst({
-      where: { crsmain_id },
+      where: { crsmain_id, isDeleted: false },
     })
     if (!staticCourse) throw new ApolloError('No data found')
     const curriculum = await prisma.jmkcrsdet.findMany({ where: { crsmain_id: staticCourse.crsmain_id }, select: { topic: true, description: true } });
@@ -244,7 +244,7 @@ const jamuntekResolversQuery = {
   },
 
   getPopularAndUpcomingCourse: async (_, { args }, { userId, role }) => {
-    const staticCourse = await prisma.jmkcrsmain.findMany()
+    const staticCourse = await prisma.jmkcrsmain.findMany({ isDeleted: false })
     if (!staticCourse) throw new ApolloError('No data found');
     let upcomingCourse = []
     let popularCourse = []

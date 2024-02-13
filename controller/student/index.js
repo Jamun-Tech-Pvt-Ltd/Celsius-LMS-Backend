@@ -588,6 +588,7 @@ const studentResolvers = {
     const course = await prisma.jmkcrsmain.findFirst({
       where: {
         crsmain_id: userNew.crsmain_id,
+        isDeleted: false
       },
     })
 
@@ -754,7 +755,7 @@ const studentResolvers = {
       where: { std_id: userId },
     })
     const course = await prisma.jmkcrsmain.findFirst({
-      where: { crsmain_id: parseInt(data.crsmain_id) },
+      where: { crsmain_id: parseInt(data.crsmain_id), isDeleted: false },
     })
     const userCourse = await prisma.jmkstdcrsinfo.findFirst({
       where: { std_id: userId, crsmain_id: parseInt(data.crsmain_id) },
@@ -1511,7 +1512,7 @@ const studentResolversQuery = {
 
   // need to chnage 
   courseList: async () => {
-    const course = await prisma.jmkcrsmain.findMany()
+    const course = await prisma.jmkcrsmain.findMany({ isDeleted: false })
     const filter = course.reduce((all, course) => {
       all[course.crsmain_type] = [
         ...(all[course.crsmain_type] || []),
