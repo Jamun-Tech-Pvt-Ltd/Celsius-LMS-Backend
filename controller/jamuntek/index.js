@@ -112,6 +112,7 @@ const jamuntekQuery = `
    getCategoryAndCourse: [CategoryAndCourse]
    getDynamicCourseById(crsmain_id:Int!): staticCourse!
    getPopularAndUpcomingCourse: PopularAndUpcoming!
+   getAutoComplete:[staticCourse]!
 
 `
 
@@ -229,6 +230,12 @@ const jamuntekResolversQuery = {
     return sendData
   },
 
+  getAutoComplete: async (_) => {
+    const coursesData = await prisma.jmkcrsmain.findMany({ where: { isDeleted: false } });
+    if (!coursesData) throw new Error('No Data Found')
+    return coursesData
+  },
+
   getDynamicCourseById: async (_, { crsmain_id }, { userId, role }) => {
     if (!crsmain_id) throw new ApolloError('Data Not Found');
     const staticCourse = await prisma.jmkcrsmain.findFirst({
@@ -244,7 +251,7 @@ const jamuntekResolversQuery = {
   },
 
   getPopularAndUpcomingCourse: async (_, { args }, { userId, role }) => {
-    const staticCourse = await prisma.jmkcrsmain.findMany({ isDeleted: false })
+    const staticCourse = await prisma.jmkcrsmain.findMany({ where: { isDeleted: false } })
     if (!staticCourse) throw new ApolloError('No data found');
     let upcomingCourse = []
     let popularCourse = []
