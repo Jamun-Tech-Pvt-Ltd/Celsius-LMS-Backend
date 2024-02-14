@@ -570,6 +570,8 @@ const adminQueryTypesAndInputs = `
       serial:Int
       title: String!
       description: String!
+      long_description: String!
+      short_description: String!
       icon: Upload
      }
 
@@ -652,6 +654,8 @@ const adminQueryTypesAndInputs = `
       serial:Int!
       title:String!
       description:String!
+      long_description:String!
+      short_description:String!
       icon:String!
       created_at:Date!
      }

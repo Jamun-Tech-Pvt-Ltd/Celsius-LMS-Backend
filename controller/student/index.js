@@ -608,8 +608,8 @@ const studentResolvers = {
           std_id: newUser.std_id,
           payment_type: std_payment_type,
           payment_option: std_payment_option,
-          amt_paid: std_payment_amount,
-          amt_due: course.rate - std_payment_amount,
+          amt_paid: std_payment_amount ?? 0,
+          amt_due: course.rate - std_payment_amount ?? 0,
           time,
           ref_id
         },
