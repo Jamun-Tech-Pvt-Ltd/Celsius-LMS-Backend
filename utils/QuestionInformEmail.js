@@ -1172,7 +1172,7 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                       <tr>
                                         <td style="padding: 0 2px 0 2px">
                                           <a
-                                            href="https://www.facebook.com/jamuntech"
+                                            href="https://www.facebook.com/jaamunelearning"
                                             target="_blank"
                                             ><img
                                               alt="Facebook"
@@ -1189,24 +1189,24 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                         </td>
                                         <td style="padding: 0 2px 0 2px">
                                           <a
-                                            href="https://twitter.com/JamunTech"
+                                            href="https://www.youtube.com/@jaamunelearning"
                                             target="_blank"
                                             ><img
                                               alt="Twitter"
                                               height="32"
-                                              src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/twitter2x.png"
+                                              src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/e8c9828387de2a83e5469a95bc6d8574.png"
                                               style="
                                                 display: block;
                                                 height: auto;
                                                 border: 0;
                                               "
-                                              title="twitter"
+                                              title="youtube"
                                               width="32"
                                           /></a>
                                         </td>
                                         <td style="padding: 0 2px 0 2px">
                                           <a
-                                            href="https://twitter.com/JamunTech"
+                                            href="https://www.linkedin.com/company/jaamunelearning"
                                             target="_blank"
                                             ><img
                                               alt="Linkedin"
@@ -1223,7 +1223,7 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                         </td>
                                         <td style="padding: 0 2px 0 2px">
                                           <a
-                                            href="https://www.tiktok.com/@user1383810681492"
+                                            href="https://www.tiktok.com/@jaamunelearning"
                                             target="_blank"
                                             ><img
                                               alt="TikTok"
@@ -1352,7 +1352,7 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                           <!--[if mso]><table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style=""><tr style="text-align:center;"><!
                                           [endif]-->[endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><!
                                           [endif]--><a
-                                            href="https://www.jaamun.com/contact"
+                                            href="https://www.jaamun.com/helpCenter"
                                             style="
                                               mso-hide: false;
                                               padding-top: 5px;

@@ -4,7 +4,7 @@ const mg = mailgun({ apiKey: process.env.MAIL_GUN, domain: DOMAIN })
 
 const sendMail = async (email, subject, template) => {
   const data = {
-    from: 'Jamuntek <noreply@jamuntek.com>',
+    from: 'Jaamun <no-reply@jaamun.com>',
     to: email,
     subject: subject,
     html: template,

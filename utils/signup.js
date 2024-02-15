@@ -479,7 +479,7 @@ const signupHTML = (token, name) => `
 																		width="144px">
 																		<tr>
 																			<td style="padding:0 2px 0 2px;"><a
-																					href="https://www.facebook.com/jamuntech"
+																					href="https://www.facebook.com/jaamunelearning"
 																					target="_blank"><img alt="Facebook"
 																						height="32"
 																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/facebook2x.png"
@@ -487,15 +487,15 @@ const signupHTML = (token, name) => `
 																						title="facebook"
 																						width="32" /></a></td>
 																			<td style="padding:0 2px 0 2px;"><a
-																					href="https://twitter.com/JamunTech"
-																					target="_blank"><img alt="Twitter"
+																					href="https://www.youtube.com/@jaamunelearning"
+																					target="_blank"><img alt="Youtube"
 																						height="32"
-																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/twitter2x.png"
+																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/e8c9828387de2a83e5469a95bc6d8574.png"
 																						style="display: block; height: auto; border: 0;"
 																						title="twitter"
 																						width="32" /></a></td>
 																			<td style="padding:0 2px 0 2px;"><a
-																					href="https://www.linkedin.com/company/jaamun/?originalSubdomain=np"
+																					href="https://www.linkedin.com/company/jaamunelearning"
 																					target="_blank"><img alt="Linkedin"
 																						height="32"
 																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/linkedin2x.png"
@@ -503,7 +503,7 @@ const signupHTML = (token, name) => `
 																						title="linkedin"
 																						width="32" /></a></td>
 																			<td style="padding:0 2px 0 2px;"><a
-																					href="https://www.tiktok.com/@user1383810681492"
+																					href="https://www.tiktok.com/@jaamunelearning"
 																					target="_blank"><img alt="TikTok"
 																						height="32"
 																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/tiktok2x.png"
