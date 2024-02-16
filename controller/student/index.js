@@ -1524,9 +1524,9 @@ const studentResolversQuery = {
   courseList: async () => {
     const course = await prisma.jmkcrsmain.findMany({ where: { isDeleted: false } })
     const filter = course.reduce((all, course) => {
-      all[course.crsmain_type] = [
-        ...(all[course.crsmain_type] || []),
-        { ...course },
+      all[course.label] = [
+        ...(all[course.label] || []),
+        { ...course, crsmain_id: course.crsmain_id, crs_id: 0, crsmain_type: course.label, crsmain_title: course.title },
       ]
       return all
     }, {})
