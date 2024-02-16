@@ -2613,11 +2613,11 @@ const adminResolversQuery = {
         count: users ?? 0,
         link: '/users',
       },
-      {
-        name: 'Upcoming Events',
-        count: upcomingEvents ?? 0,
-        link: '/upcomingEvents',
-      },
+      // {
+      //   name: 'Upcoming Events',
+      //   count: upcomingEvents ?? 0,
+      //   link: '/upcomingEvents',
+      // },
       {
         name: 'Upcoming Course',
         count: upcomingCourses ?? 0,
