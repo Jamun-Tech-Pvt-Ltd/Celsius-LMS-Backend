@@ -22,7 +22,7 @@ input createUpdateCourseVideoInput {
 input createCourseInput {
     crs_name: String!
     crs_desc: String!
-    crs_duration: Int!
+    crs_duration: Float!
     crs_rate: Int!
     crs_ins: String!
     crs_type: String!
@@ -36,7 +36,7 @@ input createCourseInput {
   crs_id: Int!
   crs_name: String!
   crs_desc: String!
-  crs_duration: Int!
+  crs_duration: Float!
   crs_rate: Int!
   crs_ins: String!
   crs_type: String!
