@@ -535,6 +535,7 @@ model jmkcrsmain {
   language          String
   lavel             String
   rate              Int
+  rateUs            Float?          @default(0)
   short_description String
   start_date        DateTime
   title             String          @db.VarChar(100)

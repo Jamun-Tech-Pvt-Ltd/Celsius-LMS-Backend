@@ -78,6 +78,7 @@ const jamuntekQueryTypesAndInputs = `
       language: String!
       lavel: String!
       rate: Int!
+      rateUs: Float
       start_date: String!
       short_description: String!
       timing: [String!]!

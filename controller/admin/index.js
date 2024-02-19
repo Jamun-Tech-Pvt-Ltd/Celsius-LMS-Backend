@@ -243,6 +243,7 @@ const adminQueryTypesAndInputs = `
         language: String!
         lavel: String!
         rate: Int!
+        rateUs: Float
         start_date: String!
         short_description: String!
         learning: [String!]!
@@ -406,6 +407,7 @@ const adminQueryTypesAndInputs = `
         language: String!
         lavel: String!
         rate: Int!
+        rateUs: Float
         start_date: String!
         short_description: String!
         learning: [String!]!
