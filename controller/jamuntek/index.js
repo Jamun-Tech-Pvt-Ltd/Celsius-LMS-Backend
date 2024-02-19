@@ -176,7 +176,7 @@ const jamuntekResolvers = {
 
   signupPartner: async (_, { data }) => {
     const partner = await prisma.jmkpartnerReq.findFirst({
-      where: { tr_email: data.tr_email },
+      where: { tr_email: data.pr_email },
     })
     if (partner) throw new ApolloError('Partner already exist with that email')
     const newPartner = await prisma.jmkpartnerReq.create({ data });
