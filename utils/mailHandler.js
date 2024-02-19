@@ -1,5 +1,5 @@
 import mailgun from 'mailgun-js'
-const DOMAIN = 'www.jamuntek.com'
+const DOMAIN = 'www.jaamun.com'
 const mg = mailgun({ apiKey: process.env.MAIL_GUN, domain: DOMAIN })
 
 const sendMail = async (email, subject, template) => {

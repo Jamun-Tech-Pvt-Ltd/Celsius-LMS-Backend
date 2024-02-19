@@ -389,7 +389,7 @@ const emailVerificationHTML = (token, name, endpoint) => `
 
 																		<p
 																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
-																			Welcome to Jamun Tek
+																			Welcome to Jaamun
 																		</p>
 																		
 																	</div>

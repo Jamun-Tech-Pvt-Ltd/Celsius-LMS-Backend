@@ -26,8 +26,6 @@ const jamuntekQueryTypesAndInputs = `
         cmessage: String!
     }
 
-  
-
     input businessFormInput{
         bfname: String!
         blname: String!

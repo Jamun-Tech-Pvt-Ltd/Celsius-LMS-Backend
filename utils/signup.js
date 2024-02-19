@@ -297,7 +297,7 @@ const signupHTML = (token, name) => `
 															<td class="pad" style="text-align:center;width:100%;">
 																<h1
 																	style="margin: 0; color: #101010; direction: ltr; font-family: Arial, Helvetica Neue, Helvetica, sans-serif; font-size: 27px; font-weight: normal; letter-spacing: normal; line-height: 120%; text-align: center; margin-top: 0; margin-bottom: 0;">
-																	<strong>Welcome to Jamun Tek<br /> #1 e-Learning Platform </strong>
+																	<strong>Welcome to Jaamun<br /> #1 e-Learning Platform </strong>
 																</h1>
 															</td>
 														</tr>
@@ -346,7 +346,7 @@ const signupHTML = (token, name) => `
 																		</p>
 																		<p
 																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
-																			Thank you for registering with Jamun Tek. Before you start exploring our LMS, please confirm your email address
+																			Thank you for registering with Jaamun. Before you start exploring our LMS, please confirm your email address
 																		</p>
 																		
 																	</div>
