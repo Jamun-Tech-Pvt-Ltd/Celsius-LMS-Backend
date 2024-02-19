@@ -187,7 +187,7 @@ const jamuntekResolvers = {
     const jobReq = await prisma.jmkjobReq.findFirst({
       where: { career_id: data.career_id, email: data.email },
     })
-    if (jobReq) throw new AuthenticationError('Job Request already exist with that email')
+    if (jobReq) throw new ApolloError('Job Request already exist with that email')
     if (!data.resume) throw new ApolloError('Resume is Required')
     const file = await uploadImgToAWS(data.resume, 'job_resume/')
     if (!file.data) throw new ApolloError('Something went wrong !');
