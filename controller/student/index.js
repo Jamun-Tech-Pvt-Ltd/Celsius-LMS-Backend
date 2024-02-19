@@ -212,7 +212,7 @@ const studentQueryTypesAndInputs = `
         crs_ins:String!
         crs_complete: Boolean!
         crs_complete_date:Date
-        crs_duration:Int!
+        crs_duration:Float!
         discount: Int
         amt_paid: Int
         amt_due: Int
