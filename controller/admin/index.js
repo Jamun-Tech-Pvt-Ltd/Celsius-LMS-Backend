@@ -1015,7 +1015,7 @@ const adminResolvers = {
     )
     await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
     await sendMail(
-      'riwaz@jaamun.com',
+      'info@jaamun.com',
       'New Admin Created !',
       newUserSignupNotification(newUser, course.crs_name)
     )

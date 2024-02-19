@@ -638,7 +638,7 @@ const studentResolvers = {
     )
 
     await sendMail(
-      'riwaz@jaamun.com',
+      'info@jaamun.com',
       'New User Singup Notification',
       newUserSignupNotification(newUser, course.crs_name)
     )
