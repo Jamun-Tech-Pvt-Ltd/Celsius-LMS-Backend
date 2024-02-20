@@ -935,8 +935,6 @@ const adminResolvers = {
         if (!logo.data) throw new ApolloError("Something went wrong!");
       }
 
-      console.log(logo);
-
       const blog = await prisma.jmkblog.update({
         where: {
           blog_id: blog_id,
