@@ -945,8 +945,8 @@ const adminResolvers = {
           updated_at: new Date(),
           blog_image: data.blog_image != null ? file?.data?.Location : prevBlog.blog_image,
           blog_image_key: data.blog_image != null ? file?.data?.Location : prevBlog.blog_image_key,
-          blog_logo: data.blog_image != null ? logo?.data?.Location : prevBlog.blog_logo,
-          blog_logo_key: data.blog_image != null ? logo?.data?.Location : prevBlog.blog_logo_key,
+          blog_logo: logo.blog_image != null ? logo?.data?.Location : prevBlog.blog_logo,
+          blog_logo_key: logo.blog_image != null ? logo?.data?.Location : prevBlog.blog_logo_key,
         }
       });
 
