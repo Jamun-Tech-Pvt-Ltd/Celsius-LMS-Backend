@@ -935,6 +935,8 @@ const adminResolvers = {
         if (!logo.data) throw new ApolloError("Something went wrong!");
       }
 
+      console.log(logo);
+
       const blog = await prisma.jmkblog.update({
         where: {
           blog_id: blog_id,
@@ -944,8 +946,8 @@ const adminResolvers = {
           updated_at: new Date(),
           blog_image: data?.blog_image != null ? file?.data?.Location : prevBlog.blog_image,
           blog_image_key: data?.blog_image != null ? file?.data?.key : prevBlog.blog_image_key,
-          blog_logo: logo?.blog_logo != null ? logo?.data?.Location : prevBlog.blog_logo,
-          blog_logo_key: logo?.blog_logo != null ? logo?.data?.key : prevBlog.blog_logo_key,
+          blog_logo: data?.blog_logo != null ? logo?.data?.Location : prevBlog.blog_logo,
+          blog_logo_key: data?.blog_logo != null ? logo?.data?.key : prevBlog.blog_logo_key,
         }
       });
 
