@@ -866,10 +866,12 @@ model jmkblog {
   blog_slug              String
   blog_type              String
   blog_heading           String
-  blog_short_description String
+  blog_short_description String   @db.LongText
   blog_description       String   @db.LongText
   blog_image             String?  @db.VarChar(1000)
   blog_image_key         String?  @db.VarChar(1000)
+  blog_logo              String?  @db.VarChar(1000)
+  blog_logo_key          String?  @db.VarChar(1000)
   blog_meta_title        String
   blog_meta_description  String
   blog_meta_keyword      String

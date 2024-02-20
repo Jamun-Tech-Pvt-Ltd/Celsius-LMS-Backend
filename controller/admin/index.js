@@ -362,6 +362,7 @@ const adminQueryTypesAndInputs = `
         blog_short_description: String
         blog_description: String
         blog_image: Upload
+        blog_logo: Upload
         author: String
         blog_meta_title: String
         blog_meta_description: String
@@ -381,6 +382,7 @@ const adminQueryTypesAndInputs = `
         blog_short_description: String
         blog_description: String
         blog_image: Upload
+        blog_logo: Upload
         author: String
         blog_meta_title: String
         blog_meta_description: String
@@ -919,13 +921,19 @@ const adminResolvers = {
         where: { blog_id: blog_id }
       });
 
-
       let file;
       if (data.blog_image !== null) {
         await deleteImgToAWS(prevBlog?.blog_image_key);
 
         file = await uploadImgToAWS(data.blog_image, 'blog');
         if (!file.data) throw new ApolloError("Something went wrong!");
+      }
+
+      let logo;
+      if (data.blog_logo !== null) {
+        await deleteImgToAWS(prevBlog?.blog_logo_key);
+        logo = await uploadImgToAWS(data.blog_logo, 'blog');
+        if (!logo.data) throw new ApolloError("Something went wrong!");
       }
 
       const blog = await prisma.jmkblog.update({
@@ -937,6 +945,8 @@ const adminResolvers = {
           updated_at: new Date(),
           blog_image: data.blog_image != null ? file?.data?.Location : prevBlog.blog_image,
           blog_image_key: data.blog_image != null ? file?.data?.Location : prevBlog.blog_image_key,
+          blog_logo: data.blog_image != null ? logo?.data?.Location : prevBlog.blog_logo,
+          blog_logo_key: data.blog_image != null ? logo?.data?.Location : prevBlog.blog_logo_key,
         }
       });
 
@@ -958,6 +968,12 @@ const adminResolvers = {
         if (!file.data) throw new ApolloError("Something went wrong!");
       }
 
+      let logo;
+      if (data.blog_logo !== null) {
+        logo = await uploadImgToAWS(data.blog_logo, 'blog');
+        if (!file.data) throw new ApolloError("Something went wrong!");
+      }
+
       const name = data.blog_heading;
       const formattedName = name.toLowerCase().replace(/ /g, '-');
       const blog = await prisma.jmkblog.create({
@@ -967,6 +983,8 @@ const adminResolvers = {
           created_by: userId,
           blog_image: data.blog_image != null ? file?.data?.Location : null,
           blog_image_key: data.blog_image != null ? file?.data?.Location : null,
+          blog_logo: data.blog_image != null ? logo?.data?.Location : null,
+          blog_logo_key: data.blog_image != null ? logo?.data?.Location : null,
           blog_slug: formattedName
         }
       });

@@ -106,21 +106,28 @@ input createCourseInput {
       blog_type:String
       blog_slug:String
       blog_heading:String
-      blog_image_key:String
+      blog_logo:String
       author:String
       blog_id:Int
+      created_at:Date
+      updated_at:Date
+      created_by:String
       blog_short_description:String
+      blog_meta_title:String
+      blog_meta_description:String
+      blog_meta_keyword:String
   }
 
   type JmkBlog{
       blog_type:String
       blog_heading:String
-      blog_image_key:String
+      blog_logo:String
       author:String
       blog_id:Int
       blog_short_description:String
       blog_description:String
       blog_image:String
+      blog_meta_title:String
       blog_meta_description:String
       blog_meta_keyword:String
       created_at:Date
