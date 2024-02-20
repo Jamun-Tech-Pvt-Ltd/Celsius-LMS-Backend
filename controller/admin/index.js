@@ -944,9 +944,9 @@ const adminResolvers = {
           ...updatedData,
           updated_at: new Date(),
           blog_image: data.blog_image != null ? file?.data?.Location : prevBlog.blog_image,
-          blog_image_key: data.blog_image != null ? file?.data?.Location : prevBlog.blog_image_key,
-          blog_logo: logo.blog_image != null ? logo?.data?.Location : prevBlog.blog_logo,
-          blog_logo_key: logo.blog_image != null ? logo?.data?.Location : prevBlog.blog_logo_key,
+          blog_image_key: data.blog_image != null ? file?.data?.key : prevBlog.blog_image_key,
+          blog_logo: logo.blog_logo != null ? logo?.data?.Location : prevBlog.blog_logo,
+          blog_logo_key: logo.blog_logo != null ? logo?.data?.key : prevBlog.blog_logo_key,
         }
       });
 
@@ -982,9 +982,9 @@ const adminResolvers = {
           updated_at: new Date(),
           created_by: userId,
           blog_image: data.blog_image != null ? file?.data?.Location : null,
-          blog_image_key: data.blog_image != null ? file?.data?.Location : null,
+          blog_image_key: data.blog_image != null ? file?.data?.key : null,
           blog_logo: data.blog_image != null ? logo?.data?.Location : null,
-          blog_logo_key: data.blog_image != null ? logo?.data?.Location : null,
+          blog_logo_key: data.blog_image != null ? logo?.data?.key : null,
           blog_slug: formattedName
         }
       });
