@@ -929,7 +929,7 @@ const adminResolvers = {
       }
 
       let logo;
-      if (data.blog_logo !== null) {
+      if (data?.blog_logo !== null) {
         await deleteImgToAWS(prevBlog?.blog_logo_key);
         logo = await uploadImgToAWS(data.blog_logo, 'blog');
         if (!logo.data) throw new ApolloError("Something went wrong!");
