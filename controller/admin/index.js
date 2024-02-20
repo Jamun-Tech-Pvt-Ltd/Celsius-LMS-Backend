@@ -2776,28 +2776,30 @@ const adminResolversQuery = {
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
     const paymentInfos = []
-    const paymentsInfo = await prisma.jmktstdpayinfo.findMany({})
+    const paymentsInfo = await prisma.jmkstdcrsinfo.findMany({})
 
     for (let i = 0; i < paymentsInfo.length; i++) {
-      const course = await prisma.jmkcrsinfo.findUnique({
-        where: {
-          crs_id: paymentsInfo[i]?.crs_id,
-        },
-      })
-      const student = await prisma.jmkstdinfo.findUnique({
-        where: {
-          std_id: paymentsInfo[i]?.std_id,
-        },
-      })
-      paymentInfos.push({
-        pay_id: paymentsInfo[i].pay_id,
-        payment_date: paymentsInfo[i].payment_date,
-        pay_amount: paymentsInfo[i].pay_amount,
-        std_email: student?.std_email,
-        transaction_id: paymentsInfo[i].transaction_id,
-        crs_name: course?.crs_name,
-        pay_verified: paymentsInfo[i].pay_verified,
-      })
+      if (paymentsInfo[i]?.crsmain_id && paymentsInfo[i].amt_paid) {
+        const course = await prisma.jmkcrsmain.findUnique({
+          where: {
+            crsmain_id: paymentsInfo[i]?.crsmain_id,
+          },
+        })
+        const student = await prisma.jmkstdinfo.findFirst({
+          where: {
+            std_id: paymentsInfo[i]?.std_id,
+          },
+        })
+        paymentInfos.push({
+          pay_id: paymentsInfo[i].serial,
+          payment_date: paymentsInfo[i].createdAt,
+          pay_amount: paymentsInfo[i].amt_paid ?? 0,
+          std_email: student?.std_email,
+          transaction_id: paymentsInfo[i].ref_id ?? 'empty',
+          crs_name: course?.title,
+          pay_verified: paymentsInfo[i].std_crs_verirfy,
+        })
+      }
     }
     return paymentInfos
   },
