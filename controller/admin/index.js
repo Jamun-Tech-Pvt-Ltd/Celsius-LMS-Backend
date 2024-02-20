@@ -924,7 +924,6 @@ const adminResolvers = {
       let file;
       if (data.blog_image !== null) {
         await deleteImgToAWS(prevBlog?.blog_image_key);
-
         file = await uploadImgToAWS(data.blog_image, 'blog');
         if (!file.data) throw new ApolloError("Something went wrong!");
       }
@@ -943,10 +942,10 @@ const adminResolvers = {
         data: {
           ...updatedData,
           updated_at: new Date(),
-          blog_image: data.blog_image != null ? file?.data?.Location : prevBlog.blog_image,
-          blog_image_key: data.blog_image != null ? file?.data?.key : prevBlog.blog_image_key,
-          blog_logo: logo.blog_logo != null ? logo?.data?.Location : prevBlog.blog_logo,
-          blog_logo_key: logo.blog_logo != null ? logo?.data?.key : prevBlog.blog_logo_key,
+          blog_image: data?.blog_image != null ? file?.data?.Location : prevBlog.blog_image,
+          blog_image_key: data?.blog_image != null ? file?.data?.key : prevBlog.blog_image_key,
+          blog_logo: logo?.blog_logo != null ? logo?.data?.Location : prevBlog.blog_logo,
+          blog_logo_key: logo?.blog_logo != null ? logo?.data?.key : prevBlog.blog_logo_key,
         }
       });
 
