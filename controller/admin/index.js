@@ -269,6 +269,7 @@ const adminQueryTypesAndInputs = `
       usr_lname:String
       usr_img_url:String
       usr_img_key:String
+      usr_access:String
      }
 
      type eventsInfo{
@@ -326,6 +327,7 @@ const adminQueryTypesAndInputs = `
       usr_lname:String
       usr_img_url:String
       usr_password:String
+      usr_access:String
      }
      type PaymentInfo{
       pay_id: Int!
@@ -480,6 +482,7 @@ const adminQueryTypesAndInputs = `
       usr_fname:String
       usr_mname:String
       usr_lname:String
+      usr_access:String
       usr_img_url:Upload
      }
 
@@ -1568,7 +1571,7 @@ const adminResolvers = {
     if (!selectedUser) throw new ApolloError('invalid user')
 
     let file
-    if (data.usr_img_url !== null) {
+    if (data.usr_img_url !== null && data.usr_img_url) {
       await deleteImgToAWS(selectedUser?.usr_img_key)
 
       file = await uploadImgToAWS(data.usr_img_url, 'admin_users_profilePic/')
