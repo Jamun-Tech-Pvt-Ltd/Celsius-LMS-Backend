@@ -1065,7 +1065,7 @@ const adminResolvers = {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_id: userId, usr_role: role },
+        where: { usr_id: userId },
       })
       if (!admin) throw new AuthenticationError('invalid admin')
 
@@ -1105,7 +1105,7 @@ const adminResolvers = {
 
     if (role == 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_id: userId, usr_role: role },
+        where: { usr_id: userId },
       })
       if (!admin) {
         throw new AuthenticationError('invalid admin')
@@ -1502,7 +1502,7 @@ const adminResolvers = {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_id: userId, usr_role: role },
+        where: { usr_id: userId },
       })
       if (!admin) throw new AuthenticationError('invalid admin')
 
@@ -2411,7 +2411,7 @@ const adminResolversQuery = {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_id: userId, usr_role: role },
+        where: { usr_id: userId },
       })
       if (!admin) throw new AuthenticationError('invalid admin credentials')
 
@@ -2521,7 +2521,7 @@ const adminResolversQuery = {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_id: userId, usr_role: role },
+        where: { usr_id: userId },
       })
       if (!admin) throw new AuthenticationError('invalid admin credentials')
       const course = await prisma.jmkstdcrsinfo.findFirst({
