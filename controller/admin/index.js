@@ -2546,7 +2546,7 @@ const adminResolversQuery = {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_id: userId, usr_role: role },
+        where: { usr_id: userId },
       })
       if (!admin) throw new AuthenticationError('invalid admin credentials')
 
