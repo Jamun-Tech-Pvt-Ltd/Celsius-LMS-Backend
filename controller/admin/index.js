@@ -1006,7 +1006,7 @@ const adminResolvers = {
     const isMatch = data.usr_password == admin.usr_password
     if (!isMatch) throw new AuthenticationError('invalid user credentials')
     const token = jwt.sign(
-      { userId: admin.usr_id, role: admin.usr_role },
+      { userId: admin.usr_id, role: 'admin' },
       process.env.JWT_SECRET_KEY
     )
     return { token }
@@ -1029,7 +1029,7 @@ const adminResolvers = {
       data: { ...data },
     })
     const token = jwt.sign(
-      { userId: newAdmin.usr_id, role: data.usr_role },
+      { userId: newAdmin.usr_id, role: 'admin' },
       process.env.JWT_SECRET_KEY,
       { expiresIn: '1d' }
     )
