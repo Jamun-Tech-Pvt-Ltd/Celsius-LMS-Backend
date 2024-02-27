@@ -264,7 +264,6 @@ const jamuntekResolversQuery = {
     return ({ ...staticCourse, learning, curriculum, timing })
   },
 
-
   getPopularAndUpcomingCourse: async (_, { args }, { userId, role }) => {
     const staticCourse = await prisma.jmkcrsmain.findMany({ where: { isDeleted: false } })
     if (!staticCourse) throw new ApolloError('No data found');
