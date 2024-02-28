@@ -1271,7 +1271,7 @@ const developerMutationResolver = {
     const { techstk_id, ...udpatedData } = data
     if (!userId) throw new ForbiddenError('invalid token')
     // const admin = await prisma.jmkuserinfo.findFirst({
-    //     where: { usr_id: userId, usr_role: role },
+    //     where: { usr_id: userId},
     // })
     // if (!admin) throw new AuthenticationError('invalid admin')
 
@@ -1299,7 +1299,7 @@ const developerMutationResolver = {
   addTechStack: async (_, { data }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId, usr_role: role },
+      where: { usr_id: userId},
     })
     if (!admin) throw new AuthenticationError('invalid admin')
     const existingTechStack = await prisma.jmktechstk.findFirst({

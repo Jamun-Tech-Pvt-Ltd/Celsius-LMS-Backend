@@ -110,6 +110,7 @@ const jamuntekQuery = `
    getAllCareerPage: [CareerPage!]!
    getCategoryAndCourse: [CategoryAndCourse]
    getDynamicCourseById(crsmain_id:Int!): staticCourse!
+   getDynamicCourseBySlug(slug:String!): staticCourse!
    getPopularAndUpcomingCourse: PopularAndUpcoming!
    getAutoComplete:[staticCourse]!
 
@@ -239,6 +240,20 @@ const jamuntekResolversQuery = {
     if (!crsmain_id) throw new ApolloError('Data Not Found');
     const staticCourse = await prisma.jmkcrsmain.findFirst({
       where: { crsmain_id, isDeleted: false },
+    })
+    if (!staticCourse) throw new ApolloError('No data found')
+    const curriculum = await prisma.jmkcrsdet.findMany({ where: { crsmain_id: staticCourse.crsmain_id }, select: { topic: true, description: true } });
+    let learning = await prisma.jmkcrsLearing.findMany({ where: { crsmain_id: staticCourse.crsmain_id } });
+    learning = learning.map(i => i.title)
+    let timing = await prisma.jmkcrsTiming.findMany({ where: { crsmain_id: staticCourse.crsmain_id } });
+    timing = timing.map(i => i.time)
+    return ({ ...staticCourse, learning, curriculum, timing })
+  },
+
+  getDynamicCourseBySlug: async (_, { slug }, { userId, role }) => {
+    if (!slug) throw new ApolloError('Slug is required');
+    const staticCourse = await prisma.jmkcrsmain.findFirst({
+      where: { title: slug, isDeleted: false },
     })
     if (!staticCourse) throw new ApolloError('No data found')
     const curriculum = await prisma.jmkcrsdet.findMany({ where: { crsmain_id: staticCourse.crsmain_id }, select: { topic: true, description: true } });

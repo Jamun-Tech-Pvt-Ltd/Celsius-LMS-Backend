@@ -405,6 +405,7 @@ model jmkuserinfo {
   usr_lname    String?   @db.VarChar(20)
   usr_img_url  String?   @db.VarChar(100)
   usr_img_key  String?   @db.VarChar(100)
+  usr_access   String?   @db.LongText
   created_at   DateTime? @default(now())
 }
 
