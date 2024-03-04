@@ -1,4 +1,6 @@
-const newUserSignupNotification = (user, courseName) => `
+//TODO: CHANGE THE LOCALHOST TO THE PROD URL IN THE VERIFY MAIL SECTION
+
+const emailVerificationHTML = (token, name, endpoint) => `
 <!DOCTYPE html>
 
 <html lang="en" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
@@ -297,7 +299,7 @@ const newUserSignupNotification = (user, courseName) => `
 															<td class="pad" style="text-align:center;width:100%;">
 																<h1
 																	style="margin: 0; color: #101010; direction: ltr; font-family: Arial, Helvetica Neue, Helvetica, sans-serif; font-size: 27px; font-weight: normal; letter-spacing: normal; line-height: 120%; text-align: center; margin-top: 0; margin-bottom: 0;">
-																	<strong>New user just signup  </strong>
+																	<strong>Jamun Tech </strong>
 																</h1>
 															</td>
 														</tr>
@@ -340,13 +342,15 @@ const newUserSignupNotification = (user, courseName) => `
 																<div style="font-family: sans-serif">
 																	<div class=""
 																		style="font-size: 12px; mso-line-height-alt: 21.6px; color: #848484; line-height: 1.8; font-family: Arial, Helvetica Neue, Helvetica, sans-serif;">
-																		<div
-																			style="margin-left: 0px; font-size: 16px; text-align: center; mso-line-height-alt: 25.2px;">
-																			<p>Username: ${user.std_fname} ${user.std_mname ?? ''} ${user.std_lname}</p>
-																			<p>Email: ${user.std_email}</p>
-																			<p>Phone: ${user.std_mobile}</p>
-																			<p>Course: ${courseName}</p>
-																		</div>
+																		<p
+																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
+																			Hi, ${name}
+																		</p>
+																		<p
+																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
+																			We're happy you signed up for Jamun. To start exploring the Dashboard. please comfirm the email address
+																		</p>
+																		
 																	</div>
 																</div>
 															</td>
@@ -354,6 +358,45 @@ const newUserSignupNotification = (user, courseName) => `
 													</table>
 													<div class="spacer_block block-2"
 														style="height:10px;line-height:10px;font-size:1px;"> </div>
+													<table border="0" cellpadding="10" cellspacing="0"
+														class="button_block block-3" role="presentation"
+														style="mso-table-lspace: 0pt; mso-table-rspace: 0pt;"
+														width="100%">
+														<tr>
+															<td class="pad">
+																<div align="center" class="alignment">
+																	<!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://student.jaamun.com/" style="height:44px;width:221px;v-text-anchor:middle;" arcsize="10%" strokeweight="0.75pt" strokecolor="#101" fillcolor="#101"><w:anchorlock/><v:textbox inset="0px,0px,0px,0px"><center style="color:#ffffff; font-family:Arial, sans-serif; font-size:16px"><![endif]--><a
+																	href="http://jaamun.com/${endpoint}?token=${token}"
+																		style="text-decoration:none;display:inline-block;color:#ffffff;background-color:#101;border-radius:4px;width:auto;border-top:1px solid #101;font-weight:undefined;border-right:1px solid #101;border-bottom:1px solid #101;border-left:1px solid #101;padding-top:5px;padding-bottom:5px;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:16px;text-align:center;mso-border-alt:none;word-break:keep-all;"
+																		target="_blank"><span
+																			style="padding-left:20px;padding-right:20px;font-size:16px;display:inline-block;letter-spacing:normal;"><span
+																				dir="ltr"
+																				style="word-break: break-word; line-height: 32px;">Verify Mail</span></span></a><!--[if mso]></center></v:textbox></v:roundrect><![endif]-->
+																</div>
+															</td>
+														</tr>
+													</table>
+													<table border="0" cellpadding="0" cellspacing="0"
+														class="text_block block-1" role="presentation"
+														style="mso-table-lspace: 0pt; mso-table-rspace: 0pt; word-break: break-word;"
+														width="100%">
+														<tr>
+															<td class="pad"
+																style="padding-bottom:10px;padding-left:20px;padding-right:10px;padding-top:10px;">
+																<div style="font-family: sans-serif">
+																	<div class=""
+																		style="font-size: 12px; mso-line-height-alt: 21.6px; color: #848484; line-height: 1.8; font-family: Arial, Helvetica Neue, Helvetica, sans-serif;">
+
+																		<p
+																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
+																			Welcome to Jaamun
+																		</p>
+																		
+																	</div>
+																</div>
+															</td>
+														</tr>
+													</table>
 													<div class="spacer_block block-4"
 														style="height:20px;line-height:20px;font-size:1px;"> </div>
 												</td>
@@ -455,7 +498,7 @@ const newUserSignupNotification = (user, courseName) => `
 																						title="twitter"
 																						width="32" /></a></td>
 																			<td style="padding:0 2px 0 2px;"><a
-																					href="https://www.linkedin.com/company/jaamunelearning"
+																					href="https://www.linkedin.com/company/jaamunelearning/"
 																					target="_blank"><img alt="Linkedin"
 																						height="32"
 																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/linkedin2x.png"
@@ -577,4 +620,6 @@ const newUserSignupNotification = (user, courseName) => `
 
 `
 
-export default newUserSignupNotification
+
+
+export default emailVerificationHTML

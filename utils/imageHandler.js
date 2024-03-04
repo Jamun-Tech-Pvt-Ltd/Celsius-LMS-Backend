@@ -35,8 +35,7 @@ const uploadImgToAWS = async (file, folder) => {
   const data = await new Promise((resolve) => {
     s3Uploader.s3.upload(upload, (err, data) => {
       if (err) {
-        console.log('There was an error uploading your photo: ', err);
-        throw new Error('There was an error uploading your photo: ', err);
+        throw new Error('There was an error uploading your file: ', err);
       } else {
         resolve(data);
       }
@@ -53,8 +52,7 @@ const deleteImgToAWS = async (key) => {
   await new Promise((resolve) => {
     s3Uploader.s3.deleteObject(upload, (err, data) => {
       if (err) {
-        console.log('There was an error delete your photo: ', err);
-        // throw new Error('There was an error delete your photo: ', err);
+        console.log('There was an error delete your file: ', err);
         resolve(null);
       } else {
         resolve(data);

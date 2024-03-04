@@ -1,5 +1,6 @@
 import { AuthenticationError } from 'apollo-server-express'
 import prisma from '../../database.js'
+import { response } from 'express'
 
 const courseQueryTypesAndInputs = `
     type Course{
@@ -10,15 +11,37 @@ const courseQueryTypesAndInputs = `
         crsmain_duration: Int!
         crsmain_rate: Int!
         crsmain_img_url: String!     
-        crsmain_type:String! 
+        crsmain_type:String!
+        cramain_seo_title:String
+        cramain_seo_desc:String
+    }
+    type UpcommingCourse{
+      start_date:Date
+      crsmain_id:Int!
+      crsmain_title:String!
+      crsmain_desc:String!
+      crsmain_overview:String!
+      crsmain_duration: Int!
+      crsmain_rate: Int!
+      crsmain_img_url: String!     
+      crsmain_type:String! 
+    }
+
+    type StuentCourse{
+      crs_id:Int!
+      crs_name:String!
     }
 
     type CourseContent{
         crsdet_id: Int!
         crsdet_title: String!
         crsmain_id:Int!
+        crsdet_sub_title:String
     }
-
+    type CourseType {
+      crs_type:String
+    }
+   
     input addCourseInput {
         crsmain_title:String!
         crsmain_desc:String!
@@ -27,34 +50,108 @@ const courseQueryTypesAndInputs = `
         crsmain_rate: Int!
         crsmain_img_url: String! 
         crsmain_type:String!
-}
+        cramain_seo_title:String
+        cramain_seo_desc:String
+    }
 
-input CourseContentInput {
-    crsdet_title: String!
-    crsmain_id:Int!
-} 
+    input CourseContentInput {
+        crsdet_title: String!
+        crsmain_id:Int!
+        crsdet_sub_title:String
+    } 
 `
 
 const courseQuery = `
   getMainCourses: [Course]
-  getMainCourseById(crsmain_id: Int!): Course
-
+  getMainCourseById(crsmain_title: String!): Course
   getAllCourseContentByCourseId(crsmain_id:Int!):[CourseContent]
-
+  getAllCourseType:[CourseType]
+  getCourseTitleByType(crsmain_type:String!):[Course]
+  getAllUpcommingCourse:[UpcommingCourse]
+  getStudentCourse:[StuentCourse]  
 `
 
 const courseMutation = `
     addMainCourse(data:addCourseInput!):Course
     updateMainCourse(crsmain_id:Int!,data:addCourseInput!):Course
     deleteMainCourse(crsmain_id:Int!):Boolean
-
     addDetails(data:CourseContentInput):CourseContent
     updateDetails(crsdet_id:Int!,data:CourseContentInput):CourseContent
     deleteDetails(crsdet_id:Int!):Boolean
 `
 
 const courseQueryResolver = {
+  getMainCourses: async () => {
+    const courses = await prisma.jmkcrsmain.findMany()
+    if (!courses) throw new AuthenticationError('No course listed')
+    return courses
+  },
+  getMainCourseById: async (_, { crsmain_title }) => {
+    const course = await prisma.jmkcrsmain.findFirst({
+      where: { crsmain_title },
+    })
+    if (!course) throw new AuthenticationError('No such course')
+    return course
+  },
+  getStudentCourse: async (_, { }) => {
+    const studentCourse = await prisma.jmkcrsinfo.findMany({
+      where: {
+        cid: null,
+      },
+      select: {
+        crs_id: true,
+        crs_name: true,
+      },
+    })
+    if (!studentCourse) throw new AuthenticationError('No such course')
+    return studentCourse
+  },
+  getAllCourseContentByCourseId: async (_, { crsmain_id }) => {
+    const content = await prisma.jmkcrsdet.findMany({
+      where: { crsmain_id },
+    })
+    if (!content) throw new AuthenticationError('No content available')
+    return content
+  },
+  getAllCourseType: async () => {
+    const result = await prisma.jmkcrsmain.findMany({
+      select: { crsmain_type: true },
+    })
+    const ctype = []
+    result.map((c_type) => {
+      if (!ctype.includes(c_type.crsmain_type)) {
+        ctype.push(c_type.crsmain_type)
+      }
+    })
 
+    const services = ctype.map((c) => {
+      return { crs_type: c }
+    })
+    if (!services) throw new AuthenticationError('No content avaliable')
+    return services
+  },
+  getCourseTitleByType: async (_, { crsmain_type }) => {
+    const result = await prisma.jmkcrsmain.findMany({
+      where: { crsmain_type },
+    })
+    if (!result) throw new AuthenticationError('No content avaliable')
+    return result
+  },
+  getAllUpcommingCourse: async () => {
+    const results = await prisma.jmkcrsupcom.findMany({
+      select: { start_date: true, crsmain_id: true },
+    })
+    const upcomingCourses = []
+    for (let i = 0; i < results.length; i++) {
+      let response = await prisma.jmkcrsmain.findUnique({
+        where: { crsmain_id: results[i].crsmain_id },
+      })
+      response.start_date = results[i].start_date
+      upcomingCourses.push(response)
+    }
+    if (!upcomingCourses) throw new AuthenticationError('No contetn available')
+    return upcomingCourses
+  },
 }
 
 const courseMutationResolver = {

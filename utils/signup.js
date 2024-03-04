@@ -1,4 +1,4 @@
-const signupHTML = `
+const signupHTML = (token, name) => `
 <!DOCTYPE html>
 
 <html lang="en" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
@@ -297,7 +297,7 @@ const signupHTML = `
 															<td class="pad" style="text-align:center;width:100%;">
 																<h1
 																	style="margin: 0; color: #101010; direction: ltr; font-family: Arial, Helvetica Neue, Helvetica, sans-serif; font-size: 27px; font-weight: normal; letter-spacing: normal; line-height: 120%; text-align: center; margin-top: 0; margin-bottom: 0;">
-																	<strong>You Have Successfully Register </strong>
+																	<strong>Welcome to Jaamun<br /> #1 e-Learning Platform </strong>
 																</h1>
 															</td>
 														</tr>
@@ -342,11 +342,13 @@ const signupHTML = `
 																		style="font-size: 12px; mso-line-height-alt: 21.6px; color: #848484; line-height: 1.8; font-family: Arial, Helvetica Neue, Helvetica, sans-serif;">
 																		<p
 																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
-																			<span
-																				style="font-size:14px;">Congratulations</span>
-																			on creating your account with us! You're now
-																			part of a community.
+																			Hi, ${name}
 																		</p>
+																		<p
+																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
+																			Thank you for registering with Jaamun. Before you start exploring our LMS, please confirm your email address
+																		</p>
+																		
 																	</div>
 																</div>
 															</td>
@@ -361,15 +363,33 @@ const signupHTML = `
 														<tr>
 															<td class="pad">
 																<div align="center" class="alignment">
-																	<!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://student.jamuntek.com/" style="height:44px;width:221px;v-text-anchor:middle;" arcsize="10%" strokeweight="0.75pt" strokecolor="#101" fillcolor="#101"><w:anchorlock/><v:textbox inset="0px,0px,0px,0px"><center style="color:#ffffff; font-family:Arial, sans-serif; font-size:16px"><![endif]--><a
-																		href="https://student.jamuntek.com/"
+																	<!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://student.jaamun.com/" style="height:44px;width:221px;v-text-anchor:middle;" arcsize="10%" strokeweight="0.75pt" strokecolor="#101" fillcolor="#101"><w:anchorlock/><v:textbox inset="0px,0px,0px,0px"><center style="color:#ffffff; font-family:Arial, sans-serif; font-size:16px"><![endif]--><a
+																	href="${process.env.CLIENT_URL}welcomeVerification?token=${token}"
 																		style="text-decoration:none;display:inline-block;color:#ffffff;background-color:#101;border-radius:4px;width:auto;border-top:1px solid #101;font-weight:undefined;border-right:1px solid #101;border-bottom:1px solid #101;border-left:1px solid #101;padding-top:5px;padding-bottom:5px;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:16px;text-align:center;mso-border-alt:none;word-break:keep-all;"
 																		target="_blank"><span
 																			style="padding-left:20px;padding-right:20px;font-size:16px;display:inline-block;letter-spacing:normal;"><span
 																				dir="ltr"
-																				style="word-break: break-word; line-height: 32px;">Goto
-																				Student
-																				Dashboard</span></span></a><!--[if mso]></center></v:textbox></v:roundrect><![endif]-->
+																				style="word-break: break-word; line-height: 32px;">Verify Email</span></span></a><!--[if mso]></center></v:textbox></v:roundrect><![endif]-->
+																</div>
+															</td>
+														</tr>
+													</table>
+													<table border="0" cellpadding="0" cellspacing="0"
+														class="text_block block-1" role="presentation"
+														style="mso-table-lspace: 0pt; mso-table-rspace: 0pt; word-break: break-word;"
+														width="100%">
+														<tr>
+															<td class="pad"
+																style="padding-bottom:10px;padding-left:20px;padding-right:10px;padding-top:10px;">
+																<div style="font-family: sans-serif">
+																	<div class=""
+																		style="font-size: 12px; mso-line-height-alt: 21.6px; color: #848484; line-height: 1.8; font-family: Arial, Helvetica Neue, Helvetica, sans-serif;">
+
+																		<p
+																			style="margin: 0; font-size: 12px; text-align: center; mso-line-height-alt: 25.2px;">
+																		</p>
+																		
+																	</div>
 																</div>
 															</td>
 														</tr>
@@ -459,7 +479,7 @@ const signupHTML = `
 																		width="144px">
 																		<tr>
 																			<td style="padding:0 2px 0 2px;"><a
-																					href="https://www.facebook.com/jamuntech"
+																					href="https://www.facebook.com/jaamunelearning"
 																					target="_blank"><img alt="Facebook"
 																						height="32"
 																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/facebook2x.png"
@@ -467,15 +487,15 @@ const signupHTML = `
 																						title="facebook"
 																						width="32" /></a></td>
 																			<td style="padding:0 2px 0 2px;"><a
-																					href="https://twitter.com/JamunTech"
-																					target="_blank"><img alt="Twitter"
+																					href="https://www.youtube.com/@jaamunelearning"
+																					target="_blank"><img alt="Youtube"
 																						height="32"
-																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/twitter2x.png"
+																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/e8c9828387de2a83e5469a95bc6d8574.png"
 																						style="display: block; height: auto; border: 0;"
 																						title="twitter"
 																						width="32" /></a></td>
 																			<td style="padding:0 2px 0 2px;"><a
-																					href="https://twitter.com/JamunTech"
+																					href="https://www.linkedin.com/company/jaamunelearning"
 																					target="_blank"><img alt="Linkedin"
 																						height="32"
 																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/linkedin2x.png"
@@ -483,7 +503,7 @@ const signupHTML = `
 																						title="linkedin"
 																						width="32" /></a></td>
 																			<td style="padding:0 2px 0 2px;"><a
-																					href="https://www.tiktok.com/@user1383810681492"
+																					href="https://www.tiktok.com/@jaamunelearning"
 																					target="_blank"><img alt="TikTok"
 																						height="32"
 																						src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/images/tiktok2x.png"
@@ -526,13 +546,13 @@ const signupHTML = `
 																			</div>
 																			<div class="menu-links">
 																				<!--[if mso]><table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style=""><tr style="text-align:center;"><![endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><![endif]--><a
-																					href="https://www.jamuntek.com/contact"
+																					href="https://www.jaamun.com/#contact"
 																					style="mso-hide:false;padding-top:5px;padding-bottom:5px;padding-left:15px;padding-right:15px;display:inline-block;color:#101010;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:14px;text-decoration:none;letter-spacing:normal;"
 																					target="_self">Help</a><!--[if mso]></td><![endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><![endif]--><a
-																					href="https://student.jamuntek.com/"
+																					href="https://student.jaamun.com/"
 																					style="mso-hide:false;padding-top:5px;padding-bottom:5px;padding-left:15px;padding-right:15px;display:inline-block;color:#101010;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:14px;text-decoration:none;letter-spacing:normal;"
 																					target="_self">Login</a><!--[if mso]></td><![endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><![endif]--><a
-																					href="https://www.jamuntek.com/about"
+																					href="https://www.jaamun.com/about"
 																					style="mso-hide:false;padding-top:5px;padding-bottom:5px;padding-left:15px;padding-right:15px;display:inline-block;color:#101010;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:14px;text-decoration:none;letter-spacing:normal;"
 																					target="_self">About</a><!--[if mso]></td><![endif]--><!--[if mso]></tr></table><![endif]-->
 																			</div>
@@ -596,6 +616,5 @@ const signupHTML = `
 </html>
 
 `
-
 
 export default signupHTML
