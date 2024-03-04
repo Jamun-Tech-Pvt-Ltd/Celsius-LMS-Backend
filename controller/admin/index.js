@@ -551,6 +551,8 @@ const adminQueryTypesAndInputs = `
       serial:Int
       title:String!
       description:String!
+      seo_title:String
+      seo_description:String
       department:String!
       employment_type:String!
       employment_structure:String!
@@ -577,6 +579,8 @@ const adminQueryTypesAndInputs = `
       serial:Int
       title: String!
       description: String!
+      seo_title: String!
+      seo_description: String!
       long_description: String!
       short_description: String!
       icon: Upload
@@ -620,6 +624,8 @@ const adminQueryTypesAndInputs = `
       department:String!
       employment_type:String!
       employment_structure:String!
+      seo_title:String
+      seo_description:String
       location:String!
       created_at:Date!
       status:Boolean!
@@ -661,6 +667,8 @@ const adminQueryTypesAndInputs = `
       serial:Int!
       title:String!
       description:String!
+      seo_title:String
+      seo_description:String
       long_description:String!
       short_description:String!
       icon:String!
@@ -2072,7 +2080,7 @@ const adminResolvers = {
         data.icon = service.icon;
         data.icon_key = service.icon_key;
       }
-      const updateService = await prisma.jmk_services.update({ where: { serial: data.serial }, data });
+    const updateService = await prisma.jmk_services.update({ where: { serial: data.serial }, data });
       if (!updateService) throw new ApolloError('invalid id')
     }
     return "success"
@@ -3107,11 +3115,11 @@ const adminResolversQuery = {
   },
 
   getService: async (_, { serial }, { userId, role }) => {
-    // if (!userId) throw new ForbiddenError('invalid token');
-    // const admin = await prisma.jmkuserinfo.findFirst({
-    //   where: { usr_id: userId},
-    // });
-    // if (!admin) throw new AuthenticationError('invalid admin credentials');
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId},
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
     const service = await prisma.jmk_services.findFirst({ where: { serial } });
     if (!service) throw new ApolloError('Data Not Found')
     return service

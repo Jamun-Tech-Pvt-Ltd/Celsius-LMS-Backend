@@ -999,6 +999,8 @@ model jmk_web_career {
   location             String
   created_at           DateTime    @default(now())
   status               Boolean
+  seo_title            String?
+  seo_description      String?
   jmkjobReq            jmkjobReq[]
 }
 
@@ -1017,6 +1019,8 @@ model jmk_services {
   description       String   @db.LongText
   long_description  String   @db.LongText
   short_description String   @db.LongText
+  seo_title         String?
+  seo_description   String?
   icon              String
   icon_key          String
   created_at        DateTime @default(now())

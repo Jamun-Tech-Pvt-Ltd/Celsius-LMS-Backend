@@ -91,6 +91,8 @@ const jamuntekQueryTypesAndInputs = `
       department:String!
       employment_type:String!
       employment_structure:String!
+      seo_title:String
+      seo_description:String
       location:String!
      }
 
@@ -113,6 +115,7 @@ const jamuntekQuery = `
    getDynamicCourseBySlug(slug:String!): staticCourse!
    getPopularAndUpcomingCourse: PopularAndUpcoming!
    getAutoComplete:[staticCourse]!
+   getServicByTitle(title:String!):Service
 
 `
 
@@ -283,7 +286,13 @@ const jamuntekResolversQuery = {
       popularCourse.push({ ...popularCourseRendom[index], timing })
     }
     return ({ popularCourse, upcomingCourse })
-  }
+  },
+
+  getServicByTitle: async (_, { title }, { userId, role }) => {
+    const service = await prisma.jmk_services.findFirst({ where: { title } });
+    if (!service) throw new ApolloError('Data Not Found')
+    return service
+  },
 }
 
 export {
