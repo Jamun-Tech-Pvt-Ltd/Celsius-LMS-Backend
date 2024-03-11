@@ -22,14 +22,6 @@ jobs:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
         ssh-passphrase: ${{ secrets.SSH_PASSPHRASE }}
 
-    - name: Deploy to Server
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          cd /Backend-server
-          git pull origin dev
-          npm install
-          pm2 restart 0
+name: Deploy to Server
+      run: |
+        ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ec2-user@${{ secrets.SERVER_HOST }} "cd /Backend-server && git pull origin dev && npm install && pm2 restart 0"
