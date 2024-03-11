@@ -23,10 +23,6 @@ jobs:
         ssh-passphrase: ${{ secrets.SSH_PASSPHRASE }}
       env:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-      run: |
-        eval "$(ssh-agent -s)"
-        ssh-add -L
-        ssh-add -l
               
     - name: Deploy to Server
       run: |
