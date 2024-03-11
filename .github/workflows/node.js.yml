@@ -21,7 +21,13 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
         ssh-passphrase: ${{ secrets.SSH_PASSPHRASE }}
-
-name: Deploy to Server
+      env:
+        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       run: |
-        ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ec2-user@${{ secrets.SERVER_HOST }} "cd /Backend-server && git pull origin dev && npm install && pm2 restart 0"
+        eval "$(ssh-agent -s)"
+        ssh-add -L
+        ssh-add -l
+              
+    - name: Deploy to Server
+          run: |
+            ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ec2-user@${{ secrets.SERVER_HOST }} "cd /path/to/your/app && git pull origin dev && npm install && pm2 restart 0"
