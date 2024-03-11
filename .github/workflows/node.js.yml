@@ -16,6 +16,12 @@ jobs:
     - name: Install Dependencies
       run: npm install
 
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        ssh-passphrase: ${{ secrets.SSH_PASSPHRASE }}
+
     - name: Deploy to Server
       uses: appleboy/ssh-action@master
       with:
