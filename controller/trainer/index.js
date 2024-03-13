@@ -107,6 +107,7 @@ const trainerQueryTypesAndInputs = `
       ans2: String
       ans3: String
       ans4: String
+      hint: String
       rtans: String
      }
       
