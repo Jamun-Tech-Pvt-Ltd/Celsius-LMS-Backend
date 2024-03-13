@@ -239,6 +239,9 @@ const trainerQueryTypesAndInputs = `
       type:String!
       video_url:String
       project_url:String
+      level:String
+      duration:String
+      share_date:String
       date:Date
     }
 
@@ -257,6 +260,7 @@ const trainerQueryTypesAndInputs = `
       ans2: String!
       ans3: String!
       ans4: String!
+      hint: String
       rtans: String!
      }
 
