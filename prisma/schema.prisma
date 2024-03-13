@@ -46,6 +46,9 @@ model jmk_week_content {
   week_id       Int
   video_url     String?          @db.VarChar(1000)
   project_url   String?          @db.VarChar(1000)
+  duration      String?          @db.VarChar(100)
+  label         String?          @db.VarChar(100)
+  share_date    String?          @db.VarChar(100)
   date          DateTime         @default(now())
   video_url_key String?          @db.VarChar(1000)
   jmk_tr_week   jmk_tr_week      @relation(fields: [week_id], references: [week_id])
@@ -61,6 +64,7 @@ model jmk_test_set {
   ans2        String? @db.VarChar(100)
   ans3        String? @db.VarChar(100)
   ans4        String? @db.VarChar(100)
+  hint        String? @db.VarChar(100)
   rtans       String? @db.VarChar(100)
 }
 

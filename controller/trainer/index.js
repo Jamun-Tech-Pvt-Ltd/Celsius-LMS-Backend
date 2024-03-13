@@ -93,6 +93,9 @@ const trainerQueryTypesAndInputs = `
       type: ContentTypes!
       video_url:Upload
       project_url:String
+      duration:String
+      label:String
+      share_date:String
       content_id:Int
       test: [TestInput]
      }
