@@ -354,6 +354,7 @@ const studentQueryTypesAndInputs = `
         ans2:String!
         ans3:String!
         ans4:String!
+        hint:String
      }
 
      type weeklyTestSet {
