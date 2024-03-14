@@ -47,7 +47,7 @@ model jmk_week_content {
   video_url     String?          @db.VarChar(1000)
   project_url   String?          @db.VarChar(1000)
   duration      String?          @db.VarChar(100)
-  lebel         String?          @db.VarChar(100)
+  level         String?          @db.VarChar(100)
   share_date    String?          @db.VarChar(100)
   date          DateTime         @default(now())
   video_url_key String?          @db.VarChar(1000)

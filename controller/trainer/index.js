@@ -94,7 +94,7 @@ const trainerQueryTypesAndInputs = `
       video_url:Upload
       project_url:String
       duration:String
-      lebel:String
+      level:String
       share_date:String
       content_id:Int
       test: [TestInput]
