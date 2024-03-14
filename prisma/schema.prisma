@@ -22,6 +22,7 @@ model jmkcrsinfo {
   crs_code        String?        @db.VarChar(40)
   lavel           String?        @db.VarChar(200)
   time            String?        @db.VarChar(200)
+  meetLink        String?        @db.VarChar(1000)
   isDeleted       Boolean        @default(false)
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]

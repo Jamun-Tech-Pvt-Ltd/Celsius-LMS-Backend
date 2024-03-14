@@ -335,6 +335,9 @@ const studentQueryTypesAndInputs = `
        title:String!
        description:String
        type:String!
+       duration:String
+       share_date:String
+       level:String
        date:Date!
        video_url:String
        project_url: String
