@@ -29,6 +29,7 @@ input createCourseInput {
     crs_nxt_st_date: Date!
     crs_image: String!
     lavel: String!
+    meetLink: String
     time: String!
  }
 
@@ -44,6 +45,7 @@ input createCourseInput {
   crs_image: String!
   lavel: String!
   time: String!
+  meetLink: String
  }
 
  input deleteCourseInput {
@@ -66,6 +68,7 @@ input createCourseInput {
         crs_image:String
         time:String
         lavel:String
+        meetLink:String
         isDeleted:Boolean!
     }
 

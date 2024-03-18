@@ -217,6 +217,8 @@ const studentQueryTypesAndInputs = `
         amt_paid: Int
         amt_due: Int
         crs_rate: Int
+        meetLink: String
+        time: String
      }
      
      type User {

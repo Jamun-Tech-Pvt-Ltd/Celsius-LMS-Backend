@@ -221,6 +221,8 @@ const trainerQueryTypesAndInputs = `
       crs_name: String!
       crs_image: String
       crs_desc: String
+      meetLink:String
+      time:String
     }
 
     type weekDetails {
