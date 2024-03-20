@@ -370,6 +370,7 @@ const studentQueryTypesAndInputs = `
      }
 
      type testResults {
+        content_id:Int!
         total_question:Int!
         question_attempted:Int!
         correct_answer:Int!
@@ -1233,7 +1234,7 @@ const studentResolvers = {
         return hours + " hours " + remainingMinutes + " minutes";
       }
     }
-    
+
     const updateJmkWeekTest = await prisma.jmk_std_test_result.create({
       data: {
         std_id: userId,
@@ -1830,6 +1831,7 @@ const studentResolversQuery = {
     const history = await prisma.jmk_std_test_result.findMany({ where: { content_id: content_id, std_id: userId }, orderBy: { created_at: 'desc' } });
     for (let index = 0; index < history.length; index++) {
       data.push({
+        content_id,
         total_question: parseInt(history[index].score.split('/')[1] !== 'undefined' ? history[index].score.split('/')[1] : 1),
         question_attempted: history[index].question_attempted,
         correct_answer: parseInt(history[index].score.split('/')[0] ?? 0),
