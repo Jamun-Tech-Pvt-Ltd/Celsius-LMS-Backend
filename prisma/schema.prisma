@@ -70,11 +70,14 @@ model jmk_test_set {
 }
 
 model jmk_std_test_result {
-  serial        Int     @id @default(autoincrement())
-  content_id    Int
-  std_id        Int
-  test_complete Boolean @default(false)
-  score         String  @default("0")
+  serial             Int      @id @default(autoincrement())
+  content_id         Int
+  std_id             Int
+  test_complete      Boolean  @default(false)
+  score              String   @default("0")
+  question_attempted Int      @default(0)
+  time_taken         String   @default("")
+  created_at         DateTime @default(now())
 }
 
 model jmk_std_test_ans {

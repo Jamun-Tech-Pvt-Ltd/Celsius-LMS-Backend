@@ -146,6 +146,11 @@ const studentQueryTypesAndInputs = `
      }
 
      input submitStdTestAnsInput {
+      time_taken: String!
+      testAns: [testAnsInput]
+     }
+
+     input testAnsInput {
       test_set_id:Int!
       std_ans:String!
      }
@@ -364,6 +369,13 @@ const studentQueryTypesAndInputs = `
       questions:[weeklyTest]
      }
 
+     type testResults {
+        total_question:Int!
+        question_attempted:Int!
+        correct_answer:Int!
+        time_taken: String!
+     }
+
      type weeklyNote {
       serial: Int!
       week_id: Int!
@@ -475,6 +487,7 @@ const studentQuery = `
 
     getStudentCourseWeek:[courseWeek]
     getStudentCourseWeekContent(week_id:Int!):[courseWeekContent]
+    getStudentCourseResult(content_id:Int!):[testResults]
 
     getStdQuestions:[stdQuestion]
     getStdQuestionById(question_id:Int!):stdQuestion
@@ -526,7 +539,7 @@ const studentMutation = `
     createAndUpdateStdQuesSub(data:stdQuesSubInput!):String!
 
 
-    submitStdTestAns(data:[submitStdTestAnsInput]!):String!
+    submitStdTestAns(data:submitStdTestAnsInput!):String!
 
     createStdWeeklyNote(data:createStdWeeklyNoteInput):String!
 
@@ -1183,35 +1196,52 @@ const studentResolvers = {
       where: { std_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user');
-    if (!data[0].test_set_id) throw new AuthenticationError('invalid submit');
+    if (!data.testAns?.[0]?.test_set_id) throw new AuthenticationError('invalid submit');
 
-    const question = await prisma.jmk_test_set.findFirst({ where: { test_set_id: data[0].test_set_id } })
+    const question = await prisma.jmk_test_set.findFirst({ where: { test_set_id: data.testAns[0].test_set_id } })
     if (!question) throw new ApolloError('Invalid !')
 
     let score = 0;
+    let question_attempted = 0;
 
-    for (let index = 0; index < data.length; index++) {
-      const questionCheck = await prisma.jmk_test_set.findFirst({ where: { test_set_id: data[index].test_set_id } })
-      if (questionCheck.rtans.toLowerCase() == data[index].std_ans.toLowerCase()) {
+    for (let index = 0; index < data.testAns.length; index++) {
+      const questionCheck = await prisma.jmk_test_set.findFirst({ where: { test_set_id: data.testAns[index].test_set_id } })
+      if (questionCheck.rtans.toLowerCase() == data.testAns[index].std_ans.toLowerCase()) {
         score += 1
+      }
+
+      if (questionCheck.rtans.toLowerCase() !== "Not Answers") {
+        question_attempted += 1
       }
 
       await prisma.jmk_std_test_ans.create({
         data: {
           std_id: userId,
           content_id: question.content_id,
-          test_set_id: data[index].test_set_id,
-          std_ans: data[index].std_ans
+          test_set_id: data?.testAns[index].test_set_id,
+          std_ans: data.testAns[index].std_ans
         }
       })
     }
 
+    const formatTimeTaken = (minutes) => {
+      if (minutes < 60) {
+        return minutes + " minutes";
+      } else {
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        return hours + " hours " + remainingMinutes + " minutes";
+      }
+    }
+    
     const updateJmkWeekTest = await prisma.jmk_std_test_result.create({
       data: {
         std_id: userId,
         content_id: question.content_id,
         test_complete: true,
-        score: `${score}/${data.length}`
+        score: `${score}/${data.testAns.length}`,
+        question_attempted,
+        time_taken: formatTimeTaken(data.time_taken),
       }
     })
 
@@ -1785,6 +1815,28 @@ const studentResolversQuery = {
 
     if (!weekContents[0]) throw new ForbiddenError('No data in this week .')
     return weekContents
+  },
+
+  getStudentCourseResult: async (_, { content_id }, { userId, role }) => {
+
+    if (!userId) throw new ForbiddenError('user need to login');
+
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    });
+
+    if (!user) throw new AuthenticationError('invalid user');
+    const data = [];
+    const history = await prisma.jmk_std_test_result.findMany({ where: { content_id: content_id, std_id: userId }, orderBy: { created_at: 'desc' } });
+    for (let index = 0; index < history.length; index++) {
+      data.push({
+        total_question: parseInt(history[index].score.split('/')[1] !== 'undefined' ? history[index].score.split('/')[1] : 1),
+        question_attempted: history[index].question_attempted,
+        correct_answer: parseInt(history[index].score.split('/')[0] ?? 0),
+        time_taken: history[index].time_taken,
+      })
+    }
+    return data
   },
 
   getStudentChats: async (_, { chatId, chatType }, { userId, role }) => {
