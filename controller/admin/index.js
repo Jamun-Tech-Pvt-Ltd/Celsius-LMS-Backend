@@ -7,6 +7,7 @@ import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
 import { uploadImgToAWS, deleteImgToAWS } from '../../utils/imageHandler.js'
 import { ROLES } from '../../utils/helper.js'
+import { sendMail } from '../../utils/mailHandler.js'
 
 const adminQueryTypesAndInputs = `
 
@@ -597,6 +598,12 @@ const adminQueryTypesAndInputs = `
       icon:Upload
      }
 
+     input MailSendInput {
+      content:String!
+      users:String!
+      subject:String!
+     }
+
      type UserCourseAdmin {
       std_id:Int!
       serial:Int!
@@ -876,6 +883,8 @@ const adminMutation = `
 
     createAndUpdatePartner(data:PartnerInput):String!
     deletePartnerById(serial:Int!):String!
+
+    sendEmailByUser(data:MailSendInput!):String!
 `
 
 const adminResolvers = {
@@ -2080,7 +2089,7 @@ const adminResolvers = {
         data.icon = service.icon;
         data.icon_key = service.icon_key;
       }
-    const updateService = await prisma.jmk_services.update({ where: { serial: data.serial }, data });
+      const updateService = await prisma.jmk_services.update({ where: { serial: data.serial }, data });
       if (!updateService) throw new ApolloError('invalid id')
     }
     return "success"
@@ -2158,6 +2167,42 @@ const adminResolvers = {
     await deleteImgToAWS(partner.icon_key);
     if (!partner) throw new ApolloError('someting went wrong');
     return 'deleted'
+  },
+
+  sendEmailByUser: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+
+    if (!admin) throw new AuthenticationError('invalid admin');
+
+    if (data.users === 'Students') {
+      const students = await prisma.jmkstdinfo.findMany();
+      for (let index = 0; index < students.length; index++) {
+        const student = students[index];
+        await sendMail(student.std_email, data.subject, data.content)
+      }
+    }
+
+    if (data.users === 'Trainers') {
+      const trainers = await prisma.jmktrinfo.findMany();
+      for (let index = 0; index < trainers.length; index++) {
+        const trainer = trainers[index];
+        await sendMail(trainer.tr_email, data.subject, data.content)
+      }
+    }
+
+    if (data.users === 'Admins') {
+      const admins = await prisma.jmkuserinfo.findMany();
+      for (let index = 0; index < students.length; index++) {
+        const admin = admins[index];
+        await sendMail(admin.usr_email, data.subject, data.content)
+      }
+    }
+
+    return 'send'
   },
 }
 
@@ -3117,7 +3162,7 @@ const adminResolversQuery = {
   getService: async (_, { serial }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId},
+      where: { usr_id: userId },
     });
     if (!admin) throw new AuthenticationError('invalid admin credentials');
     const service = await prisma.jmk_services.findFirst({ where: { serial } });
