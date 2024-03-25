@@ -150,6 +150,17 @@ input createCourseInput {
     img: String!
   }
 
+  type Notification {
+    serial: Int!
+    user_type: String!
+    user_id: Int!
+    category: String!
+    link: String
+    message: String!
+    is_read: Boolean!
+    created_at: Date!
+  }
+
 `
 
 const commonQuery = `
@@ -162,6 +173,7 @@ const commonQuery = `
     getBlogBySlug(blog_slug:String!):JmkBlog!
     getFaqByType(type:String):[Faq!]!
     getFaqById(faq_id:Int!):Faq!
+    getMyNotifications:[Notification]
 `
 
 const commonMutation = `
@@ -322,6 +334,51 @@ const commonResolversQuery = {
     })
     if (!faq) throw new ApolloError('Data Not Found')
     return faq
+  },
+  getMyNotifications: async (_, { }, { userId, role }) => {
+    if (role === ROLES[0]) {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const student = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      });
+      if (!student) throw new AuthenticationError('invalid student');
+      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: student.std_id, user_type: 'Student' } });
+      if (notifications) {
+        return notifications
+      } else {
+        return []
+      }
+    }
+
+    if (role === ROLES[1]) {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      });
+      if (!trainer) throw new AuthenticationError('invalid trainer');
+      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: trainer.tr_id, user_type: 'Trainer' } });
+      if (notifications) {
+        return notifications
+      } else {
+        return []
+      }
+    }
+
+    if (role === 'admin') {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin');
+      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: admin.usr_id, user_type: 'Admin' } });
+      if (notifications) {
+        return notifications
+      } else {
+        return []
+      }
+    }
+
+    throw new AuthenticationError('invalid access');
   },
 }
 

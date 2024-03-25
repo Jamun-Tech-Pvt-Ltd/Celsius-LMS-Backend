@@ -1049,6 +1049,17 @@ model jmk_partner_ui {
   created_at DateTime @default(now())
 }
 
+model jmk_notifications {
+  serial     Int                   @id @default(autoincrement())
+  user_type  jmk_notification_type
+  user_id    Int
+  category   String
+  link       String?
+  message    String
+  is_read    Boolean
+  created_at DateTime              @default(now())
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
@@ -1094,4 +1105,10 @@ enum jmk_faq_type {
   Student
   Trainer
   Jamuntek
+}
+
+enum jmk_notification_type {
+  Student
+  Trainer
+  Admin
 }
