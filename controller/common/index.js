@@ -156,6 +156,8 @@ input createCourseInput {
     user_id: Int!
     category: String!
     link: String
+    label1: String
+    label2: String
     message: String!
     is_read: Boolean!
     created_at: Date!

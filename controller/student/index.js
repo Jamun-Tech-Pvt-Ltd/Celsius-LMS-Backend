@@ -1166,28 +1166,49 @@ const studentResolvers = {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
-    })
-    if (!user) throw new AuthenticationError('invalid user')
+    }); 
+    if (!user) throw new AuthenticationError('invalid user');
     const subscribe = await prisma.jmk_ques_sub.findFirst({
       where: {
         question_id: data.question_id,
         student_id: userId
       },
-    })
+    });
     if (subscribe) {
-      const stdSubscribe = await prisma.jmk_ques_sub.delete({ where: { sub_id: subscribe.sub_id } })
+      const stdSubscribe = await prisma.jmk_ques_sub.delete({ where: { sub_id: subscribe.sub_id } });
+      if (!stdSubscribe) throw new ApolloError('Someting went wrong !');
+      const course = await prisma.jmkcrsinfo.delete({ where: { crs_id: user.crs_id } })
+      // notification
+      await prisma.jmk_notifications.create({
+        data: {
+          user_id: userId,
+          label1: user.std_fname,
+          label2: course.crs_name,
+          user_type: "Student",
+          category: "discussion_panel",
+          message: "just unsubscribed to your question in discussion panel of",
+          link: "https://student.jaamun.com/discussion_panel"
+        }
+      });
 
-      if (!stdSubscribe) throw new ApolloError('Someting went wrong !')
-
-      return 'unsubscribed'
+      return 'unsubscribed';
     }
 
     const stdSubscribe = await prisma.jmk_ques_sub.create({
       data: { ...data, student_id: userId },
-    })
-
-    if (!stdSubscribe) throw new ApolloError('Someting went wrong !')
-
+    });
+    if (!stdSubscribe) throw new ApolloError('Someting went wrong !');
+    await prisma.jmk_notifications.create({
+      data: {
+        user_id: userId,
+        label1: user.std_fname,
+        label2: course.crs_name,
+        user_type: "Student",
+        category: "discussion_panel",
+        message: "just subscribed to your question in discussion panel of",
+        link: "https://student.jaamun.com/discussion_panel"
+      }
+    });
     return 'subscribed'
   },
 
