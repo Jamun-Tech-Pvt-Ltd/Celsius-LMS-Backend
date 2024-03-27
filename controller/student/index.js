@@ -1187,7 +1187,8 @@ const studentResolvers = {
           user_type: "Student",
           category: "discussion_panel",
           message: "just unsubscribed to your question in discussion panel of",
-          link: "https://student.jaamun.com/discussion_panel"
+          link: `${process.env.CLIENT_URL}discussion_panel/${data.question_id}`
+
         }
       });
 
@@ -1206,7 +1207,7 @@ const studentResolvers = {
         user_type: "Student",
         category: "discussion_panel",
         message: "just subscribed to your question in discussion panel of",
-        link: "https://student.jaamun.com/discussion_panel"
+        link: `${process.env.CLIENT_URL}discussion_panel/${data.question_id}`
       }
     });
     return 'subscribed'

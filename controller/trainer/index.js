@@ -596,15 +596,33 @@ const trainerResolvers = {
     if (role === ROLES[1]) {
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
-      })
-      if (!trainer) throw new AuthenticationError('invalid trainer credentials')
+      });
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      const course = await prisma.jmkcrsinfo.findFirst({
+        where: { crs_id: trainer.crs_id },
+      });
+      if (!course) throw new AuthenticationError('invalid trainer');
       const week = await prisma.jmk_tr_week.create({
         data: {
           ...data,
           crs_id: trainer.crs_id,
         },
-      })
+      });
       if (!week) throw new ApolloError('Unable to create the week')
+      const allStudentFromCourse = await prisma.jmkstdcrsinfo.findMany({ where: { crs_id: trainer.crs_id } });
+      for (let index = 0; index < allStudentFromCourse.length; index++) {
+        await prisma.jmk_notifications.create({
+          data: {
+            user_id: allStudentFromCourse[index].std_id,
+            label1: trainer.tr_fname,
+            label2: course.crs_name,
+            user_type: "Student",
+            category: "week",
+            message: `just added a new week named : ${week.title}`,
+            link: `${process.env.CLIENT_URL}weeks/${week.title}?week_id=${week.week_id}`
+          }
+        });
+      }
       return 'Week Successfully added'
     }
   },
