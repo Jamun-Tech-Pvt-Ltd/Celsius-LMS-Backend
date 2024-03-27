@@ -1166,7 +1166,7 @@ const studentResolvers = {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
-    }); 
+    });
     if (!user) throw new AuthenticationError('invalid user');
     const subscribe = await prisma.jmk_ques_sub.findFirst({
       where: {
@@ -1187,8 +1187,8 @@ const studentResolvers = {
           user_type: "Student",
           category: "discussion_panel",
           message: "just unsubscribed to your question in discussion panel of",
-          link: `${process.env.CLIENT_URL}discussion_panel/${data.question_id}`
-
+          link: `${process.env.CLIENT_URL}discussion_panel/${data.question_id}`,
+          is_read: false,
         }
       });
 
@@ -1207,7 +1207,8 @@ const studentResolvers = {
         user_type: "Student",
         category: "discussion_panel",
         message: "just subscribed to your question in discussion panel of",
-        link: `${process.env.CLIENT_URL}discussion_panel/${data.question_id}`
+        link: `${process.env.CLIENT_URL}discussion_panel/${data.question_id}`,
+        is_read: false,
       }
     });
     return 'subscribed'

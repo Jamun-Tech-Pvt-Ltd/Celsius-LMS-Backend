@@ -619,7 +619,8 @@ const trainerResolvers = {
             user_type: "Student",
             category: "week",
             message: `just added a new week named : ${week.title}`,
-            link: `${process.env.CLIENT_URL}weeks/${week.title}?week_id=${week.week_id}`
+            link: `${process.env.CLIENT_URL}weeks/${week.title}?week_id=${week.week_id}`,
+            is_read:false,
           }
         });
       }
