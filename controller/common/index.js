@@ -259,7 +259,7 @@ const commonResolvers = {
         where: { std_id: userId },
       });
       if (!student) throw new AuthenticationError('invalid student');
-      await prisma.jmk_notifications.delete({ where: { user_id: student.std_id, user_type: 'Student' } });
+      await prisma.jmk_notifications.deleteMany({ where: { user_id: student.std_id, user_type: 'Student' } });
       return 'success'
     }
 
