@@ -936,9 +936,21 @@ const studentResolvers = {
     });
     studentList.forEach(async (stud) => {
       if (stud.std_id != user.std_id) {
+        await prisma.jmk_notifications.create({
+          data: {
+            user_id: stud.std_id,
+            label1: `${user.std_fname}`,
+            label2: question.ques_title,
+            user_type: "Student",
+            category: 'discussion_panel_new',
+            message: `just posted a question `,
+            link: `${process.env.CLIENT_URL}discussion_panel/${question.ques_id}`,
+            is_read: false,
+          }
+        });
         await sendMail(user.std_email, `Question was posted`, QuestionInformTemplate(`${user.std_fname} ${user.std_lname}`, `${user.std_fname} ${user.std_lname}`, `${user.std_pic}`, question.ques_id));
       }
-    })
+    });
 
     //TODO: Teacher one up for discussion
 
@@ -1064,6 +1076,18 @@ const studentResolvers = {
           std_id: student.student_id
         }
       });
+      await prisma.jmk_notifications.create({
+        data: {
+          user_id: studentDB.std_id,
+          label1: `${user.std_fname}`,
+          label2: question.ques_title,
+          user_type: "Student",
+          category: 'discussion_panel_comment',
+          message: `just commented in your question in discussion panel of`,
+          link: `${process.env.CLIENT_URL}discussion_panel/${question.ques_id}`,
+          is_read: false,
+        }
+      });
       await sendMail(studentDB.std_email, `Question Subscription Update`, SubscriptionEmailTemplate(`${studentDB.std_fname} ${studentDB.std_lname}`, `${studentDB.std_pic}`, data.question_id));
 
     });
@@ -1104,6 +1128,9 @@ const studentResolvers = {
     })
 
     if (!user) throw new AuthenticationError('invalid user')
+
+    const question = await prisma.jmk_std_ques.findFirst({ where: { question_id: data.question_id } });
+    if (!question) throw new AuthenticationError('invalid opration')
 
     if (data.imp_type === "Question") {
 
@@ -1155,7 +1182,20 @@ const studentResolvers = {
         data: { ...data, user_type: "Student", student_id: userId }
       })
 
-      if (!vote) throw new ApolloError('Someting went wrong !')
+      if (!vote) throw new ApolloError('Someting went wrong !');
+
+      await prisma.jmk_notifications.create({
+        data: {
+          user_id: question.student_id,
+          label1: user.std_fname,
+          label2: question.ques_title,
+          user_type: "Student",
+          category: data.upvote === 1 ? "discussion_panel_upvote" : "discussion_panel_downvote",
+          message: `${data.upvote === 1 ? 'upvote' : 'downvote'} on your comments on your post in the discussion panel of`,
+          link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
+          is_read: false,
+        }
+      });
 
       return 'Successfully Created !'
     }
@@ -1168,6 +1208,9 @@ const studentResolvers = {
       where: { std_id: userId },
     });
     if (!user) throw new AuthenticationError('invalid user');
+    const question = await prisma.jmk_std_ques.findFirst({ where: { question_id: data.question_id } });
+    if (!question) throw new AuthenticationError('invalid opration');
+
     const subscribe = await prisma.jmk_ques_sub.findFirst({
       where: {
         question_id: data.question_id,
@@ -1177,11 +1220,11 @@ const studentResolvers = {
     if (subscribe) {
       const stdSubscribe = await prisma.jmk_ques_sub.delete({ where: { sub_id: subscribe.sub_id } });
       if (!stdSubscribe) throw new ApolloError('Someting went wrong !');
-      const course = await prisma.jmkcrsinfo.delete({ where: { crs_id: user.crs_id } })
+      const course = await prisma.jmkcrsinfo.delete({ where: { crs_id: user.crs_id } });
       // notification
       await prisma.jmk_notifications.create({
         data: {
-          user_id: userId,
+          user_id: question.student_id,
           label1: user.std_fname,
           label2: course.crs_name,
           user_type: "Student",

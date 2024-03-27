@@ -614,13 +614,13 @@ const trainerResolvers = {
         await prisma.jmk_notifications.create({
           data: {
             user_id: allStudentFromCourse[index].std_id,
-            label1: trainer.tr_fname,
-            label2: course.crs_name,
+            label1: `${trainer.tr_fname} (Trainer)`,
+            label2: week.title,
             user_type: "Student",
             category: "week",
-            message: `just added a new week named : ${week.title}`,
+            message: `just added a new week named`,
             link: `${process.env.CLIENT_URL}weeks/${week.title}?week_id=${week.week_id}`,
-            is_read:false,
+            is_read: false,
           }
         });
       }
@@ -714,6 +714,22 @@ const trainerResolvers = {
       const weekContent = await prisma.jmk_week_content.create({ data });
 
       if (!weekContent) throw new ApolloError('Something went wrong !');
+
+      const allStudentFromCourse = await prisma.jmkstdcrsinfo.findMany({ where: { crs_id: trainer.crs_id } });
+      for (let index = 0; index < allStudentFromCourse.length; index++) {
+        await prisma.jmk_notifications.create({
+          data: {
+            user_id: allStudentFromCourse[index].std_id,
+            label1: `${trainer.tr_fname} (Trainer)`,
+            label2: week.title,
+            user_type: "Student",
+            category: data.type,
+            message: `just added a ${data.type.toLowerCase()} for`,
+            link: `${process.env.CLIENT_URL}weeks/${week.title}?week_id=${week.week_id}`,
+            is_read: false,
+          }
+        });
+      }
 
       if (data.type === 'Test') {
         for (let index = 0; index < tests.length; index++) {
