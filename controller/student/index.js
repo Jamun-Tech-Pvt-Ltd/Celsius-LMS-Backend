@@ -1061,35 +1061,19 @@ const studentResolvers = {
 
     const answer = await prisma.jmk_ques_ans.create({
       data: { ...data, student_id: userId, user_type: 'Student' }
-    })
-
-
-    const subsList = await prisma.jmk_ques_sub.findMany({
-      where: {
-        question_id: data.question_id
-      }
     });
 
-    subsList.forEach(async (student) => {
-      let studentDB = await prisma.jmkstdinfo.findFirst({
-        where: {
-          std_id: student.student_id
-        }
-      });
-      await prisma.jmk_notifications.create({
-        data: {
-          user_id: studentDB.std_id,
-          label1: `${user.std_fname}`,
-          label2: question.ques_title,
-          user_type: "Student",
-          category: 'discussion_panel_comment',
-          message: `just commented in your question in discussion panel of`,
-          link: `${process.env.CLIENT_URL}discussion_panel/${question.ques_id}`,
-          is_read: false,
-        }
-      });
-      await sendMail(studentDB.std_email, `Question Subscription Update`, SubscriptionEmailTemplate(`${studentDB.std_fname} ${studentDB.std_lname}`, `${studentDB.std_pic}`, data.question_id));
-
+    await prisma.jmk_notifications.create({
+      data: {
+        user_id: question.student_id,
+        label1: `${user.std_fname}`,
+        label2: question.ques_title,
+        user_type: "Student",
+        category: 'discussion_panel_comment',
+        message: `just commented in your question in discussion panel of`,
+        link: `${process.env.CLIENT_URL}discussion_panel/${question.ques_id}`,
+        is_read: false,
+      }
     });
 
     if (!answer) throw new ApolloError('Someting went wrong !')
@@ -1129,7 +1113,7 @@ const studentResolvers = {
 
     if (!user) throw new AuthenticationError('invalid user')
 
-    const question = await prisma.jmk_std_ques.findFirst({ where: { question_id: data.question_id } });
+    const question = await prisma.jmk_std_ques.findFirst({ where: { ques_id: data.question_id } });
     if (!question) throw new AuthenticationError('invalid opration')
 
     if (data.imp_type === "Question") {
@@ -1208,7 +1192,7 @@ const studentResolvers = {
       where: { std_id: userId },
     });
     if (!user) throw new AuthenticationError('invalid user');
-    const question = await prisma.jmk_std_ques.findFirst({ where: { question_id: data.question_id } });
+    const question = await prisma.jmk_std_ques.findFirst({ where: { ques_id: data.question_id } });
     if (!question) throw new AuthenticationError('invalid opration');
 
     const subscribe = await prisma.jmk_ques_sub.findFirst({
