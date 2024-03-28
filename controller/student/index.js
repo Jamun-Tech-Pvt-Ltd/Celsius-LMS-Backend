@@ -1131,7 +1131,21 @@ const studentResolvers = {
           where: { imp_id: oldVote.imp_id }
         })
 
-        if (!vote) throw new ApolloError('Someting went wrong !')
+        if (!vote) throw new ApolloError('Someting went wrong !');
+        if ((data.upvote === 1 || data.downvote === 1) && question.student_id !== userId) {
+          await prisma.jmk_notifications.create({
+            data: {
+              user_id: question.student_id,
+              label1: user.std_fname,
+              label2: question.ques_title,
+              user_type: "Student",
+              category: data.upvote === 1 ? "discussion_panel_like" : "discussion_panel_dislike",
+              message: `just ${data.upvote === 1 ? 'liked' : 'disliked'} liked your question in discussion panel of `,
+              link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
+              is_read: false,
+            }
+          });
+        }
         return 'Successfully updated !'
       }
 
@@ -1140,23 +1154,26 @@ const studentResolvers = {
       })
 
       if (!vote) throw new ApolloError('Someting went wrong !')
-
-      await prisma.jmk_notifications.create({
-        data: {
-          user_id: question.student_id,
-          label1: user.std_fname,
-          label2: question.ques_title,
-          user_type: "Student",
-          category: data.upvote === 1 ? "discussion_panel_like" : "discussion_panel_dislike",
-          message: `just ${data.upvote === 1 ? 'liked' : 'disliked'} liked your question in discussion panel of `,
-          link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
-          is_read: false,
-        }
-      });
-
+      if ((data.upvote === 1 || data.downvote === 1) && question.student_id !== userId) {
+        await prisma.jmk_notifications.create({
+          data: {
+            user_id: question.student_id,
+            label1: user.std_fname,
+            label2: question.ques_title,
+            user_type: "Student",
+            category: data.upvote === 1 ? "discussion_panel_like" : "discussion_panel_dislike",
+            message: `just ${data.upvote === 1 ? 'liked' : 'disliked'} liked your question in discussion panel of `,
+            link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
+            is_read: false,
+          }
+        });
+      }
       return 'Successfully Created !'
     }
     if (data.imp_type === "Answer") {
+
+      const ans = await prisma.jmk_ques_ans.findFirst({ where: { ans_id: data.ans_id } });
+      if (!ans) throw new AuthenticationError('invalid opration')
 
       const oldVote = await prisma.jmk_ques_ans_imp.findFirst({
         where: {
@@ -1171,7 +1188,21 @@ const studentResolvers = {
           where: { imp_id: oldVote.imp_id }
         })
 
-        if (!vote) throw new ApolloError('Someting went wrong !')
+        if (!vote) throw new ApolloError('Someting went wrong !');
+        if ((data.upvote === 1 || data.downvote === 1) && ans.student_id !== userId) {
+          await prisma.jmk_notifications.create({
+            data: {
+              user_id: ans.student_id,
+              label1: user.std_fname,
+              label2: question.ques_title,
+              user_type: "Student",
+              category: data.upvote === 1 ? "discussion_panel_upvote" : "discussion_panel_downvote",
+              message: `${data.upvote === 1 ? 'upvote' : 'downvote'} on your comments on your post in the discussion panel of`,
+              link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
+              is_read: false,
+            }
+          });
+        }
         return 'Successfully updated !'
       }
 
@@ -1181,19 +1212,20 @@ const studentResolvers = {
 
       if (!vote) throw new ApolloError('Someting went wrong !');
 
-      await prisma.jmk_notifications.create({
-        data: {
-          user_id: question.student_id,
-          label1: user.std_fname,
-          label2: question.ques_title,
-          user_type: "Student",
-          category: data.upvote === 1 ? "discussion_panel_upvote" : "discussion_panel_downvote",
-          message: `${data.upvote === 1 ? 'upvote' : 'downvote'} on your comments on your post in the discussion panel of`,
-          link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
-          is_read: false,
-        }
-      });
-
+      if ((data.upvote === 1 || data.downvote === 1) && ans.student_id !== userId) {
+        await prisma.jmk_notifications.create({
+          data: {
+            user_id: vote.student_id,
+            label1: user.std_fname,
+            label2: question.ques_title,
+            user_type: "Student",
+            category: data.upvote === 1 ? "discussion_panel_upvote" : "discussion_panel_downvote",
+            message: `${data.upvote === 1 ? 'upvote' : 'downvote'} on your comments on your post in the discussion panel of`,
+            link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
+            is_read: false,
+          }
+        });
+      }
       return 'Successfully Created !'
     }
     throw new AuthenticationError('invalid !')
@@ -1217,7 +1249,7 @@ const studentResolvers = {
     if (subscribe) {
       const stdSubscribe = await prisma.jmk_ques_sub.delete({ where: { sub_id: subscribe.sub_id } });
       if (!stdSubscribe) throw new ApolloError('Someting went wrong !');
-      const course = await prisma.jmkcrsinfo.delete({ where: { crs_id: user.crs_id } });
+      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: user.crs_id } });
       // notification
       await prisma.jmk_notifications.create({
         data: {
@@ -1239,10 +1271,10 @@ const studentResolvers = {
       data: { ...data, student_id: userId },
     });
     if (!stdSubscribe) throw new ApolloError('Someting went wrong !');
-    const course = await prisma.jmkcrsinfo.delete({ where: { crs_id: user.crs_id } });
+    const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: user.crs_id } });
     await prisma.jmk_notifications.create({
       data: {
-        user_id: userId,
+        user_id: question.student_id,
         label1: user.std_fname,
         label2: course.crs_name,
         user_type: "Student",

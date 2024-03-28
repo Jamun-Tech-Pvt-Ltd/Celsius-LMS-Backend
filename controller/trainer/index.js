@@ -725,7 +725,7 @@ const trainerResolvers = {
             user_type: "Student",
             category: data.type,
             message: `just added a ${data.type.toLowerCase()} for`,
-            link: `${process.env.CLIENT_URL}weeks/${week.title}?week_id=${week.week_id}`,
+            link: `${process.env.CLIENT_URL}weeks/${weekContent.title}?week_id=${weekContent.week_id}`,
             is_read: false,
           }
         });
