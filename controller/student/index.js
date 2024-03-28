@@ -1239,6 +1239,7 @@ const studentResolvers = {
       data: { ...data, student_id: userId },
     });
     if (!stdSubscribe) throw new ApolloError('Someting went wrong !');
+    const course = await prisma.jmkcrsinfo.delete({ where: { crs_id: user.crs_id } });
     await prisma.jmk_notifications.create({
       data: {
         user_id: userId,
