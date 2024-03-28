@@ -484,7 +484,7 @@ const trainerResolvers = {
           user_type: "Student",
           category: "certificate",
           message: `you have completed the course and unlocked the certificate`,
-          link: `${process.env.CLIENT_URL}weeks/${weekContent.title}?week_id=${weekContent.week_id}`,
+          link: `${process.env.CLIENT_URL}course_certificate`,
           is_read: false,
         }
       });
