@@ -461,6 +461,7 @@ const trainerResolvers = {
     if (!updateStudent) throw new ApolloError('Something went wrong');
 
     const stdCrs = await prisma.jmkstdcrsinfo.findFirst({ where: { std_id: data.std_id, crs_id: trainer.crs_id } });
+    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: trainer.crs_id } });
 
     if (!stdCrs) throw new ApolloError('invalid req');
 
@@ -473,6 +474,21 @@ const trainerResolvers = {
     })
 
     if (!updateStdCrs) throw new ApolloError('Something went wrong');
+
+    if (updateStdCrs.crs_complete) {
+      await prisma.jmk_notifications.create({
+        data: {
+          user_id: updateStudent.std_id,
+          label1: `Congratulations, `,
+          label2: crs.crs_name,
+          user_type: "Student",
+          category: "certificate",
+          message: `you have completed the course and unlocked the certificate`,
+          link: `${process.env.CLIENT_URL}weeks/${weekContent.title}?week_id=${weekContent.week_id}`,
+          is_read: false,
+        }
+      });
+    }
 
     return 'Success'
   },
