@@ -185,6 +185,8 @@ const commonMutation = `
 
     deleteNotification(serial:Int!):String!
     deleteAllNotification:String!
+
+    updateNotification(serial:Int!):String!
 `
 
 
@@ -284,6 +286,13 @@ const commonResolvers = {
     }
 
     throw new AuthenticationError('invalid access');
+  },
+
+  updateNotification: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (!serial) throw new ForbiddenError('invalid serial');
+    await prisma.jmk_notifications.update({ where: { serial }, data: { is_read: true } });
+    return 'success'
   },
 }
 

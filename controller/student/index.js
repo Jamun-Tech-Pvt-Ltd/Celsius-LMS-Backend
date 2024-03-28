@@ -1141,6 +1141,19 @@ const studentResolvers = {
 
       if (!vote) throw new ApolloError('Someting went wrong !')
 
+      await prisma.jmk_notifications.create({
+        data: {
+          user_id: question.student_id,
+          label1: user.std_fname,
+          label2: question.ques_title,
+          user_type: "Student",
+          category: data.upvote === 1 ? "discussion_panel_like" : "discussion_panel_dislike",
+          message: `just ${data.upvote === 1 ? 'liked' : 'disliked'} liked your question in discussion panel of `,
+          link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
+          is_read: false,
+        }
+      });
+
       return 'Successfully Created !'
     }
     if (data.imp_type === "Answer") {
