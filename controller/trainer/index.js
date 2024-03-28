@@ -721,7 +721,7 @@ const trainerResolvers = {
           data: {
             user_id: allStudentFromCourse[index].std_id,
             label1: `${trainer.tr_fname} (Trainer)`,
-            label2: week.title,
+            label2: weekContent.title,
             user_type: "Student",
             category: data.type,
             message: `just added a ${data.type.toLowerCase()} for`,
