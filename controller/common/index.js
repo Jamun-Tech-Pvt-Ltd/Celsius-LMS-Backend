@@ -398,7 +398,7 @@ const commonResolversQuery = {
         where: { std_id: userId },
       });
       if (!student) throw new AuthenticationError('invalid student');
-      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: student.std_id, user_type: 'Student' } });
+      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: student.std_id, user_type: 'Student' }, orderBy: { created_at: 'desc' } });
       if (notifications) {
         return notifications
       } else {
@@ -412,7 +412,7 @@ const commonResolversQuery = {
         where: { tr_id: userId },
       });
       if (!trainer) throw new AuthenticationError('invalid trainer');
-      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: trainer.tr_id, user_type: 'Trainer' } });
+      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: trainer.tr_id, user_type: 'Trainer' }, orderBy: { created_at: 'desc' } });
       if (notifications) {
         return notifications
       } else {
@@ -426,7 +426,7 @@ const commonResolversQuery = {
         where: { usr_id: userId },
       });
       if (!admin) throw new AuthenticationError('invalid admin');
-      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: admin.usr_id, user_type: 'Admin' } });
+      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: admin.usr_id, user_type: 'Admin' }, orderBy: { created_at: 'desc' } });
       if (notifications) {
         return notifications
       } else {

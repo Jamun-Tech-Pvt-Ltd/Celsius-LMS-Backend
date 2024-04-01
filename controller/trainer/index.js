@@ -484,7 +484,7 @@ const trainerResolvers = {
           user_type: "Student",
           category: "certificate",
           message: `you have completed the course and unlocked the certificate`,
-          link: `${process.env.CLIENT_URL}course_certificate`,
+          link: `/course_certificate`,
           is_read: false,
         }
       });
@@ -635,7 +635,7 @@ const trainerResolvers = {
             user_type: "Student",
             category: "week",
             message: `just added a new week named`,
-            link: `${process.env.CLIENT_URL}weeks/${week.title}?week_id=${week.week_id}`,
+            link: `/weeks/${week.title}?week_id=${week.week_id}`,
             is_read: false,
           }
         });
@@ -741,7 +741,7 @@ const trainerResolvers = {
             user_type: "Student",
             category: data.type,
             message: `just added a ${data.type.toLowerCase()} for`,
-            link: `${process.env.CLIENT_URL}weeks/${weekContent.title}?week_id=${weekContent.week_id}`,
+            link: `/weeks/${weekContent.title}?week_id=${weekContent.week_id}`,
             is_read: false,
           }
         });
@@ -897,8 +897,10 @@ const trainerResolvers = {
       where: { tr_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user')
-
+    const question = await prisma.jmk_std_ques.findFirst({ where: { ques_id: data.question_id } });
+    if (!question) throw new AuthenticationError('invalid opration')
     if (data.imp_type === 'Question') {
+
       const oldVote = await prisma.jmk_ques_ans_imp.findFirst({
         where: {
           teacher_id: userId,
@@ -913,6 +915,20 @@ const trainerResolvers = {
         })
 
         if (!vote) throw new ApolloError('Someting went wrong !')
+        if (data.upvote === 1 || data.downvote === 1) {
+          await prisma.jmk_notifications.create({
+            data: {
+              user_id: question.student_id,
+              label1: `${user.tr_fname} (Trainer)`,
+              label2: question.ques_title,
+              user_type: "Student",
+              category: data.upvote === 1 ? "discussion_panel_like" : "discussion_panel_dislike",
+              message: `just ${data.upvote === 1 ? 'liked' : 'disliked'} liked your question in discussion panel of `,
+              link: `/discussion_panel/${question.ques_id}`,
+              is_read: false,
+            }
+          });
+        }
         return 'Successfully updated !'
       }
 
@@ -922,9 +938,27 @@ const trainerResolvers = {
 
       if (!vote) throw new ApolloError('Someting went wrong !')
 
+
+      if (data.upvote === 1 || data.downvote === 1) {
+        await prisma.jmk_notifications.create({
+          data: {
+            user_id: question.student_id,
+            label1: `${user.tr_fname} (Trainer)`,
+            label2: question.ques_title,
+            user_type: "Student",
+            category: data.upvote === 1 ? "discussion_panel_like" : "discussion_panel_dislike",
+            message: `just ${data.upvote === 1 ? 'liked' : 'disliked'} liked your question in discussion panel of `,
+            link: `/discussion_panel/${question.ques_id}`,
+            is_read: false,
+          }
+        });
+      }
+
       return 'Successfully Created !'
     }
     if (data.imp_type === 'Answer') {
+      const ans = await prisma.jmk_ques_ans.findFirst({ where: { ans_id: data.ans_id } });
+      if (!ans) throw new AuthenticationError('invalid opration')
       const oldVote = await prisma.jmk_ques_ans_imp.findFirst({
         where: {
           teacher_id: userId,
@@ -938,6 +972,20 @@ const trainerResolvers = {
         })
 
         if (!vote) throw new ApolloError('Someting went wrong !')
+        if ((data.upvote === 1 || data.downvote === 1) && ans.student_id) {
+          await prisma.jmk_notifications.create({
+            data: {
+              user_id: ans.student_id,
+              label1: `${user.tr_fname} (Trainer)`,
+              label2: question.ques_title,
+              user_type: "Student",
+              category: data.upvote === 1 ? "discussion_panel_upvote" : "discussion_panel_downvote",
+              message: `${data.upvote === 1 ? 'upvote' : 'downvote'} on your comments on your post in the discussion panel of`,
+              link: `/discussion_panel/${question.ques_id}`,
+              is_read: false,
+            }
+          });
+        }
         return 'Successfully updated !'
       }
 
@@ -946,6 +994,21 @@ const trainerResolvers = {
       })
 
       if (!vote) throw new ApolloError('Someting went wrong !')
+
+      if ((data.upvote === 1 || data.downvote === 1) && ans.student_id) {
+        await prisma.jmk_notifications.create({
+          data: {
+            user_id: ans.student_id,
+            label1: `${user.tr_fname} (Trainer)`,
+            label2: question.ques_title,
+            user_type: "Student",
+            category: data.upvote === 1 ? "discussion_panel_upvote" : "discussion_panel_downvote",
+            message: `${data.upvote === 1 ? 'upvote' : 'downvote'} on your comments on your post in the discussion panel of`,
+            link: `/discussion_panel/${question.ques_id}`,
+            is_read: false,
+          }
+        });
+      }
 
       return 'Successfully Created !'
     }
@@ -969,7 +1032,20 @@ const trainerResolvers = {
       data: { ...data, teacher_id: userId, user_type: 'Teacher' },
     })
 
-    if (!answer) throw new ApolloError('Someting went wrong !')
+    if (!answer) throw new ApolloError('Someting went wrong !');
+
+    await prisma.jmk_notifications.create({
+      data: {
+        user_id: question.student_id,
+        label1: `${user.tr_fname} (Trainer)`,
+        label2: question.ques_title,
+        user_type: "Student",
+        category: "discussion_panel_comment",
+        message: `just commented in your question in discussion panel of`,
+        link: `/discussion_panel/${question.ques_id}`,
+        is_read: false,
+      }
+    });
 
     return 'Successfully created'
   },

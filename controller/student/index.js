@@ -924,9 +924,6 @@ const studentResolvers = {
       }
     });
 
-    //This one sends the mail to the current user informing his post has been sucessfully posted
-    await sendMail(user.std_email, `Question Sucessfully Posted`, QuestionCreateTemplate(`${user.std_fname} ${user.std_lname}`, `${user.std_pic}`, question.ques_id));
-
     //This one is for all the other users having common CRSID informing that the user has posted a question
     const studentList = await prisma.jmkstdinfo.findMany({
       where: {
@@ -944,7 +941,7 @@ const studentResolvers = {
             user_type: "Student",
             category: 'discussion_panel_new',
             message: `just posted a question `,
-            link: `${process.env.CLIENT_URL}discussion_panel/${question.ques_id}`,
+            link: `/discussion_panel/${question.ques_id}`,
             is_read: false,
           }
         });
@@ -952,7 +949,19 @@ const studentResolvers = {
       }
     });
 
-    //TODO: Teacher one up for discussion
+    const trainer = await prisma.jmktrcrsinfo.findFirst({ where: { crs_id: user.crs_id } });
+    await prisma.jmk_notifications.create({
+      data: {
+        user_id: trainer.tr_id,
+        label1: `${user.std_fname}`,
+        label2: question.ques_title,
+        user_type: "Trainer",
+        category: 'discussion_panel_new',
+        message: `just posted a question `,
+        link: `/discussionPanel/${question.ques_id}`,
+        is_read: false,
+      }
+    });
 
     if (!question) throw new ApolloError('Someting went wrong !')
 
@@ -1071,7 +1080,7 @@ const studentResolvers = {
         user_type: "Student",
         category: 'discussion_panel_comment',
         message: `just commented in your question in discussion panel of`,
-        link: `${process.env.CLIENT_URL}discussion_panel/${question.ques_id}`,
+        link: `/discussion_panel/${question.ques_id}`,
         is_read: false,
       }
     });
@@ -1141,7 +1150,7 @@ const studentResolvers = {
               user_type: "Student",
               category: data.upvote === 1 ? "discussion_panel_like" : "discussion_panel_dislike",
               message: `just ${data.upvote === 1 ? 'liked' : 'disliked'} liked your question in discussion panel of `,
-              link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
+              link: `/discussion_panel/${question.ques_id}`,
               is_read: false,
             }
           });
@@ -1163,7 +1172,7 @@ const studentResolvers = {
             user_type: "Student",
             category: data.upvote === 1 ? "discussion_panel_like" : "discussion_panel_dislike",
             message: `just ${data.upvote === 1 ? 'liked' : 'disliked'} liked your question in discussion panel of `,
-            link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
+            link: `/discussion_panel/${question.ques_id}`,
             is_read: false,
           }
         });
@@ -1192,13 +1201,13 @@ const studentResolvers = {
         if ((data.upvote === 1 || data.downvote === 1) && ans.student_id !== userId) {
           await prisma.jmk_notifications.create({
             data: {
-              user_id: ans.student_id,
+              user_id: ans.user_type === 'Teacher' ? ans.teacher_id : ans.student_id,
               label1: user.std_fname,
               label2: question.ques_title,
-              user_type: "Student",
+              user_type: ans.user_type === 'Teacher' ? 'Trainer' : ans.user_type,
               category: data.upvote === 1 ? "discussion_panel_upvote" : "discussion_panel_downvote",
               message: `${data.upvote === 1 ? 'upvote' : 'downvote'} on your comments on your post in the discussion panel of`,
-              link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
+              link: ans.user_type === 'Teacher' ? `/discussionPanel/${question.ques_id}` : `/discussion_panel/${question.ques_id}`,
               is_read: false,
             }
           });
@@ -1221,7 +1230,7 @@ const studentResolvers = {
             user_type: "Student",
             category: data.upvote === 1 ? "discussion_panel_upvote" : "discussion_panel_downvote",
             message: `${data.upvote === 1 ? 'upvote' : 'downvote'} on your comments on your post in the discussion panel of`,
-            link: `${process.env.CLIENT_URL}discussion_panel/${question.question_id}`,
+            link: `/discussion_panel/${question.ques_id}`,
             is_read: false,
           }
         });
@@ -1259,7 +1268,7 @@ const studentResolvers = {
           user_type: "Student",
           category: "discussion_panel",
           message: "just unsubscribed to your question in discussion panel of",
-          link: `${process.env.CLIENT_URL}discussion_panel/${data.question_id}`,
+          link: `/discussion_panel/${data.question_id}`,
           is_read: false,
         }
       });
@@ -1280,7 +1289,7 @@ const studentResolvers = {
         user_type: "Student",
         category: "discussion_panel",
         message: "just subscribed to your question in discussion panel of",
-        link: `${process.env.CLIENT_URL}discussion_panel/${data.question_id}`,
+        link: `/discussion_panel/${data.question_id}`,
         is_read: false,
       }
     });
