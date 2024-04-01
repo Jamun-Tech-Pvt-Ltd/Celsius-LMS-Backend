@@ -1203,15 +1203,30 @@ const adminResolvers = {
 
     if (!admin) throw new AuthenticationError('invalid admin')
 
+
     const checkCourse = await prisma.jmktrcrsinfo.findFirst({
       where: { crs_id: data.crs_id, tr_id: data.tr_id },
     });
-
     if (checkCourse) throw new AuthenticationError('already assign');
 
-    const trainerCourse = await prisma.jmktrcrsinfo.create({ data: { ...data }, })
+    const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id } });
+    if (!course) throw new AuthenticationError('invalid');
 
+    const trainerCourse = await prisma.jmktrcrsinfo.create({ data: { ...data }, })
     if (!trainerCourse) throw new AuthenticationError('Something went wrong')
+
+    await prisma.jmk_notifications.create({
+      data: {
+        user_id: trainerCourse.tr_id,
+        label1: `Admin`,
+        label2: course.crs_name,
+        user_type: "Trainer",
+        category: 'new_course',
+        message: `just assign a new course `,
+        link: `/courses`,
+        is_read: false,
+      }
+    });
 
     return 'success'
   },
