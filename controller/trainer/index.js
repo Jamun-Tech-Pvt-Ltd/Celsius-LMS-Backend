@@ -543,6 +543,32 @@ const trainerResolvers = {
         'TrainerVerification'
       )
     )
+
+    const admins = await prisma.jmkuserinfo.findMany();
+    for (let index = 0; index < admins.length; index++) {
+      const admin = admins[index];
+      const accessData = JSON.parse(admin.usr_access);
+      if (admin?.usr_access?.[0]) {
+        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
+        if (findRegistrationAccess && findRegistrationAccess?.option) {
+          const registration = findRegistrationAccess.option.find((item) => item.name === 'Trainer Request');
+          if (registration?.access?.[0]?.read) {
+            await prisma.jmk_notifications.create({
+              data: {
+                user_id: admin.usr_id,
+                label1: `${newTrainer.tr_fname}`,
+                label2: '',
+                user_type: "Admin",
+                category: 'trainer',
+                message: `wants to apply for the role of trainer for Jaamun.`,
+                link: `/trainer/${newTrainer.tr_id}`,
+                is_read: false,
+              }
+            });
+          }
+        }
+      }
+    }
     return { token }
   },
 

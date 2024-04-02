@@ -151,6 +151,32 @@ const jamuntekResolvers = {
       'Your Contact Form Has Been Received',
       contackFormHTML
     )
+
+    const admins = await prisma.jmkuserinfo.findMany();
+    for (let index = 0; index < admins.length; index++) {
+      const admin = admins[index];
+      const accessData = JSON.parse(admin.usr_access);
+      if (admin?.usr_access?.[0]) {
+        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
+        if (findRegistrationAccess && findRegistrationAccess?.option) {
+          const registration = findRegistrationAccess.option.find((item) => item.name === 'Contact Request');
+          if (registration?.access?.[0]?.read) {
+            await prisma.jmk_notifications.create({
+              data: {
+                user_id: admin.usr_id,
+                label1: `${contactForm.cfname}`,
+                label2: '',
+                user_type: "Admin",
+                category: 'contact',
+                message: `has filled the contact us form. Please check what he/she is looking for.`,
+                link: `/contactRequest/${contactForm.serial}`,
+                is_read: false,
+              }
+            });
+          }
+        }
+      }
+    }
     return 'Success'
   },
 
@@ -162,6 +188,31 @@ const jamuntekResolvers = {
       'Your Bussiness Form Has Been Received',
       contackFormHTML
     )
+    const admins = await prisma.jmkuserinfo.findMany();
+    for (let index = 0; index < admins.length; index++) {
+      const admin = admins[index];
+      const accessData = JSON.parse(admin.usr_access);
+      if (admin?.usr_access?.[0]) {
+        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
+        if (findRegistrationAccess && findRegistrationAccess?.option) {
+          const registration = findRegistrationAccess.option.find((item) => item.name === 'Contact Request');
+          if (registration?.access?.[0]?.read) {
+            await prisma.jmk_notifications.create({
+              data: {
+                user_id: admin.usr_id,
+                label1: `${contactForm.cfname}`,
+                label2: '',
+                user_type: "Admin",
+                category: 'contact',
+                message: `has filled the contact us form. Please check what he/she is looking for.`,
+                link: `/contactRequest/${contactForm.serial}`,
+                is_read: false,
+              }
+            });
+          }
+        }
+      }
+    }
     return 'Success'
   },
 
@@ -184,6 +235,33 @@ const jamuntekResolvers = {
     if (partner) throw new ApolloError('Partner already exist with that email')
     const newPartner = await prisma.jmkpartnerReq.create({ data });
     if (!newPartner) throw new ApolloError('Something went wrong')
+
+
+    const admins = await prisma.jmkuserinfo.findMany();
+    for (let index = 0; index < admins.length; index++) {
+      const admin = admins[index];
+      const accessData = JSON.parse(admin.usr_access);
+      if (admin?.usr_access?.[0]) {
+        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
+        if (findRegistrationAccess && findRegistrationAccess?.option) {
+          const registration = findRegistrationAccess.option.find((item) => item.name === 'Partnership Request');
+          if (registration?.access?.[0]?.read) {
+            await prisma.jmk_notifications.create({
+              data: {
+                user_id: admin.usr_id,
+                label1: `${newPartner.pr_fname}`,
+                label2: '',
+                user_type: "Admin",
+                category: 'parnter',
+                message: `wants to join Jaamun as a partner and has filled the become parnter form.`,
+                link: `/partnership/${newPartner.pr_id}`,
+                is_read: false,
+              }
+            });
+          }
+        }
+      }
+    }
     return 'success'
   },
 
@@ -199,6 +277,32 @@ const jamuntekResolvers = {
     data.resume_key = file?.data?.key;
     const newJobReq = await prisma.jmkjobReq.create({ data });
     if (!newJobReq) throw new ApolloError('Something went wrong')
+
+    const admins = await prisma.jmkuserinfo.findMany();
+    for (let index = 0; index < admins.length; index++) {
+      const admin = admins[index];
+      const accessData = JSON.parse(admin.usr_access);
+      if (admin?.usr_access?.[0]) {
+        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
+        if (findRegistrationAccess && findRegistrationAccess?.option) {
+          const registration = findRegistrationAccess.option.find((item) => item.name === 'Job Request');
+          if (registration?.access?.[0]?.read) {
+            await prisma.jmk_notifications.create({
+              data: {
+                user_id: admin.usr_id,
+                label1: `${newJobReq.fname}`,
+                label2: newJobReq.role,
+                user_type: "Admin",
+                category: 'job',
+                message: `applied for the role of`,
+                link: `/jobRequest/${newJobReq.serial}`,
+                is_read: false,
+              }
+            });
+          }
+        }
+      }
+    }
     return 'success'
   },
 }
