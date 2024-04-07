@@ -289,22 +289,24 @@ model jmkjobReq {
 }
 
 model jmkstdcrsinfo {
-  serial            Int       @id @default(autoincrement())
+  serial            Int             @id @default(autoincrement())
   crs_id            Int?
-  crs_start_dt      DateTime? @db.Date
+  crs_start_dt      DateTime?       @db.Date
   std_id            Int?
-  std_crs_verirfy   Boolean   @default(false)
+  std_crs_verirfy   Boolean         @default(false)
   discount          Int?
   amt_paid          Int?
   amt_due           Int?
-  crs_complete      Boolean?  @default(false)
-  crs_complete_date DateTime? @db.Date
+  crs_complete      Boolean?        @default(false)
+  crs_complete_date DateTime?       @db.Date
   crsmain_id        Int?
-  createdAt         DateTime  @default(now())
+  createdAt         DateTime        @default(now())
   payment_option    String?
   payment_type      String?
   time              String?
   ref_id            String?
+  promo_code        String?
+  promo             jmk_promo_code? @relation(fields: [promo_code], references: [code], onDelete: Cascade)
 }
 
 model jmkquesans {
@@ -1060,6 +1062,18 @@ model jmk_notifications {
   message    String
   is_read    Boolean
   created_at DateTime              @default(now())
+}
+
+model jmk_promo_code {
+  serial        Int             @id @default(autoincrement())
+  name          String
+  crs_id        Int
+  code          String          @unique
+  discount      Int
+  upto          Int
+  expiry_date   DateTime        @default(now())
+  created_at    DateTime        @default(now())
+  jmkstdcrsinfo jmkstdcrsinfo[]
 }
 
 enum jmk_std_ques_severity_level_enum {

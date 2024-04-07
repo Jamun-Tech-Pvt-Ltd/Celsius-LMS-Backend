@@ -603,7 +603,7 @@ const studentResolvers = {
       where: { std_email: userNew.std_email },
     });
 
-    if (user) throw new AuthenticationError('user already exist with that email')
+    if (user) throw new AuthenticationError('user already exist with that email');
 
     const course = await prisma.jmkcrsmain.findFirst({
       where: {
@@ -614,7 +614,18 @@ const studentResolvers = {
 
     if (!course) throw new AuthenticationError('invalid course')
 
-    const { std_payment_type, std_payment_option, std_payment_amount, time, ref_id, ...rest } = userNew;
+    const { std_payment_type, std_payment_option, std_payment_amount, time, ref_id, promo_code, ...rest } = userNew;
+
+    if (promo_code) {
+      const promo = await prisma.jmk_promo_code.findFirst({
+        where: { code: promo_code },
+      });
+      if (!promo) throw new ApolloError('Invalid Code');
+      if (promo.upto < 1) throw new ApolloError('Invalid');
+      if (new Date(promo.created_at).getTime() > Date.now()) throw new ApolloError('Promo Expire');
+      if (promo.crs_id !== data.crs_id) throw new ApolloError('Invalid');
+      await prisma.jmk_promo_code.update({ where: { serial: promo.serial }, data: { upto: promo.upto - 1 } })
+    }
 
     const newUser = await prisma.jmkstdinfo.create({
       data: { ...rest, crs_id: 59, std_join_dt: new Date() },
@@ -631,6 +642,7 @@ const studentResolvers = {
             payment_option: std_payment_option,
             amt_paid: std_payment_amount ?? 0,
             amt_due: course.rate - std_payment_amount ?? 0,
+            promo_code: promo_code ?? null,
             time,
             ref_id
           },
@@ -641,6 +653,7 @@ const studentResolvers = {
             crsmain_id: userNew.crsmain_id,
             crs_start_dt: course.start_date,
             std_id: newUser.std_id,
+            promo_code: promo_code ?? null
           },
         })
       }

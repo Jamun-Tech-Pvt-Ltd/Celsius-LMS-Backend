@@ -67,6 +67,11 @@ const jamuntekQueryTypesAndInputs = `
       remark: String
     }
 
+    input promoCheck {
+      code: String!
+      crs_id: Int!
+    }
+
     type CourseForCat {
       crsmain_id:Int!
       category: String!
@@ -127,6 +132,7 @@ const jamuntekMutation = `
     signupPartner(data:signupPartnerInput!):String!
     jobReq(data:jobReqInput!):String!
 
+    applyCheck(data:promoCheck!):Int!
 `
 
 const jamuntekResolvers = {
@@ -304,6 +310,17 @@ const jamuntekResolvers = {
       }
     }
     return 'success'
+  },
+
+  applyCheck: async (_, { data, }) => {
+    const promo = await prisma.jmk_promo_code.findFirst({
+      where: { code: data.code },
+    });
+    if (!promo) throw new ApolloError('Invalid Code');
+    if (promo.upto < 1) throw new ApolloError('Invalid');
+    if (new Date(promo.created_at).getTime() > Date.now()) throw new ApolloError('Promo Expire');
+    if (promo.crs_id !== data.crs_id) throw new ApolloError('Invalid');
+    return promo.discount
   },
 }
 
