@@ -69,7 +69,7 @@ const jamuntekQueryTypesAndInputs = `
 
     input promoCheck {
       code: String!
-      crs_id: Int!
+      crs_name: String!
     }
 
     type CourseForCat {
@@ -316,10 +316,12 @@ const jamuntekResolvers = {
     const promo = await prisma.jmk_promo_code.findFirst({
       where: { code: data.code },
     });
-    if (!promo) throw new ApolloError('Invalid Code');
+    if (!promo) throw new ApolloError('Invalid Promo Code');
     if (promo.upto < 1) throw new ApolloError('Invalid');
-    if (new Date(promo.created_at).getTime() > Date.now()) throw new ApolloError('Promo Expire');
-    if (promo.crs_id !== data.crs_id) throw new ApolloError('Invalid');
+    if (new Date(promo.created_at).getTime() > Date.now()) throw new ApolloError('Promo Code Expire');
+    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: promo.crs_id } })
+    console.log(crs);
+    if (data.crs_name !== crs.crs_name) throw new ApolloError('Invalid Promo Code');
     return promo.discount
   },
 }

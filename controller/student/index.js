@@ -56,6 +56,7 @@ const studentQueryTypesAndInputs = `
         ref_id:String
         std_add_zone:String
         std_country:String
+        promo_code:String
         crs_id:Int
         crs_ecp_st_d:Date
         cid:Int
@@ -620,10 +621,9 @@ const studentResolvers = {
       const promo = await prisma.jmk_promo_code.findFirst({
         where: { code: promo_code },
       });
-      if (!promo) throw new ApolloError('Invalid Code');
-      if (promo.upto < 1) throw new ApolloError('Invalid');
-      if (new Date(promo.created_at).getTime() > Date.now()) throw new ApolloError('Promo Expire');
-      if (promo.crs_id !== data.crs_id) throw new ApolloError('Invalid');
+      if (!promo) throw new ApolloError('Invalid Promo Code');
+      if (promo.upto < 1) throw new ApolloError('Invalid Promo Code');
+      if (new Date(promo.created_at).getTime() > Date.now()) throw new ApolloError('Promo Code Expire');
       await prisma.jmk_promo_code.update({ where: { serial: promo.serial }, data: { upto: promo.upto - 1 } })
     }
 

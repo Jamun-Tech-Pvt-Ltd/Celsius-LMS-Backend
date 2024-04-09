@@ -3378,15 +3378,17 @@ const adminResolversQuery = {
     for (let index = 0; index < promo.jmkstdcrsinfo.length; index++) {
       const element = promo.jmkstdcrsinfo[index];
       const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: element.std_id } });
-      const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: element.crs_id } });
-      students.push({
-        serial: element.serial,
-        name: std.std_fname + ' ' + std.std_mname + ' ' + std.std_lname,
-        course: crs.crs_name,
-        discount: promo.discount,
-        created_at: element.createdAt,
-        std_id:element.std_id,
-      })
+      if (element.crs_id) {
+        const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: element.crs_id } });
+        students.push({
+          serial: element.serial,
+          name: std.std_fname + ' ' + std.std_mname + ' ' + std.std_lname,
+          course: crs.crs_name,
+          discount: promo.discount,
+          created_at: element.createdAt,
+          std_id: element.std_id,
+        })
+      }
     }
     if (!promo) throw new ApolloError('Data Not Found')
     return { ...promo, promoStudents: students }
