@@ -223,6 +223,8 @@ const studentQueryTypesAndInputs = `
         amt_paid: Int
         amt_due: Int
         crs_rate: Int
+        promo_discount: Int
+        promo_code: String
         meetLink: String
         time: String
      }
@@ -1753,13 +1755,14 @@ const studentResolversQuery = {
       if (!user) throw new AuthenticationError('invalid user credentials')
       const stdcourse = await prisma.jmkstdcrsinfo.findFirst({
         where: { std_id: userId, crs_id: user.crs_id },
+        include: { promo: true }
       })
       if (!stdcourse) throw new ForbiddenError('invalid')
 
       const crs = await prisma.jmkcrsinfo.findFirst({
         where: { crs_id: user.crs_id },
       })
-      return { ...stdcourse, ...crs }
+      return { ...stdcourse, ...crs, promo_discount: stdcourse.promo?.discount ?? null, promo_code: stdcourse.promo?.code ?? null }
     }
     throw new ForbiddenError('Bad request !!')
   },
