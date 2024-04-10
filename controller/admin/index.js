@@ -630,6 +630,8 @@ const adminQueryTypesAndInputs = `
       std_crs_verirfy:Boolean
       payment_option:String
       payment_type:String
+      promo_discount: Int
+      promo_code: String
       time:String
       ref_id:String
      }
@@ -2660,6 +2662,7 @@ const adminResolversQuery = {
       if (!admin) throw new AuthenticationError('invalid admin credentials')
       const course = await prisma.jmkstdcrsinfo.findFirst({
         where: { serial: args.serial },
+        include: { promo: true }
       })
       if (!course) throw new ApolloError('crs not fund !!')
       const selectedCourse = await prisma.jmkcrsmain.findFirst({
@@ -2671,7 +2674,7 @@ const adminResolversQuery = {
           rate: true
         },
       })
-      return { ...course, ...selectedCourse }
+      return { ...course, ...selectedCourse, promo_discount: course.promo?.discount ?? null, promo_code: course.promo?.code ?? null }
     }
     throw new AuthenticationError('invalid access')
   },
