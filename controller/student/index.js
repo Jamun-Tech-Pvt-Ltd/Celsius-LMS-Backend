@@ -554,6 +554,8 @@ const studentMutation = `
     updateMessageSeen(id:Int!, type:String!):String!
 
     addStudentPayInfo(data:addStudentPaymentInput): String!
+
+    applyCourseCoupon(code:String!):String!
     
 `
 
@@ -1672,6 +1674,31 @@ const studentResolvers = {
     return 'success'
   },
 
+  applyCourseCoupon: async (_, { code }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('Invalid Token');
+    if (role !== ROLES[0]) throw new AuthenticationError('invalid access');
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user');
+    const stdcrs = await prisma.jmkstdcrsinfo.findFirst({ where: { crs_id: user.crs_id, std_id: user.std_id } });
+    if (!stdcrs) throw new Error('invalid User Course');
+    if (stdcrs.promo_code) throw new Error('Coupon already applyed on this course');
+    const promo = await prisma.jmk_promo_code.findFirst({
+      where: { code, crs_id: user.crs_id },
+    });
+    if (!promo) throw new Error('Invalid Promo Code');
+    if (!code) throw new ApolloError('Invalid Promo Code');
+    if (promo.upto < 1) throw new ApolloError('Promo Code Expire');
+    if (new Date(promo.created_at).getTime() > Date.now()) throw new ApolloError('Promo Code Expire');
+    await prisma.jmkstdcrsinfo.update({
+      where: { serial: stdcrs.serial }, data: {
+        promo_code: promo.code,
+      }
+    })
+    return 'success'
+  },
+
 }
 
 const studentResolversQuery = {
@@ -2248,6 +2275,7 @@ const studentResolversQuery = {
     if (!channel[0]) throw new ApolloError('user doesnt have course')
     return channel
   },
+
 }
 
 const subscription = {
