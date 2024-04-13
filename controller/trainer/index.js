@@ -429,6 +429,32 @@ const trainerResolvers = {
 
     if (!stdCrs) throw new ApolloError('Something went wrong');
 
+    const admins = await prisma.jmkuserinfo.findMany();
+    for (let index = 0; index < admins.length; index++) {
+      const admin = admins[index];
+      const accessData = JSON.parse(admin.usr_access);
+      if (admin?.usr_access?.[0]) {
+        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
+        if (findRegistrationAccess && findRegistrationAccess?.option) {
+          const registration = findRegistrationAccess.option.find((item) => item.name === 'Course Registration');
+          if (registration?.access?.[0]?.read) {
+            await prisma.jmk_notifications.create({
+              data: {
+                user_id: admin.usr_id,
+                label1: `${newStudent.std_fname}`,
+                label2: course.title,
+                user_type: "Admin",
+                category: 'registered',
+                message: `has successfully registered for course`,
+                link: `/students/${newStudent.std_id}`,
+                is_read: false,
+              }
+            });
+          }
+        }
+      }
+    }
+
     return 'Success'
   },
 
@@ -766,7 +792,7 @@ const trainerResolvers = {
             label2: weekContent.title,
             user_type: "Student",
             category: data.type,
-            message: `just added a ${data.type.toLowerCase()} for`,
+            message: `just added a ${data.type.toLowerCase().replace('note', 'file')} for`,
             link: `/weeks/${weekContent.title}?week_id=${weekContent.week_id}`,
             is_read: false,
           }

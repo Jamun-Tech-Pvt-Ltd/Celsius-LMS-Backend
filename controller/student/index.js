@@ -843,7 +843,33 @@ const studentResolvers = {
         crs_start_dt: new Date(),
         std_id: userId,
       },
-    })
+    });
+
+    const admins = await prisma.jmkuserinfo.findMany();
+    for (let index = 0; index < admins.length; index++) {
+      const admin = admins[index];
+      const accessData = JSON.parse(admin.usr_access);
+      if (admin?.usr_access?.[0]) {
+        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
+        if (findRegistrationAccess && findRegistrationAccess?.option) {
+          const registration = findRegistrationAccess.option.find((item) => item.name === 'Course Registration');
+          if (registration?.access?.[0]?.read) {
+            await prisma.jmk_notifications.create({
+              data: {
+                user_id: admin.usr_id,
+                label1: `${user.std_fname}`,
+                label2: course.title,
+                user_type: "Admin",
+                category: 'course_red',
+                message: `has request new course `,
+                link: `/students/${user.std_id}`,
+                is_read: false,
+              }
+            });
+          }
+        }
+      }
+    }
     return 'success'
   },
 
@@ -1115,18 +1141,20 @@ const studentResolvers = {
       data: { ...data, student_id: userId, user_type: 'Student' }
     });
 
-    await prisma.jmk_notifications.create({
-      data: {
-        user_id: question.student_id,
-        label1: `${user.std_fname}`,
-        label2: question.ques_title,
-        user_type: "Student",
-        category: 'discussion_panel_comment',
-        message: `just commented in your question in discussion panel of`,
-        link: `/discussion_panel/${question.ques_id}`,
-        is_read: false,
-      }
-    });
+    if (question?.student_id !== user.std_id) {
+      await prisma.jmk_notifications.create({
+        data: {
+          user_id: question.student_id,
+          label1: `${user.std_fname}`,
+          label2: question.ques_title,
+          user_type: "Student",
+          category: 'discussion_panel_comment',
+          message: `just commented in your question in discussion panel of`,
+          link: `/discussion_panel/${question.ques_id}`,
+          is_read: false,
+        }
+      });
+    }
 
     if (!answer) throw new ApolloError('Someting went wrong !')
 
