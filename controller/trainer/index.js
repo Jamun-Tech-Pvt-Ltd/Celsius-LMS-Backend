@@ -441,11 +441,11 @@ const trainerResolvers = {
             await prisma.jmk_notifications.create({
               data: {
                 user_id: admin.usr_id,
-                label1: `${newStudent.std_fname}`,
-                label2: course.title,
+                label1: `${trainer.tr_fname} (Trainer)`,
+                label2: `${newStudent.std_fname}`,
                 user_type: "Admin",
                 category: 'registered',
-                message: `has successfully registered for course`,
+                message: `has added a new student `,
                 link: `/students/${newStudent.std_id}`,
                 is_read: false,
               }
