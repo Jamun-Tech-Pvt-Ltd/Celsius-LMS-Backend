@@ -29,6 +29,7 @@ input createCourseInput {
     crs_nxt_st_date: Date!
     crs_image: String!
     lavel: String!
+    meetLink: String
     time: String!
  }
 
@@ -44,6 +45,7 @@ input createCourseInput {
   crs_image: String!
   lavel: String!
   time: String!
+  meetLink: String
  }
 
  input deleteCourseInput {
@@ -66,6 +68,7 @@ input createCourseInput {
         crs_image:String
         time:String
         lavel:String
+        meetLink:String
         isDeleted:Boolean!
     }
 
@@ -147,6 +150,19 @@ input createCourseInput {
     img: String!
   }
 
+  type Notification {
+    serial: Int!
+    user_type: String!
+    user_id: Int!
+    category: String!
+    link: String
+    label1: String
+    label2: String
+    message: String!
+    is_read: Boolean!
+    created_at: Date!
+  }
+
 `
 
 const commonQuery = `
@@ -159,12 +175,18 @@ const commonQuery = `
     getBlogBySlug(blog_slug:String!):JmkBlog!
     getFaqByType(type:String):[Faq!]!
     getFaqById(faq_id:Int!):Faq!
+    getMyNotifications:[Notification]
 `
 
 const commonMutation = `
     createCourse(data:createCourseInput!):String!
     updateCourse(data:updateCourseInput!):String!
     deleteCourse(data:deleteCourseInput):String
+
+    deleteNotification(serial:Int!):String!
+    deleteAllNotification:String!
+
+    updateNotification(serial:Int!):String!
 `
 
 
@@ -222,6 +244,55 @@ const commonResolvers = {
       return 'success'
     }
     throw new AuthenticationError('invalid access')
+  },
+
+  deleteNotification: async (_, { serial }, { userId, role }) => {
+    if (role) {
+      if (!userId) throw new ForbiddenError('invalid token');
+      await prisma.jmk_notifications.delete({ where: { serial } });
+      return 'success'
+    }
+  },
+
+  deleteAllNotification: async (_, { data }, { userId, role }) => {
+    if (role === ROLES[0]) {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const student = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      });
+      if (!student) throw new AuthenticationError('invalid student');
+      await prisma.jmk_notifications.deleteMany({ where: { user_id: student.std_id, user_type: 'Student' } });
+      return 'success'
+    }
+
+    if (role === ROLES[1]) {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      });
+      if (!trainer) throw new AuthenticationError('invalid trainer');
+      await prisma.jmk_notifications.deleteMany({ where: { user_id: trainer.tr_id, user_type: 'Trainer' } });
+      return 'success'
+    }
+
+    if (role === 'admin') {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin');
+      await prisma.jmk_notifications.deleteMany({ where: { user_id: admin.usr_id, user_type: 'Admin' } });
+      return 'success'
+    }
+
+    throw new AuthenticationError('invalid access');
+  },
+
+  updateNotification: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (!serial) throw new ForbiddenError('invalid serial');
+    await prisma.jmk_notifications.update({ where: { serial }, data: { is_read: true } });
+    return 'success'
   },
 }
 
@@ -319,6 +390,51 @@ const commonResolversQuery = {
     })
     if (!faq) throw new ApolloError('Data Not Found')
     return faq
+  },
+  getMyNotifications: async (_, { }, { userId, role }) => {
+    if (role === ROLES[0]) {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const student = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      });
+      if (!student) throw new AuthenticationError('invalid student');
+      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: student.std_id, user_type: 'Student' }, orderBy: { created_at: 'desc' } });
+      if (notifications) {
+        return notifications
+      } else {
+        return []
+      }
+    }
+
+    if (role === ROLES[1]) {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      });
+      if (!trainer) throw new AuthenticationError('invalid trainer');
+      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: trainer.tr_id, user_type: 'Trainer' }, orderBy: { created_at: 'desc' } });
+      if (notifications) {
+        return notifications
+      } else {
+        return []
+      }
+    }
+
+    if (role === 'admin') {
+      if (!userId) throw new ForbiddenError('invalid token');
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin');
+      const notifications = await prisma.jmk_notifications.findMany({ where: { user_id: admin.usr_id, user_type: 'Admin' }, orderBy: { created_at: 'desc' } });
+      if (notifications) {
+        return notifications
+      } else {
+        return []
+      }
+    }
+
+    throw new AuthenticationError('invalid access');
   },
 }
 

@@ -22,6 +22,7 @@ model jmkcrsinfo {
   crs_code        String?        @db.VarChar(40)
   lavel           String?        @db.VarChar(200)
   time            String?        @db.VarChar(200)
+  meetLink        String?        @db.VarChar(1000)
   isDeleted       Boolean        @default(false)
   jmkcrstest      jmkcrstest[]
   jmkstdinfo      jmkstdinfo[]
@@ -46,6 +47,9 @@ model jmk_week_content {
   week_id       Int
   video_url     String?          @db.VarChar(1000)
   project_url   String?          @db.VarChar(1000)
+  duration      String?          @db.VarChar(100)
+  level         String?          @db.VarChar(100)
+  share_date    String?          @db.VarChar(100)
   date          DateTime         @default(now())
   video_url_key String?          @db.VarChar(1000)
   jmk_tr_week   jmk_tr_week      @relation(fields: [week_id], references: [week_id])
@@ -61,15 +65,19 @@ model jmk_test_set {
   ans2        String? @db.VarChar(100)
   ans3        String? @db.VarChar(100)
   ans4        String? @db.VarChar(100)
+  hint        String? @db.VarChar(100)
   rtans       String? @db.VarChar(100)
 }
 
 model jmk_std_test_result {
-  serial        Int     @id @default(autoincrement())
-  content_id    Int
-  std_id        Int
-  test_complete Boolean @default(false)
-  score         String  @default("0")
+  serial             Int      @id @default(autoincrement())
+  content_id         Int
+  std_id             Int
+  test_complete      Boolean  @default(false)
+  score              String   @default("0")
+  question_attempted Int      @default(0)
+  time_taken         String   @default("")
+  created_at         DateTime @default(now())
 }
 
 model jmk_std_test_ans {
@@ -281,22 +289,24 @@ model jmkjobReq {
 }
 
 model jmkstdcrsinfo {
-  serial            Int       @id @default(autoincrement())
+  serial            Int             @id @default(autoincrement())
   crs_id            Int?
-  crs_start_dt      DateTime? @db.Date
+  crs_start_dt      DateTime?       @db.Date
   std_id            Int?
-  std_crs_verirfy   Boolean   @default(false)
+  std_crs_verirfy   Boolean         @default(false)
   discount          Int?
   amt_paid          Int?
   amt_due           Int?
-  crs_complete      Boolean?  @default(false)
-  crs_complete_date DateTime? @db.Date
+  crs_complete      Boolean?        @default(false)
+  crs_complete_date DateTime?       @db.Date
   crsmain_id        Int?
-  createdAt         DateTime  @default(now())
+  createdAt         DateTime        @default(now())
   payment_option    String?
   payment_type      String?
   time              String?
   ref_id            String?
+  promo_code        String?
+  promo             jmk_promo_code? @relation(fields: [promo_code], references: [code], onDelete: Cascade)
 }
 
 model jmkquesans {
@@ -1041,6 +1051,31 @@ model jmk_partner_ui {
   created_at DateTime @default(now())
 }
 
+model jmk_notifications {
+  serial     Int                   @id @default(autoincrement())
+  user_type  jmk_notification_type
+  user_id    Int
+  category   String
+  link       String?
+  label1     String?
+  label2     String?
+  message    String
+  is_read    Boolean
+  created_at DateTime              @default(now())
+}
+
+model jmk_promo_code {
+  serial        Int             @id @default(autoincrement())
+  name          String
+  crs_id        Int
+  code          String          @unique
+  discount      Int
+  upto          Int
+  expiry_date   DateTime        @default(now())
+  created_at    DateTime        @default(now())
+  jmkstdcrsinfo jmkstdcrsinfo[]
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
@@ -1086,4 +1121,10 @@ enum jmk_faq_type {
   Student
   Trainer
   Jamuntek
+}
+
+enum jmk_notification_type {
+  Student
+  Trainer
+  Admin
 }

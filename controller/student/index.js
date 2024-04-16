@@ -56,6 +56,7 @@ const studentQueryTypesAndInputs = `
         ref_id:String
         std_add_zone:String
         std_country:String
+        promo_code:String
         crs_id:Int
         crs_ecp_st_d:Date
         cid:Int
@@ -146,6 +147,11 @@ const studentQueryTypesAndInputs = `
      }
 
      input submitStdTestAnsInput {
+      time_taken: String!
+      testAns: [testAnsInput]
+     }
+
+     input testAnsInput {
       test_set_id:Int!
       std_ans:String!
      }
@@ -217,6 +223,10 @@ const studentQueryTypesAndInputs = `
         amt_paid: Int
         amt_due: Int
         crs_rate: Int
+        promo_discount: Int
+        promo_code: String
+        meetLink: String
+        time: String
      }
      
      type User {
@@ -335,6 +345,9 @@ const studentQueryTypesAndInputs = `
        title:String!
        description:String
        type:String!
+       duration:String
+       share_date:String
+       level:String
        date:Date!
        video_url:String
        project_url: String
@@ -351,11 +364,20 @@ const studentQueryTypesAndInputs = `
         ans2:String!
         ans3:String!
         ans4:String!
+        hint:String
      }
 
      type weeklyTestSet {
       courseWeekContent:courseWeekContent
       questions:[weeklyTest]
+     }
+
+     type testResults {
+        content_id:Int!
+        total_question:Int!
+        question_attempted:Int!
+        correct_answer:Int!
+        time_taken: String!
      }
 
      type weeklyNote {
@@ -469,6 +491,7 @@ const studentQuery = `
 
     getStudentCourseWeek:[courseWeek]
     getStudentCourseWeekContent(week_id:Int!):[courseWeekContent]
+    getStudentCourseResult(content_id:Int!):[testResults]
 
     getStdQuestions:[stdQuestion]
     getStdQuestionById(question_id:Int!):stdQuestion
@@ -520,7 +543,7 @@ const studentMutation = `
     createAndUpdateStdQuesSub(data:stdQuesSubInput!):String!
 
 
-    submitStdTestAns(data:[submitStdTestAnsInput]!):String!
+    submitStdTestAns(data:submitStdTestAnsInput!):String!
 
     createStdWeeklyNote(data:createStdWeeklyNoteInput):String!
 
@@ -531,6 +554,8 @@ const studentMutation = `
     updateMessageSeen(id:Int!, type:String!):String!
 
     addStudentPayInfo(data:addStudentPaymentInput): String!
+
+    applyCourseCoupon(code:String!):String!
     
 `
 
@@ -583,7 +608,7 @@ const studentResolvers = {
       where: { std_email: userNew.std_email },
     });
 
-    if (user) throw new AuthenticationError('user already exist with that email')
+    if (user) throw new AuthenticationError('user already exist with that email');
 
     const course = await prisma.jmkcrsmain.findFirst({
       where: {
@@ -594,7 +619,17 @@ const studentResolvers = {
 
     if (!course) throw new AuthenticationError('invalid course')
 
-    const { std_payment_type, std_payment_option, std_payment_amount, time, ref_id, ...rest } = userNew;
+    const { std_payment_type, std_payment_option, std_payment_amount, time, ref_id, promo_code, ...rest } = userNew;
+
+    if (promo_code) {
+      const promo = await prisma.jmk_promo_code.findFirst({
+        where: { code: promo_code },
+      });
+      if (!promo) throw new ApolloError('Invalid Promo Code');
+      if (promo.upto < 1) throw new ApolloError('Invalid Promo Code');
+      if (new Date(promo.created_at).getTime() > Date.now()) throw new ApolloError('Promo Code Expire');
+      await prisma.jmk_promo_code.update({ where: { serial: promo.serial }, data: { upto: promo.upto - 1 } })
+    }
 
     const newUser = await prisma.jmkstdinfo.create({
       data: { ...rest, crs_id: 59, std_join_dt: new Date() },
@@ -611,6 +646,7 @@ const studentResolvers = {
             payment_option: std_payment_option,
             amt_paid: std_payment_amount ?? 0,
             amt_due: course.rate - std_payment_amount ?? 0,
+            promo_code: promo_code ?? null,
             time,
             ref_id
           },
@@ -621,6 +657,7 @@ const studentResolvers = {
             crsmain_id: userNew.crsmain_id,
             crs_start_dt: course.start_date,
             std_id: newUser.std_id,
+            promo_code: promo_code ?? null
           },
         })
       }
@@ -642,6 +679,32 @@ const studentResolvers = {
       'New User Singup Notification',
       newUserSignupNotification(newUser, course.crs_name)
     )
+
+    const admins = await prisma.jmkuserinfo.findMany();
+    for (let index = 0; index < admins.length; index++) {
+      const admin = admins[index];
+      const accessData = JSON.parse(admin.usr_access);
+      if (admin?.usr_access?.[0]) {
+        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
+        if (findRegistrationAccess && findRegistrationAccess?.option) {
+          const registration = findRegistrationAccess.option.find((item) => item.name === 'Course Registration');
+          if (registration?.access?.[0]?.read) {
+            await prisma.jmk_notifications.create({
+              data: {
+                user_id: admin.usr_id,
+                label1: `${newUser.std_fname}`,
+                label2: course.title,
+                user_type: "Admin",
+                category: 'registered',
+                message: `has successfully registered for course`,
+                link: `/students/${newUser.std_id}`,
+                is_read: false,
+              }
+            });
+          }
+        }
+      }
+    }
 
     return { token }
   },
@@ -780,7 +843,33 @@ const studentResolvers = {
         crs_start_dt: new Date(),
         std_id: userId,
       },
-    })
+    });
+
+    const admins = await prisma.jmkuserinfo.findMany();
+    for (let index = 0; index < admins.length; index++) {
+      const admin = admins[index];
+      const accessData = JSON.parse(admin.usr_access);
+      if (admin?.usr_access?.[0]) {
+        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
+        if (findRegistrationAccess && findRegistrationAccess?.option) {
+          const registration = findRegistrationAccess.option.find((item) => item.name === 'Course Registration');
+          if (registration?.access?.[0]?.read) {
+            await prisma.jmk_notifications.create({
+              data: {
+                user_id: admin.usr_id,
+                label1: `${user.std_fname}`,
+                label2: course.title,
+                user_type: "Admin",
+                category: 'course_red',
+                message: `has request new course `,
+                link: `/students/${user.std_id}`,
+                is_read: false,
+              }
+            });
+          }
+        }
+      }
+    }
     return 'success'
   },
 
@@ -904,9 +993,6 @@ const studentResolvers = {
       }
     });
 
-    //This one sends the mail to the current user informing his post has been sucessfully posted
-    await sendMail(user.std_email, `Question Sucessfully Posted`, QuestionCreateTemplate(`${user.std_fname} ${user.std_lname}`, `${user.std_pic}`, question.ques_id));
-
     //This one is for all the other users having common CRSID informing that the user has posted a question
     const studentList = await prisma.jmkstdinfo.findMany({
       where: {
@@ -916,11 +1002,35 @@ const studentResolvers = {
     });
     studentList.forEach(async (stud) => {
       if (stud.std_id != user.std_id) {
+        await prisma.jmk_notifications.create({
+          data: {
+            user_id: stud.std_id,
+            label1: `${user.std_fname}`,
+            label2: question.ques_title,
+            user_type: "Student",
+            category: 'discussion_panel_new',
+            message: `just posted a question `,
+            link: `/discussion_panel/${question.ques_id}`,
+            is_read: false,
+          }
+        });
         await sendMail(user.std_email, `Question was posted`, QuestionInformTemplate(`${user.std_fname} ${user.std_lname}`, `${user.std_fname} ${user.std_lname}`, `${user.std_pic}`, question.ques_id));
       }
-    })
+    });
 
-    //TODO: Teacher one up for discussion
+    const trainer = await prisma.jmktrcrsinfo.findFirst({ where: { crs_id: user.crs_id } });
+    await prisma.jmk_notifications.create({
+      data: {
+        user_id: trainer.tr_id,
+        label1: `${user.std_fname}`,
+        label2: question.ques_title,
+        user_type: "Trainer",
+        category: 'discussion_panel_new',
+        message: `just posted a question `,
+        link: `/discussionPanel/${question.ques_id}`,
+        is_read: false,
+      }
+    });
 
     if (!question) throw new ApolloError('Someting went wrong !')
 
@@ -1029,24 +1139,22 @@ const studentResolvers = {
 
     const answer = await prisma.jmk_ques_ans.create({
       data: { ...data, student_id: userId, user_type: 'Student' }
-    })
-
-
-    const subsList = await prisma.jmk_ques_sub.findMany({
-      where: {
-        question_id: data.question_id
-      }
     });
 
-    subsList.forEach(async (student) => {
-      let studentDB = await prisma.jmkstdinfo.findFirst({
-        where: {
-          std_id: student.student_id
+    if (question?.student_id !== user.std_id) {
+      await prisma.jmk_notifications.create({
+        data: {
+          user_id: question.student_id,
+          label1: `${user.std_fname}`,
+          label2: question.ques_title,
+          user_type: "Student",
+          category: 'discussion_panel_comment',
+          message: `just commented in your question in discussion panel of`,
+          link: `/discussion_panel/${question.ques_id}`,
+          is_read: false,
         }
       });
-      await sendMail(studentDB.std_email, `Question Subscription Update`, SubscriptionEmailTemplate(`${studentDB.std_fname} ${studentDB.std_lname}`, `${studentDB.std_pic}`, data.question_id));
-
-    });
+    }
 
     if (!answer) throw new ApolloError('Someting went wrong !')
 
@@ -1085,6 +1193,9 @@ const studentResolvers = {
 
     if (!user) throw new AuthenticationError('invalid user')
 
+    const question = await prisma.jmk_std_ques.findFirst({ where: { ques_id: data.question_id } });
+    if (!question) throw new AuthenticationError('invalid opration')
+
     if (data.imp_type === "Question") {
 
       const oldVote = await prisma.jmk_ques_ans_imp.findFirst({
@@ -1100,7 +1211,21 @@ const studentResolvers = {
           where: { imp_id: oldVote.imp_id }
         })
 
-        if (!vote) throw new ApolloError('Someting went wrong !')
+        if (!vote) throw new ApolloError('Someting went wrong !');
+        if ((data.upvote === 1 || data.downvote === 1) && question.student_id !== userId) {
+          await prisma.jmk_notifications.create({
+            data: {
+              user_id: question.student_id,
+              label1: user.std_fname,
+              label2: question.ques_title,
+              user_type: "Student",
+              category: data.upvote === 1 ? "discussion_panel_like" : "discussion_panel_dislike",
+              message: `just ${data.upvote === 1 ? 'liked' : 'disliked'} liked your question in discussion panel of `,
+              link: `/discussion_panel/${question.ques_id}`,
+              is_read: false,
+            }
+          });
+        }
         return 'Successfully updated !'
       }
 
@@ -1109,10 +1234,26 @@ const studentResolvers = {
       })
 
       if (!vote) throw new ApolloError('Someting went wrong !')
-
+      if ((data.upvote === 1 || data.downvote === 1) && question.student_id !== userId) {
+        await prisma.jmk_notifications.create({
+          data: {
+            user_id: question.student_id,
+            label1: user.std_fname,
+            label2: question.ques_title,
+            user_type: "Student",
+            category: data.upvote === 1 ? "discussion_panel_like" : "discussion_panel_dislike",
+            message: `just ${data.upvote === 1 ? 'liked' : 'disliked'} liked your question in discussion panel of `,
+            link: `/discussion_panel/${question.ques_id}`,
+            is_read: false,
+          }
+        });
+      }
       return 'Successfully Created !'
     }
     if (data.imp_type === "Answer") {
+
+      const ans = await prisma.jmk_ques_ans.findFirst({ where: { ans_id: data.ans_id } });
+      if (!ans) throw new AuthenticationError('invalid opration')
 
       const oldVote = await prisma.jmk_ques_ans_imp.findFirst({
         where: {
@@ -1127,7 +1268,21 @@ const studentResolvers = {
           where: { imp_id: oldVote.imp_id }
         })
 
-        if (!vote) throw new ApolloError('Someting went wrong !')
+        if (!vote) throw new ApolloError('Someting went wrong !');
+        if ((data.upvote === 1 || data.downvote === 1) && ans.student_id !== userId) {
+          await prisma.jmk_notifications.create({
+            data: {
+              user_id: ans.user_type === 'Teacher' ? ans.teacher_id : ans.student_id,
+              label1: user.std_fname,
+              label2: question.ques_title,
+              user_type: ans.user_type === 'Teacher' ? 'Trainer' : ans.user_type,
+              category: data.upvote === 1 ? "discussion_panel_upvote" : "discussion_panel_downvote",
+              message: `${data.upvote === 1 ? 'upvote' : 'downvote'} on your comments on your post in the discussion panel of`,
+              link: ans.user_type === 'Teacher' ? `/discussionPanel/${question.ques_id}` : `/discussion_panel/${question.ques_id}`,
+              is_read: false,
+            }
+          });
+        }
         return 'Successfully updated !'
       }
 
@@ -1135,8 +1290,22 @@ const studentResolvers = {
         data: { ...data, user_type: "Student", student_id: userId }
       })
 
-      if (!vote) throw new ApolloError('Someting went wrong !')
+      if (!vote) throw new ApolloError('Someting went wrong !');
 
+      if ((data.upvote === 1 || data.downvote === 1) && ans.student_id !== userId) {
+        await prisma.jmk_notifications.create({
+          data: {
+            user_id: vote.student_id,
+            label1: user.std_fname,
+            label2: question.ques_title,
+            user_type: "Student",
+            category: data.upvote === 1 ? "discussion_panel_upvote" : "discussion_panel_downvote",
+            message: `${data.upvote === 1 ? 'upvote' : 'downvote'} on your comments on your post in the discussion panel of`,
+            link: `/discussion_panel/${question.ques_id}`,
+            is_read: false,
+          }
+        });
+      }
       return 'Successfully Created !'
     }
     throw new AuthenticationError('invalid !')
@@ -1146,28 +1315,55 @@ const studentResolvers = {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
-    })
-    if (!user) throw new AuthenticationError('invalid user')
+    });
+    if (!user) throw new AuthenticationError('invalid user');
+    const question = await prisma.jmk_std_ques.findFirst({ where: { ques_id: data.question_id } });
+    if (!question) throw new AuthenticationError('invalid opration');
+
     const subscribe = await prisma.jmk_ques_sub.findFirst({
       where: {
         question_id: data.question_id,
         student_id: userId
       },
-    })
+    });
     if (subscribe) {
-      const stdSubscribe = await prisma.jmk_ques_sub.delete({ where: { sub_id: subscribe.sub_id } })
+      const stdSubscribe = await prisma.jmk_ques_sub.delete({ where: { sub_id: subscribe.sub_id } });
+      if (!stdSubscribe) throw new ApolloError('Someting went wrong !');
+      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: user.crs_id } });
+      // notification
+      await prisma.jmk_notifications.create({
+        data: {
+          user_id: question.student_id,
+          label1: user.std_fname,
+          label2: course.crs_name,
+          user_type: "Student",
+          category: "discussion_panel",
+          message: "just unsubscribed to your question in discussion panel of",
+          link: `/discussion_panel/${data.question_id}`,
+          is_read: false,
+        }
+      });
 
-      if (!stdSubscribe) throw new ApolloError('Someting went wrong !')
-
-      return 'unsubscribed'
+      return 'unsubscribed';
     }
 
     const stdSubscribe = await prisma.jmk_ques_sub.create({
       data: { ...data, student_id: userId },
-    })
-
-    if (!stdSubscribe) throw new ApolloError('Someting went wrong !')
-
+    });
+    if (!stdSubscribe) throw new ApolloError('Someting went wrong !');
+    const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: user.crs_id } });
+    await prisma.jmk_notifications.create({
+      data: {
+        user_id: question.student_id,
+        label1: user.std_fname,
+        label2: course.crs_name,
+        user_type: "Student",
+        category: "discussion_panel",
+        message: "just subscribed to your question in discussion panel of",
+        link: `/discussion_panel/${data.question_id}`,
+        is_read: false,
+      }
+    });
     return 'subscribed'
   },
 
@@ -1177,27 +1373,42 @@ const studentResolvers = {
       where: { std_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user');
-    if (!data[0].test_set_id) throw new AuthenticationError('invalid submit');
+    if (!data.testAns?.[0]?.test_set_id) throw new AuthenticationError('invalid submit');
 
-    const question = await prisma.jmk_test_set.findFirst({ where: { test_set_id: data[0].test_set_id } })
+    const question = await prisma.jmk_test_set.findFirst({ where: { test_set_id: data.testAns[0].test_set_id } })
     if (!question) throw new ApolloError('Invalid !')
 
     let score = 0;
+    let question_attempted = 0;
 
-    for (let index = 0; index < data.length; index++) {
-      const questionCheck = await prisma.jmk_test_set.findFirst({ where: { test_set_id: data[index].test_set_id } })
-      if (questionCheck.rtans.toLowerCase() == data[index].std_ans.toLowerCase()) {
+    for (let index = 0; index < data.testAns.length; index++) {
+      const questionCheck = await prisma.jmk_test_set.findFirst({ where: { test_set_id: data.testAns[index].test_set_id } })
+      if (questionCheck.rtans.toLowerCase() == data.testAns[index].std_ans.toLowerCase()) {
         score += 1
+      }
+
+      if (questionCheck.rtans.toLowerCase() !== "Not Answers") {
+        question_attempted += 1
       }
 
       await prisma.jmk_std_test_ans.create({
         data: {
           std_id: userId,
           content_id: question.content_id,
-          test_set_id: data[index].test_set_id,
-          std_ans: data[index].std_ans
+          test_set_id: data?.testAns[index].test_set_id,
+          std_ans: data.testAns[index].std_ans
         }
       })
+    }
+
+    const formatTimeTaken = (minutes) => {
+      if (minutes < 60) {
+        return minutes + " minutes";
+      } else {
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        return hours + " hours " + remainingMinutes + " minutes";
+      }
     }
 
     const updateJmkWeekTest = await prisma.jmk_std_test_result.create({
@@ -1205,7 +1416,9 @@ const studentResolvers = {
         std_id: userId,
         content_id: question.content_id,
         test_complete: true,
-        score: `${score}/${data.length}`
+        score: `${score}/${data.testAns.length}`,
+        question_attempted,
+        time_taken: formatTimeTaken(data.time_taken),
       }
     })
 
@@ -1489,6 +1702,31 @@ const studentResolvers = {
     return 'success'
   },
 
+  applyCourseCoupon: async (_, { code }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('Invalid Token');
+    if (role !== ROLES[0]) throw new AuthenticationError('invalid access');
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user');
+    const stdcrs = await prisma.jmkstdcrsinfo.findFirst({ where: { crs_id: user.crs_id, std_id: user.std_id } });
+    if (!stdcrs) throw new Error('invalid User Course');
+    if (stdcrs.promo_code) throw new Error('Coupon already applyed on this course');
+    const promo = await prisma.jmk_promo_code.findFirst({
+      where: { code, crs_id: user.crs_id },
+    });
+    if (!promo) throw new Error('Invalid Promo Code');
+    if (!code) throw new ApolloError('Invalid Promo Code');
+    if (promo.upto < 1) throw new ApolloError('Promo Code Expire');
+    if (new Date(promo.created_at).getTime() > Date.now()) throw new ApolloError('Promo Code Expire');
+    await prisma.jmkstdcrsinfo.update({
+      where: { serial: stdcrs.serial }, data: {
+        promo_code: promo.code,
+      }
+    })
+    return 'success'
+  },
+
 }
 
 const studentResolversQuery = {
@@ -1572,13 +1810,14 @@ const studentResolversQuery = {
       if (!user) throw new AuthenticationError('invalid user credentials')
       const stdcourse = await prisma.jmkstdcrsinfo.findFirst({
         where: { std_id: userId, crs_id: user.crs_id },
+        include: { promo: true }
       })
       if (!stdcourse) throw new ForbiddenError('invalid')
 
       const crs = await prisma.jmkcrsinfo.findFirst({
         where: { crs_id: user.crs_id },
       })
-      return { ...stdcourse, ...crs }
+      return { ...stdcourse, ...crs, promo_discount: stdcourse.promo?.discount ?? null, promo_code: stdcourse.promo?.code ?? null }
     }
     throw new ForbiddenError('Bad request !!')
   },
@@ -1779,6 +2018,29 @@ const studentResolversQuery = {
 
     if (!weekContents[0]) throw new ForbiddenError('No data in this week .')
     return weekContents
+  },
+
+  getStudentCourseResult: async (_, { content_id }, { userId, role }) => {
+
+    if (!userId) throw new ForbiddenError('user need to login');
+
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    });
+
+    if (!user) throw new AuthenticationError('invalid user');
+    const data = [];
+    const history = await prisma.jmk_std_test_result.findMany({ where: { content_id: content_id, std_id: userId }, orderBy: { created_at: 'desc' } });
+    for (let index = 0; index < history.length; index++) {
+      data.push({
+        content_id,
+        total_question: parseInt(history[index].score.split('/')[1] !== 'undefined' ? history[index].score.split('/')[1] : 1),
+        question_attempted: history[index].question_attempted,
+        correct_answer: parseInt(history[index].score.split('/')[0] ?? 0),
+        time_taken: history[index].time_taken,
+      })
+    }
+    return data
   },
 
   getStudentChats: async (_, { chatId, chatType }, { userId, role }) => {
@@ -2041,6 +2303,7 @@ const studentResolversQuery = {
     if (!channel[0]) throw new ApolloError('user doesnt have course')
     return channel
   },
+
 }
 
 const subscription = {

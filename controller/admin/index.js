@@ -7,6 +7,7 @@ import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
 import { uploadImgToAWS, deleteImgToAWS } from '../../utils/imageHandler.js'
 import { ROLES } from '../../utils/helper.js'
+import { sendMail } from '../../utils/mailHandler.js'
 
 const adminQueryTypesAndInputs = `
 
@@ -597,6 +598,22 @@ const adminQueryTypesAndInputs = `
       icon:Upload
      }
 
+     input PromoInput {
+      serial:Int
+      name:String!
+      crs_id:Int!
+      code:String!
+      discount:Int!
+      upto:Int!
+      expiry_date:Date!
+     }
+
+     input MailSendInput {
+      content:String!
+      users:String!
+      subject:String!
+     }
+
      type UserCourseAdmin {
       std_id:Int!
       serial:Int!
@@ -613,6 +630,8 @@ const adminQueryTypesAndInputs = `
       std_crs_verirfy:Boolean
       payment_option:String
       payment_type:String
+      promo_discount: Int
+      promo_code: String
       time:String
       ref_id:String
      }
@@ -723,6 +742,28 @@ const adminQueryTypesAndInputs = `
       cmessage: String
       cdate: Date
     }
+
+    type PromoStudents {
+      serial:Int!
+      std_id:Int!
+      name:String!
+      course: String!
+      discount:Int!
+      created_at:Date!
+    }
+
+    type Promo {
+      serial:Int!
+      name:String!
+      crs_id:Int!
+      crs_name: String
+      code:String!
+      discount:Int!
+      upto:Int!
+      expiry_date:Date!
+      created_at:Date!
+      promoStudents: [PromoStudents]
+     }
 `
 
 const adminQuery = `
@@ -802,6 +843,9 @@ const adminQuery = `
 
     getContactReqs:[contactReq]
     getContactReqById(serial:Int!): contactReq
+
+    getPropmo:[Promo]
+    getPropmoById(serial:Int!): Promo
 `
 
 const adminMutation = `
@@ -876,6 +920,11 @@ const adminMutation = `
 
     createAndUpdatePartner(data:PartnerInput):String!
     deletePartnerById(serial:Int!):String!
+
+    createAndUpdatePromo(data:PromoInput):String!
+    deletePromoById(serial:Int!):String!
+
+    sendEmailByUser(data:MailSendInput!):String!
 `
 
 const adminResolvers = {
@@ -1194,15 +1243,30 @@ const adminResolvers = {
 
     if (!admin) throw new AuthenticationError('invalid admin')
 
+
     const checkCourse = await prisma.jmktrcrsinfo.findFirst({
       where: { crs_id: data.crs_id, tr_id: data.tr_id },
     });
-
     if (checkCourse) throw new AuthenticationError('already assign');
 
-    const trainerCourse = await prisma.jmktrcrsinfo.create({ data: { ...data }, })
+    const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id } });
+    if (!course) throw new AuthenticationError('invalid');
 
+    const trainerCourse = await prisma.jmktrcrsinfo.create({ data: { ...data }, })
     if (!trainerCourse) throw new AuthenticationError('Something went wrong')
+
+    await prisma.jmk_notifications.create({
+      data: {
+        user_id: trainerCourse.tr_id,
+        label1: `Admin`,
+        label2: course.crs_name,
+        user_type: "Trainer",
+        category: 'new_course',
+        message: `just assign a new course `,
+        link: `/courses`,
+        is_read: false,
+      }
+    });
 
     return 'success'
   },
@@ -2080,7 +2144,7 @@ const adminResolvers = {
         data.icon = service.icon;
         data.icon_key = service.icon_key;
       }
-    const updateService = await prisma.jmk_services.update({ where: { serial: data.serial }, data });
+      const updateService = await prisma.jmk_services.update({ where: { serial: data.serial }, data });
       if (!updateService) throw new ApolloError('invalid id')
     }
     return "success"
@@ -2158,6 +2222,70 @@ const adminResolvers = {
     await deleteImgToAWS(partner.icon_key);
     if (!partner) throw new ApolloError('someting went wrong');
     return 'deleted'
+  },
+
+  createAndUpdatePromo: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const promo = await prisma.jmk_promo_code.findFirst({ where: { serial: data.serial } });
+    if (!data.serial) {
+      const newPromo = await prisma.jmk_promo_code.create({ data });
+      if (!newPromo) throw new ApolloError('Someting went wrong')
+    } else {
+      const updatePomo = await prisma.jmk_promo_code.update({ where: { serial: promo.serial }, data });
+      if (!updatePomo) throw new ApolloError('invalid id')
+    }
+    return "success"
+  },
+
+  deletePartnerById: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin');
+    const promo = await prisma.jmk_promo_code.delete({ where: { serial } });
+    if (!promo) throw new ApolloError('someting went wrong');
+    return 'deleted'
+  },
+
+  sendEmailByUser: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+
+    if (!admin) throw new AuthenticationError('invalid admin');
+
+    if (data.users === 'Students') {
+      const students = await prisma.jmkstdinfo.findMany();
+      for (let index = 0; index < students.length; index++) {
+        const student = students[index];
+        await sendMail(student.std_email, data.subject, data.content)
+      }
+    }
+
+    if (data.users === 'Trainers') {
+      const trainers = await prisma.jmktrinfo.findMany();
+      for (let index = 0; index < trainers.length; index++) {
+        const trainer = trainers[index];
+        await sendMail(trainer.tr_email, data.subject, data.content)
+      }
+    }
+
+    if (data.users === 'Admins') {
+      const admins = await prisma.jmkuserinfo.findMany();
+      for (let index = 0; index < students.length; index++) {
+        const admin = admins[index];
+        await sendMail(admin.usr_email, data.subject, data.content)
+      }
+    }
+
+    return 'send'
   },
 }
 
@@ -2534,6 +2662,7 @@ const adminResolversQuery = {
       if (!admin) throw new AuthenticationError('invalid admin credentials')
       const course = await prisma.jmkstdcrsinfo.findFirst({
         where: { serial: args.serial },
+        include: { promo: true }
       })
       if (!course) throw new ApolloError('crs not fund !!')
       const selectedCourse = await prisma.jmkcrsmain.findFirst({
@@ -2545,7 +2674,7 @@ const adminResolversQuery = {
           rate: true
         },
       })
-      return { ...course, ...selectedCourse }
+      return { ...course, ...selectedCourse, promo_discount: course.promo?.discount ?? null, promo_code: course.promo?.code ?? null }
     }
     throw new AuthenticationError('invalid access')
   },
@@ -3117,7 +3246,7 @@ const adminResolversQuery = {
   getService: async (_, { serial }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId},
+      where: { usr_id: userId },
     });
     if (!admin) throw new AuthenticationError('invalid admin credentials');
     const service = await prisma.jmk_services.findFirst({ where: { serial } });
@@ -3222,6 +3351,50 @@ const adminResolversQuery = {
     const contactReq = await prisma.jmkcontact.findFirst({ where: { serial }, orderBy: { cdate: 'desc' } });
     if (!contactReq) throw new ApolloError('Data Not Found')
     return contactReq
+  },
+
+  getPropmo: async (_, { args }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    let data = [];
+    const promo = await prisma.jmk_promo_code.findMany({ orderBy: { created_at: 'desc' } });
+    for (let index = 0; index < promo.length; index++) {
+      const item = promo[index];
+      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: item.crs_id } });
+      data.push({ ...item, crs_name: course.crs_name })
+    }
+    if (!data?.[0]) throw new ApolloError('Data Not Found')
+    return data
+  },
+
+  getPropmoById: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    let students = [];
+    const promo = await prisma.jmk_promo_code.findFirst({ where: { serial }, include: { jmkstdcrsinfo: true } });
+    for (let index = 0; index < promo.jmkstdcrsinfo.length; index++) {
+      const element = promo.jmkstdcrsinfo[index];
+      const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: element.std_id } });
+      if (element.crs_id) {
+        const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: element.crs_id } });
+        students.push({
+          serial: element.serial,
+          name: std.std_fname + ' ' + std.std_mname + ' ' + std.std_lname,
+          course: crs.crs_name,
+          discount: promo.discount,
+          created_at: element.createdAt,
+          std_id: element.std_id,
+        })
+      }
+    }
+    if (!promo) throw new ApolloError('Data Not Found')
+    return { ...promo, promoStudents: students }
   },
 }
 
