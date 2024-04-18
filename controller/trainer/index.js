@@ -1346,7 +1346,9 @@ const trainerResolversQuery = {
           const student = await prisma.jmkstdinfo.findFirst({
             where: { std_id: studentList[index].std_id },
           })
-          students.push({ ...student, crs_complete: studentList[index].crs_complete, crs_complete_date: studentList[index].crs_complete_date })
+          if (student) {
+            students.push({ ...student, crs_complete: studentList[index].crs_complete, crs_complete_date: studentList[index].crs_complete_date })
+          }
         }
       }
       return students
