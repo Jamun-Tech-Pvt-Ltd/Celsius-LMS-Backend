@@ -170,6 +170,11 @@ const studentQueryTypesAndInputs = `
       std_note:String!
     }
 
+    input pageCommentInput {
+      blog_id:Int!
+      comment:String!
+    }
+
      type Feedback {
         grv_id : ID!
         std_id: String!
@@ -473,6 +478,18 @@ const studentQueryTypesAndInputs = `
     messageTyping(receiver_id: Int!, user_id:Int!):typing!
   }
 
+  type comment {
+    serial: Int!
+    comment: String! 
+    created_at:Date!
+    student: User
+  }
+
+  type pagesWithComments {
+    page:page!
+    comments:[comment]
+  }
+
 `
 
 const studentQuery = `
@@ -508,6 +525,9 @@ const studentQuery = `
     getStuentChatList:studentChatList
 
     getStudentChats(chatId:Int!,chatType:String!):StudentChatHistory!
+
+    getPagesStudent:[page]
+    getPageStudent(serial:Int!):pagesWithComments
 `
 
 const studentMutation = `
@@ -556,6 +576,8 @@ const studentMutation = `
     addStudentPayInfo(data:addStudentPaymentInput): String!
 
     applyCourseCoupon(code:String!):String!
+
+    addCommentOnPage(data:pageCommentInput):String!
     
 `
 
@@ -1727,6 +1749,27 @@ const studentResolvers = {
     return 'success'
   },
 
+  addCommentOnPage: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('Invalid Token');
+    if (role !== ROLES[0]) throw new AuthenticationError('invalid access');
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user');
+    const blog = await prisma.jmk_crs_blog.findFirst({ where: { serial: user.blog_id } });
+    if (!blog) throw new Error('invalid Blog Id');
+    const comment = await prisma.jmk_crs_blog_comments.create({
+      data: {
+        comment: data.comment,
+        blog_id: blog.serial,
+        std_id: user.std_id
+      }
+    })
+    if (!comment) throw new Error('Something Went Wrong !');
+
+    return 'success'
+  },
+
 }
 
 const studentResolversQuery = {
@@ -2302,6 +2345,37 @@ const studentResolversQuery = {
     }
     if (!channel[0]) throw new ApolloError('user doesnt have course')
     return channel
+  },
+
+  getPagesStudent: async (_, { }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    })
+    if (!user) throw new AuthenticationError('invalid user')
+
+    const pages = await prisma.jmk_crs_blog.findMany({ where: { crs_id: user.crs_id }, include: { comments: true }, orderBy: { created_at: 'desc' } });
+
+    if (!pages) throw new ApolloError('Pages Not Found !');
+
+    return pages
+  },
+
+  getPageStudent: async (_, { serial }, { userId, rossle }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    });
+    if (!user) throw new AuthenticationError('invalid user')
+
+    const page = await prisma.jmk_crs_blog.findFirst({ where: { crs_id: user.crs_id, serial }, include: { comments: { include: { student: true }, orderBy: { created_at: 'desc' } } } });
+
+    if (!page) throw new ApolloError('Pages Not Found !');
+
+    return {
+      page: page,
+      comments: page.comments
+    }
   },
 
 }
