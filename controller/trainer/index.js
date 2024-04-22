@@ -161,6 +161,14 @@ const trainerQueryTypesAndInputs = `
         std_id:Int!
       }
 
+      input createAndUpdatePageInput {
+        serial: Int
+        title:String!
+        short_description:String!
+        long_description:String!
+        img:Upload
+      }
+      
      type Trainer {
         tr_id: Int!
         tr_fname: String!
@@ -266,6 +274,16 @@ const trainerQueryTypesAndInputs = `
       rtans: String!
      }
 
+     type page {
+      serial: Int!
+      title: String!
+      short_description: String!
+      long_description: String!
+      img: String!
+      comments_count:Int
+      created_at:Date!
+     }
+
 `
 
 const trainerQuery = `
@@ -298,6 +316,9 @@ const trainerQuery = `
     getAllRelatedCrsStdForTrainer:studentChatList
     getStudentChatForTrainer(chatId:Int!,chatType:String!):StudentChatHistory!
 
+    getPagesTrainer:[page]
+    getPageTrainer(serial:Int!):page
+
 `
 
 const trainerMutation = `
@@ -328,6 +349,10 @@ const trainerMutation = `
     createQuesAnsTrainer(data:stdQuesAnsInput!):String!
 
     createGroupChat(data:createGroupChatInput!):String!
+
+    createAndUpdatePage(data:createAndUpdatePageInput):String!
+    deletePage(serial:Int!):String!
+
 
 `
 
@@ -1131,6 +1156,72 @@ const trainerResolvers = {
     return 'Successfully created'
   },
 
+  createAndUpdatePage: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      let file;
+      if (data.img) {
+        file = await uploadImgToAWS(data.img, 'course_page');
+        if (!file.data) throw new ApolloError("Something went wrong!");
+      }
+      if (file) {
+        data.img = file?.data?.Location;
+        data.img_key = file?.data?.key;
+      }
+      data.crs_id = trainer.crs_id;
+      data.tr_id = trainer.tr_id;
+      if (data?.serial) {
+        const oldBlog = await prisma.jmk_crs_blog.findFirst({ where: { serial: data.serial } });
+        if (!oldBlog) throw new ApolloError("Imvalid id!");
+        if (data.img) {
+          deleteImgToAWS(oldBlog.img_key)
+        }
+        const blog = await prisma.jmk_crs_blog.update({
+          data: {
+            ...data,
+          },
+          where: {
+            serial: data.serial,
+          },
+        })
+        if (!blog) throw new ApolloError('Page Not Found !')
+        return 'Page Successfully Updated'
+      } else {
+        const blog = await prisma.jmk_crs_blog.create({
+          data: {
+            ...data,
+          },
+        })
+        if (!blog) throw new ApolloError('Something Went Wrong !')
+        return 'Page Successfully Created'
+      }
+    }
+  },
+
+  deletePage: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+
+      const blog = await prisma.jmk_crs_blog.delete({
+        where: {
+          serial
+        },
+      })
+
+      if (!blog) throw new ApolloError("something went wrong !");
+
+      return 'page Successfully deleted'
+    }
+  },
+
 }
 
 const trainerResolversQuery = {
@@ -1649,6 +1740,36 @@ const trainerResolversQuery = {
     };
     throw new AuthenticationError('invalid request');
   },
+
+  getPagesTrainer: async (_, { }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    });
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+
+    let pages = await prisma.jmk_crs_blog.findMany({ where: { crs_id: trainer.crs_id }, include: { comments: true }, orderBy: { created_at: 'desc' } });
+    pages = pages.map(i => ({ ...i, comments_count: i?.comments?.length ?? 0 }))
+
+    if (!pages) throw new ApolloError('Pages Not Found !');
+
+    return pages
+  },
+
+  getPageTrainer: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    });
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+
+    const page = await prisma.jmk_crs_blog.findFirst({ where: { crs_id: trainer.crs_id, serial }, include: { comments: true } });
+
+    if (!page) throw new ApolloError('Pages Not Found !');
+
+    return page
+  },
+
 }
 
 const updateTrainerActiveDate = async (userId) => {
