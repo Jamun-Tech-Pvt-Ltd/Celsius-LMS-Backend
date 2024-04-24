@@ -1756,7 +1756,7 @@ const studentResolvers = {
       where: { std_id: userId },
     })
     if (!user) throw new AuthenticationError('invalid user');
-    const blog = await prisma.jmk_crs_blog.findFirst({ where: { serial: user.blog_id } });
+    const blog = await prisma.jmk_crs_blog.findFirst({ where: { serial: data.blog_id } });
     if (!blog) throw new Error('invalid Blog Id');
     const comment = await prisma.jmk_crs_blog_comments.create({
       data: {
