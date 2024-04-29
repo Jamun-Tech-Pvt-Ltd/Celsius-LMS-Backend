@@ -1772,7 +1772,6 @@ const studentResolvers = {
     return 'success'
   },
 
-
   addAttendance: async (_, { }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('Invalid Token');
     if (role !== ROLES[0]) throw new AuthenticationError('invalid access');
