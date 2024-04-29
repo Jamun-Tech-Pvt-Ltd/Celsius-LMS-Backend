@@ -578,6 +578,8 @@ const studentMutation = `
     applyCourseCoupon(code:String!):String!
 
     addCommentOnPage(data:pageCommentInput):String!
+
+    addAttendance:String!
     
 `
 
@@ -1767,6 +1769,27 @@ const studentResolvers = {
     })
     if (!comment) throw new Error('Something Went Wrong !');
 
+    return 'success'
+  },
+
+
+  addAttendance: async (_, { }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('Invalid Token');
+    if (role !== ROLES[0]) throw new AuthenticationError('invalid access');
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const oldData = await prisma.jmk_std_attendance.findFirst({ where: { crs_id: user.crs_id, std_id: user.std_id, created_at: { gte: today } } });
+    if (oldData) throw new ApolloError('Already attendance today');
+    await prisma.jmk_std_attendance.create({
+      data: {
+        crs_id: user.crs_id,
+        std_id: user.std_id,
+        attendance: true
+      }
+    });
     return 'success'
   },
 

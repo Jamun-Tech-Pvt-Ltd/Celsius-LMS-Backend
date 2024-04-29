@@ -8,26 +8,27 @@ datasource db {
 }
 
 model jmkcrsinfo {
-  crs_id          Int            @id @default(autoincrement())
-  crs_name        String         @db.VarChar(200)
-  crs_desc        String         @db.VarChar(1000)
-  crs_duration    Float?
-  crs_rate        Int?
-  crs_ins         String?        @db.VarChar(200)
-  crs_type        String         @db.VarChar(200)
-  crs_nxt_st_date DateTime?      @db.Date
-  crs_image       String?        @db.VarChar(1000)
-  crs_image_key   String?        @db.VarChar(1000)
-  cid             Int?
-  crs_code        String?        @db.VarChar(40)
-  lavel           String?        @db.VarChar(200)
-  time            String?        @db.VarChar(200)
-  meetLink        String?        @db.VarChar(1000)
-  isDeleted       Boolean        @default(false)
-  jmkcrstest      jmkcrstest[]
-  jmkstdinfo      jmkstdinfo[]
-  jmktrcrsinfo    jmktrcrsinfo[]
-  jmkvidinfo      jmkvidinfo[]
+  crs_id             Int                  @id @default(autoincrement())
+  crs_name           String               @db.VarChar(200)
+  crs_desc           String               @db.VarChar(1000)
+  crs_duration       Float?
+  crs_rate           Int?
+  crs_ins            String?              @db.VarChar(200)
+  crs_type           String               @db.VarChar(200)
+  crs_nxt_st_date    DateTime?            @db.Date
+  crs_image          String?              @db.VarChar(1000)
+  crs_image_key      String?              @db.VarChar(1000)
+  cid                Int?
+  crs_code           String?              @db.VarChar(40)
+  lavel              String?              @db.VarChar(200)
+  time               String?              @db.VarChar(200)
+  meetLink           String?              @db.VarChar(1000)
+  isDeleted          Boolean              @default(false)
+  jmkcrstest         jmkcrstest[]
+  jmkstdinfo         jmkstdinfo[]
+  jmktrcrsinfo       jmktrcrsinfo[]
+  jmkvidinfo         jmkvidinfo[]
+  jmk_std_attendance jmk_std_attendance[]
 }
 
 model jmk_tr_week {
@@ -132,6 +133,7 @@ model jmkstdinfo {
   jmkcrsmain            jmkcrsmain?             @relation(fields: [crsmain_id], references: [crsmain_id], onDelete: Cascade, onUpdate: NoAction, map: "jmkcrsmain_crsmain_id_fk")
   jmkstdreview          jmkstdreview[]
   jmk_crs_blog_comments jmk_crs_blog_comments[]
+  jmk_std_attendance    jmk_std_attendance[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
   @@index([crsmain_id], map: "jmkcrsmain_crsmain_id_fk")
@@ -1101,6 +1103,16 @@ model jmk_crs_blog_comments {
   student    jmkstdinfo   @relation(fields: [std_id], references: [std_id], onDelete: Cascade, onUpdate: NoAction)
   blog       jmk_crs_blog @relation(fields: [blog_id], references: [serial], onDelete: Cascade, onUpdate: NoAction)
   created_at DateTime     @default(now())
+}
+
+model jmk_std_attendance {
+  serial     Int        @id @default(autoincrement())
+  attendance Boolean    @default(false)
+  std_id     Int
+  crs_id     Int
+  student    jmkstdinfo @relation(fields: [std_id], references: [std_id], onDelete: Cascade, onUpdate: NoAction)
+  course     jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: Cascade, onUpdate: NoAction)
+  created_at DateTime   @default(now())
 }
 
 enum jmk_std_ques_severity_level_enum {
