@@ -291,6 +291,13 @@ const trainerQueryTypesAndInputs = `
       std_id: Int!
      }
 
+     type StudentAttendanceRecod{
+      attendance:[Attendance]
+      total_duration:Int!
+      total_absent:Int!
+      total_attendance:Int!      
+     }
+
      type StudentAttendance {
       std_id: Int!
       std_fname: String!
@@ -337,7 +344,7 @@ const trainerQuery = `
     getPageTrainer(serial:Int!):page
     
     getAttendanceTrainer:[StudentAttendance]
-    getAttendanceByIdTrainer(std_id:Int!):[Attendance]
+    getAttendanceByIdTrainer(std_id:Int!):StudentAttendanceRecod
 
 
 `
@@ -1841,13 +1848,54 @@ const trainerResolversQuery = {
     });
     if (!trainer) throw new AuthenticationError('invalid trainer');
 
-    const attendance = await prisma.jmk_std_attendance.findMany({ where: { crs_id: trainer.crs_id, std_id }, include: { student: true } });
+    const allAttendance = []
 
-    if (!attendance) throw new ApolloError('Pages Attendance Found !');
+    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: trainer.crs_id } });
+    if (!crs) throw new Error('Course not found');
 
-    return attendance
+    let totalClasses = Math.ceil((new Date() - new Date(crs.crs_nxt_st_date)) / (1000 * 60 * 60 * 24)) ?? 0;
+
+    if (new Date(crs.crs_nxt_st_date).getTime() > Date.now()) {
+      return []
+    }
+
+    totalClasses = (crs.crs_duration * 30) < totalClasses ? (crs.crs_duration * 30) : totalClasses;
+
+    const total_attendance = await prisma.jmk_std_attendance.count({ where: { crs_id: trainer.crs_id, std_id } }) ?? 0;
+
+    const startDate = new Date(crs.crs_nxt_st_date);
+    for (let index = 0; index < totalClasses; index++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + index);
+
+      const tomorrow = new Date(currentDate);
+      tomorrow.setDate(currentDate.getDate() + 1);
+      const attendance = await prisma.jmk_std_attendance.findFirst({
+        where: {
+          crs_id: trainer.crs_id, std_id, created_at: {
+            gte: currentDate,
+            lt: tomorrow,
+          }
+        }
+      });
+
+      allAttendance.push({
+        serial: index,
+        attendance: attendance ? true : false,
+        created_at: currentDate,
+        std_id,
+      })
+    }
+
+    const total_duration = crs.crs_duration * 30 ?? 0;
+    const total_absent = totalClasses - total_attendance ?? 0;
+    return {
+      attendance: allAttendance,
+      total_duration,
+      total_absent,
+      total_attendance
+    }
   },
-
 }
 
 const updateTrainerActiveDate = async (userId) => {
