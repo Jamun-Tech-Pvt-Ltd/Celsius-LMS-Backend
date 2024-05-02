@@ -3518,7 +3518,11 @@ const adminResolversQuery = {
       attendance: allAttendance,
       total_duration,
       total_absent,
-      total_attendance
+      total_attendance,
+      crs_id: crs.crs_id,
+      std_fname: std.std_fname,
+      std_lname: std.std_lname,
+      std_email: std.std_email,
     }
   },
 }

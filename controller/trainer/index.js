@@ -296,6 +296,11 @@ const trainerQueryTypesAndInputs = `
       total_duration:Int!
       total_absent:Int!
       total_attendance:Int!      
+      crs_id: Int!
+      std_fname: String!
+      std_mname: String
+      std_lname: String!
+      std_email: String!
      }
 
      type StudentAttendance {
@@ -1893,7 +1898,11 @@ const trainerResolversQuery = {
       attendance: allAttendance,
       total_duration,
       total_absent,
-      total_attendance
+      total_attendance,
+      crs_id: trainer.crs_id,
+      std_fname: std.std_fname,
+      std_lname: std.std_lname,
+      std_email: std.std_email,
     }
   },
 }
