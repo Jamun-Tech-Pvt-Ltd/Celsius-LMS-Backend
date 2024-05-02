@@ -1855,6 +1855,9 @@ const trainerResolversQuery = {
 
     const allAttendance = []
 
+    const std = await prisma.jmkstdinfo.findFirst({ where: { std_id } });
+    if (!std) throw new Error('Student not found');
+
     const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: trainer.crs_id } });
     if (!crs) throw new Error('Course not found');
 
