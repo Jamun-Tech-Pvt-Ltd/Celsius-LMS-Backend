@@ -1823,7 +1823,10 @@ const trainerResolversQuery = {
           if (std) {
             const attendance = await prisma.jmk_std_attendance.findFirst({
               where: {
-                crs_id: trainer.crs_id, std_id: element.std_id, created_at: {
+                crs_id: trainer.crs_id,
+                std_id: element.std_id,
+                attendance: true,
+                created_at: {
                   gte: today,
                   lt: tomorrow,
                 }
@@ -1880,7 +1883,10 @@ const trainerResolversQuery = {
       tomorrow.setDate(currentDate.getDate() + 1);
       const attendance = await prisma.jmk_std_attendance.findFirst({
         where: {
-          crs_id: trainer.crs_id, std_id, created_at: {
+          attendance: true,
+          crs_id: trainer.crs_id,
+          std_id,
+          created_at: {
             gte: currentDate,
             lt: tomorrow,
           }

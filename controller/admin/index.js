@@ -614,6 +614,12 @@ const adminQueryTypesAndInputs = `
       subject:String!
      }
 
+     input updateAttendanceByIdDateInput {
+      crs_id:Int!
+      std_id:Int!
+      date:String!
+     }
+
      type UserCourseAdmin {
       std_id:Int!
       serial:Int!
@@ -942,6 +948,9 @@ const adminMutation = `
     deletePromoById(serial:Int!):String!
 
     sendEmailByUser(data:MailSendInput!):String!
+
+
+    updateAttendanceByIdDate(data:updateAttendanceByIdDateInput!):String!
 `
 
 const adminResolvers = {
@@ -2304,6 +2313,59 @@ const adminResolvers = {
 
     return 'send'
   },
+
+  updateAttendanceByIdDate: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    })
+    if (!admin) throw new AuthenticationError('invalid admin');
+
+    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id } });
+    if (!crs) throw new Error('Course not found');
+
+    const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: data.std_id } });
+    if (!std) throw new Error('Student not found');
+
+    const today = new Date(data.date);
+    console.log(today);
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const attendance = await prisma.jmk_std_attendance.findFirst({
+      where: {
+        crs_id: data.crs_id,
+        std_id: data.std_id,
+        attendance: true,
+        created_at: {
+          gte: today,
+          lt: tomorrow,
+        }
+      }
+    });
+    if (!attendance) {
+      await prisma.jmk_std_attendance.create({
+        data: {
+          std_id: data.std_id,
+          crs_id: data.crs_id,
+          attendance: true,
+          created_at: new Date(data.date)
+        }
+      })
+    } else {
+      await prisma.jmk_std_attendance.update({
+        where: {
+          serial: attendance.serial,
+        },
+        data: {
+          attendance: attendance.attendance ? false : true,
+        }
+      })
+    }
+    return 'Updated'
+  },
+
 }
 
 const adminResolversQuery = {
@@ -3497,6 +3559,7 @@ const adminResolversQuery = {
       tomorrow.setDate(currentDate.getDate() + 1);
       const attendance = await prisma.jmk_std_attendance.findFirst({
         where: {
+          attendance: true,
           crs_id: std.crs_id, std_id, created_at: {
             gte: currentDate,
             lt: tomorrow,
@@ -3526,7 +3589,6 @@ const adminResolversQuery = {
     }
   },
 }
-
 
 export {
   adminQueryTypesAndInputs,
