@@ -1432,10 +1432,10 @@ const trainerResolversQuery = {
         const filesCount = await prisma.jmk_week_content.count({ where: { type: 'Note', week_id: currentWeeks[index].week_id } });
         const projectsCount = await prisma.jmk_week_content.count({ where: { type: 'Project', week_id: currentWeeks[index].week_id } });
         const testsCount = await prisma.jmk_week_content.count({ where: { type: 'Test', week_id: currentWeeks[index].week_id } });
-        videos = +videosCount;
-        files = +filesCount;
-        projects = +projectsCount;
-        tests = +testsCount;
+        videos += videosCount;
+        files += filesCount;
+        projects += projectsCount;
+        tests += testsCount;
       }
       return { students, weeks, videos, files, projects, tests, courses }
     }
