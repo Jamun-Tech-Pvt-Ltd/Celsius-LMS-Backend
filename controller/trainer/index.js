@@ -161,6 +161,14 @@ const trainerQueryTypesAndInputs = `
         std_id:Int!
       }
 
+      input createAndUpdatePageInput {
+        serial: Int
+        title:String!
+        short_description:String!
+        long_description:String!
+        img:Upload
+      }
+      
      type Trainer {
         tr_id: Int!
         tr_fname: String!
@@ -266,6 +274,45 @@ const trainerQueryTypesAndInputs = `
       rtans: String!
      }
 
+     type page {
+      serial: Int!
+      title: String!
+      short_description: String!
+      long_description: String!
+      img: String!
+      comments_count:Int
+      created_at:Date!
+     }
+
+     type Attendance {
+      serial: Int!
+      attendance: Boolean!
+      created_at:Date!
+      std_id: Int!
+     }
+
+     type StudentAttendanceRecod{
+      attendance:[Attendance]
+      total_duration:Int!
+      total_absent:Int!
+      total_attendance:Int!      
+      crs_id: Int!
+      std_fname: String!
+      std_mname: String
+      std_lname: String!
+      std_email: String!
+     }
+
+     type StudentAttendance {
+      std_id: Int!
+      std_fname: String!
+      std_mname: String
+      std_lname: String!
+      std_email: String!
+      total_atendance: Int!
+      today_atendance: Boolean!
+     }
+
 `
 
 const trainerQuery = `
@@ -298,6 +345,13 @@ const trainerQuery = `
     getAllRelatedCrsStdForTrainer:studentChatList
     getStudentChatForTrainer(chatId:Int!,chatType:String!):StudentChatHistory!
 
+    getPagesTrainer:[page]
+    getPageTrainer(serial:Int!):page
+    
+    getAttendanceTrainer:[StudentAttendance]
+    getAttendanceByIdTrainer(std_id:Int!):StudentAttendanceRecod
+
+
 `
 
 const trainerMutation = `
@@ -328,6 +382,10 @@ const trainerMutation = `
     createQuesAnsTrainer(data:stdQuesAnsInput!):String!
 
     createGroupChat(data:createGroupChatInput!):String!
+
+    createAndUpdatePage(data:createAndUpdatePageInput):String!
+    deletePage(serial:Int!):String!
+
 
 `
 
@@ -1131,6 +1189,72 @@ const trainerResolvers = {
     return 'Successfully created'
   },
 
+  createAndUpdatePage: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      let file;
+      if (data.img) {
+        file = await uploadImgToAWS(data.img, 'course_page');
+        if (!file.data) throw new ApolloError("Something went wrong!");
+      }
+      if (file) {
+        data.img = file?.data?.Location;
+        data.img_key = file?.data?.key;
+      }
+      data.crs_id = trainer.crs_id;
+      data.tr_id = trainer.tr_id;
+      if (data?.serial) {
+        const oldBlog = await prisma.jmk_crs_blog.findFirst({ where: { serial: data.serial } });
+        if (!oldBlog) throw new ApolloError("Imvalid id!");
+        if (data.img) {
+          deleteImgToAWS(oldBlog.img_key)
+        }
+        const blog = await prisma.jmk_crs_blog.update({
+          data: {
+            ...data,
+          },
+          where: {
+            serial: data.serial,
+          },
+        })
+        if (!blog) throw new ApolloError('Page Not Found !')
+        return 'Page Successfully Updated'
+      } else {
+        const blog = await prisma.jmk_crs_blog.create({
+          data: {
+            ...data,
+          },
+        })
+        if (!blog) throw new ApolloError('Something Went Wrong !')
+        return 'Page Successfully Created'
+      }
+    }
+  },
+
+  deletePage: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === ROLES[1]) {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      })
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+
+      const blog = await prisma.jmk_crs_blog.delete({
+        where: {
+          serial
+        },
+      })
+
+      if (!blog) throw new ApolloError("something went wrong !");
+
+      return 'page Successfully deleted'
+    }
+  },
+
 }
 
 const trainerResolversQuery = {
@@ -1308,10 +1432,10 @@ const trainerResolversQuery = {
         const filesCount = await prisma.jmk_week_content.count({ where: { type: 'Note', week_id: currentWeeks[index].week_id } });
         const projectsCount = await prisma.jmk_week_content.count({ where: { type: 'Project', week_id: currentWeeks[index].week_id } });
         const testsCount = await prisma.jmk_week_content.count({ where: { type: 'Test', week_id: currentWeeks[index].week_id } });
-        videos = +videosCount;
-        files = +filesCount;
-        projects = +projectsCount;
-        tests = +testsCount;
+        videos += videosCount;
+        files += filesCount;
+        projects += projectsCount;
+        tests += testsCount;
       }
       return { students, weeks, videos, files, projects, tests, courses }
     }
@@ -1346,7 +1470,9 @@ const trainerResolversQuery = {
           const student = await prisma.jmkstdinfo.findFirst({
             where: { std_id: studentList[index].std_id },
           })
-          students.push({ ...student, crs_complete: studentList[index].crs_complete, crs_complete_date: studentList[index].crs_complete_date })
+          if (student) {
+            students.push({ ...student, crs_complete: studentList[index].crs_complete, crs_complete_date: studentList[index].crs_complete_date })
+          }
         }
       }
       return students
@@ -1646,6 +1772,147 @@ const trainerResolversQuery = {
       }
     };
     throw new AuthenticationError('invalid request');
+  },
+
+  getPagesTrainer: async (_, { }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    });
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+
+    let pages = await prisma.jmk_crs_blog.findMany({ where: { crs_id: trainer.crs_id }, include: { comments: true }, orderBy: { created_at: 'desc' } });
+    pages = pages.map(i => ({ ...i, comments_count: i?.comments?.length ?? 0 }))
+
+    if (!pages) throw new ApolloError('Pages Not Found !');
+
+    return pages
+  },
+
+  getPageTrainer: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    });
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+
+    const page = await prisma.jmk_crs_blog.findFirst({ where: { crs_id: trainer.crs_id, serial }, include: { comments: true } });
+
+    if (!page) throw new ApolloError('Pages Not Found !');
+
+    return page
+  },
+
+  getAttendanceTrainer: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    });
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    let attendanceData = [];
+    const students = await prisma.jmkstdcrsinfo.findMany({ where: { crs_id: trainer.crs_id, std_crs_verirfy: true } });
+    if (students?.[0]) {
+      for (let index = 0; index < students.length; index++) {
+        const element = students[index];
+        if (element) {
+          const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: element.std_id } });
+          if (std) {
+            const attendance = await prisma.jmk_std_attendance.findFirst({
+              where: {
+                crs_id: trainer.crs_id,
+                std_id: element.std_id,
+                attendance: true,
+                created_at: {
+                  gte: today,
+                  lt: tomorrow,
+                }
+              }
+            });
+            const attendanceCount = await prisma.jmk_std_attendance.count({ where: { crs_id: trainer.crs_id, std_id: element.std_id } });
+            attendanceData.push({
+              std_id: std.std_id,
+              std_fname: std.std_fname,
+              std_mname: std.std_mname,
+              std_lname: std.std_lname,
+              std_email: std.std_email,
+              total_atendance: attendanceCount,
+              today_atendance: attendance ? true : false
+            })
+          }
+        }
+      }
+    }
+    return attendanceData
+  },
+
+  getAttendanceByIdTrainer: async (_, { std_id }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    });
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+
+    const allAttendance = []
+
+    const std = await prisma.jmkstdinfo.findFirst({ where: { std_id } });
+    if (!std) throw new Error('Student not found');
+
+    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: trainer.crs_id } });
+    if (!crs) throw new Error('Course not found');
+
+    let totalClasses = Math.ceil((new Date() - new Date(crs.crs_nxt_st_date)) / (1000 * 60 * 60 * 24)) ?? 0;
+
+    if (new Date(crs.crs_nxt_st_date).getTime() > Date.now()) {
+      return []
+    }
+
+    totalClasses = (crs.crs_duration * 30) < totalClasses ? (crs.crs_duration * 30) : totalClasses;
+
+    const total_attendance = await prisma.jmk_std_attendance.count({ where: { crs_id: trainer.crs_id, std_id } }) ?? 0;
+
+    const startDate = new Date(crs.crs_nxt_st_date);
+    for (let index = 0; index < totalClasses; index++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + index);
+
+      const tomorrow = new Date(currentDate);
+      tomorrow.setDate(currentDate.getDate() + 1);
+      const attendance = await prisma.jmk_std_attendance.findFirst({
+        where: {
+          attendance: true,
+          crs_id: trainer.crs_id,
+          std_id,
+          created_at: {
+            gte: currentDate,
+            lt: tomorrow,
+          }
+        }
+      });
+
+      allAttendance.push({
+        serial: index,
+        attendance: attendance ? true : false,
+        created_at: currentDate,
+        std_id,
+      })
+    }
+
+    const total_duration = crs.crs_duration * 30 ?? 0;
+    const total_absent = totalClasses - total_attendance ?? 0;
+    return {
+      attendance: allAttendance,
+      total_duration,
+      total_absent,
+      total_attendance,
+      crs_id: trainer.crs_id,
+      std_fname: std.std_fname,
+      std_lname: std.std_lname,
+      std_email: std.std_email,
+    }
   },
 }
 
