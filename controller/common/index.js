@@ -79,11 +79,6 @@ input createCourseInput {
         crsmain_type: String!
         crs_nxt_st_date : Date
      }
-
-    type ConsultancyInfo {
-      serial: Int!
-      oname:String!
-    } 
   
      type PublicCourseType {
         crsmain_type: String!
@@ -168,7 +163,6 @@ input createCourseInput {
 const commonQuery = `
     getAllCourseList:[Course!]!
     getCourseById(crs_id:Int!):Course!
-    getAllConsultancyInfo:[ConsultancyInfo]
     getContactInfo:ContactInfoType!
     getPopupModal: webModal
     getAllActiveBlogs:[JmkALlBlog]
@@ -328,10 +322,10 @@ const commonResolversQuery = {
       }
     }
     if (role === ROLES[2]) {
-      const consultancy = await prisma.jmkconsulinfo.findFirst({
+      const company = await prisma.jmkcompany.findFirst({
         where: { serial: userId },
       })
-      if (!consultancy)
+      if (!company)
         throw new AuthenticationError('invalid admin credentials')
       const courses = await prisma.jmkcrsinfo.findMany({
         where: { cid: userId },
@@ -349,16 +343,6 @@ const commonResolversQuery = {
     })
     if (!course) throw new ApolloError('Data Not Found')
     return course
-  },
-  getAllConsultancyInfo: async (_args, { userId, role }) => {
-    const consultancyInfo = await prisma.jmkconsulinfo.findMany({
-      select: {
-        serial: true,
-        oname: true,
-      },
-    })
-    if (!consultancyInfo) throw new ApolloError('No data Found')
-    return consultancyInfo
   },
   getAllActiveBlogs: async () => {
     const blogs = await prisma.jmkblog.findMany({

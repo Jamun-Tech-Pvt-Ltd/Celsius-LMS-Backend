@@ -9,7 +9,7 @@ const groupBy = (data, property) => {
   }, {});
 }
 
-const ROLES = ['student', 'trainer', 'consultancy', 'developer', 'employer']
+const ROLES = ['student', 'trainer', 'companey']
 
 
 function getRandomItemsFromArray(arr, numItems) {
@@ -27,8 +27,15 @@ function getRandomItemsFromArray(arr, numItems) {
   return shuffled.slice(0, numItems); // Return the first numItems elements from the shuffled array
 }
 
+function generatePasswordFromUsername(username) {
+  const hash = crypto.createHash('sha256').update(username).digest('hex');
+  const randomPart = Math.random().toString(36).substring(2, 10); // Random string of 8 characters
+  return hash.substring(0, 12) + randomPart; // Use first 12 characters of hash and add random part
+}
+
 export {
   groupBy,
   ROLES,
-  getRandomItemsFromArray
+  getRandomItemsFromArray,
+  generatePasswordFromUsername
 }

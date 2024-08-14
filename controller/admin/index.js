@@ -202,29 +202,6 @@ const adminQueryTypesAndInputs = `
         exp_end_date:Date
      }
 
-     type adminDeveloper {
-        developer_id:ID!
-        developer_type: String!
-        developer_fname: String!
-        developer_mname: String
-        developer_lname: String!
-        developer_phone: String!
-        developer_tech1: String!
-        developer_country: String!
-        developer_email: String!
-        developer_password: String!
-        developer_add_house_no: String
-        developer_add_street: String
-        developer_add_city: String
-        developer_add_ward_no: Int
-        developer_add_district: String
-        developer_add_province: String
-        developer_add_zone: String
-        dev_tech_det:[devTechDet]
-        dev_proj_det:[devProjDet]
-        dev_exp_det:[devExpDet]
-     }
-
       type courseCurriculum {
         topic: String!
         description: String!
@@ -424,25 +401,7 @@ const adminQueryTypesAndInputs = `
         crsmain_id: Int!
       }
 
-     input updateDeveloperFromDashboard {
-        developer_id: Int!
-        developer_fname: String
-        developer_mname: String
-        developer_lname: String
-        developer_phone: String
-        developer_email: String
-        developer_password: String
-        developer_type: String
-        developer_country: String
-        developer_add_house_no: String
-        developer_add_street: String
-        developer_add_city: String
-        developer_add_ward_no: Int
-        developer_add_district: String
-        developer_add_province: String
-        developer_add_zone: String
 
-     }
   
      input updateTrainerFromDashboard {
         tr_id: Int
@@ -797,9 +756,6 @@ const adminQuery = `
     getTrainerDataForAdmin:[AdminTrainer]
     getTrainerByIdForAdmin(tr_id:Int!):AdminTrainer
 
-    getDeveloperDataForAdmin:[adminDeveloper]
-    getDeveloperByIdForAdmin(developer_id:Int!):adminDeveloper
-
     getStaticCoursesDataForAdmin:[staticCourse]
     getStaticCourseByIdForAdmin(crsmain_id:Int!):staticCourse
 
@@ -884,7 +840,6 @@ const adminMutation = `
     createTrainerFromDashboard(data:updateTrainerFromDashboard):String!
     assignTrainerCourseFromDashboard(data:assignTrainerCourseFromDashboard):String!
     removeTrainerCourseFromDashboard(data:assignTrainerCourseFromDashboard):String!
-    updateDeveloperFromDashboard(data:updateDeveloperFromDashboard ):String!
 
     createStaticCourse(data:createAndUpdateStaticCourseInput):String!
     updateStaticCourse(data:createAndUpdateStaticCourseInput):String!
@@ -1169,7 +1124,7 @@ const adminResolvers = {
     }
 
     if (role === ROLES[2]) {
-      const consultancy = await prisma.jmkconsulinfo.findFirst({
+      const consultancy = await prisma.jmkcompany.findFirst({
         where: { serial: userId },
       })
       if (!consultancy) throw new AuthenticationError('invalid consultancy')
@@ -1206,10 +1161,10 @@ const adminResolvers = {
       return 'success'
     }
     if (role === ROLES[2]) {
-      const consultancy = await prisma.jmkconsulinfo.findFirst({
+      const company = await prisma.jmkcompany.findFirst({
         where: { serial: userId },
       })
-      if (!consultancy) throw new AuthenticationError('invalid admin')
+      if (!company) throw new AuthenticationError('invalid admin')
       const student = await prisma.jmkstdcrsinfo.update({
         data: { ...data },
         where: { serial: data.serial },
@@ -1594,40 +1549,6 @@ const adminResolvers = {
       },
     })
     return 'success'
-  },
-
-  updateDeveloperFromDashboard: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === 'admin') {
-      const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_id: userId },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-
-      const uppdateDev = await prisma.jmkdevinfo.update({
-        data: { ...data },
-        where: { developer_id: data.developer_id },
-      })
-      if (!uppdateDev) throw new AuthenticationError('invalid update !')
-
-      return 'success'
-    }
-
-    if (role === ROLES[2]) {
-      const consultancy = await prisma.jmkconsulinfo.findFirst({
-        where: { serial: userId },
-      })
-      if (!consultancy) throw new AuthenticationError('invalid consultancy !')
-
-      const uppdateDev = await prisma.jmkdevinfo.update({
-        data: { ...data, cid: userId },
-        where: { developer_id: data.developer_id },
-      })
-      if (!uppdateDev) throw new AuthenticationError('invalid update !')
-
-      return 'success'
-    }
-    throw new AuthenticationError('invalid aceess !')
   },
 
   createNewUser: async (_, { data }, { userId, role }) => {
@@ -2515,219 +2436,6 @@ const adminResolversQuery = {
       }
 
       return { ...trainer, join_courses }
-    }
-    throw new AuthenticationError('invalid access')
-  },
-
-  getDeveloperDataForAdmin: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    })
-    if (!admin) throw new AuthenticationError('invalid admin credentials')
-    if (role === 'admin') {
-      //let trainers = [];
-
-      const developers = await prisma.jmkdevinfo.findMany()
-
-      const allDevelopersData = await Promise.all(
-        developers.map(async (element) => {
-          const {
-            developer_id,
-            developer_type,
-            developer_fname,
-            developer_mname,
-            developer_lname,
-            developer_phone,
-            developer_country,
-            developer_email,
-            developer_tech1,
-            developer_password,
-          } = element
-
-          const newDevData = {
-            developer_id,
-            developer_type,
-            developer_fname,
-            developer_mname,
-            developer_lname,
-            developer_phone,
-            developer_tech1,
-            developer_country,
-            developer_email,
-            developer_password,
-          }
-
-          // tech details
-          const dev_tech_details = await prisma.jmkdevtechdet.findMany({
-            where: { developer_id: developer_id },
-          });
-          const dev_tech_det = dev_tech_details.map((element) => {
-            const {
-              tech_stack,
-              tech_stack_exp,
-              tech_last_used,
-              tech_stack_summary,
-            } = element
-            return {
-              tech_stack,
-              tech_stack_exp,
-              tech_last_used,
-              tech_stack_summary,
-            }
-          })
-
-          // tech exp
-          const dev_tech_experience = await prisma.jmkdevexp.findMany({
-            where: { developer_id: developer_id },
-          })
-          const dev_tech_exp = dev_tech_experience.map((element) => {
-            const {
-              company_name,
-              exp_desc,
-              exp_role_pos,
-              exp_start_date,
-              exp_end_date,
-            } = element
-            return {
-              company_name,
-              exp_desc,
-              exp_role_pos,
-              exp_start_date,
-              exp_end_date,
-            }
-          })
-
-          // proj details
-          const dev_proj_details = await prisma.jmkdevprojdet.findMany({
-            where: { developer_id: developer_id },
-          })
-          const dev_proj_det = dev_proj_details.map((element) => {
-            const { proj_title, proj_desc, proj_tech_used } = element
-            return { proj_title, proj_desc, proj_tech_used }
-          })
-
-          const mergedData = {
-            ...newDevData,
-            dev_tech_det: dev_tech_det,
-            dev_exp_det: dev_tech_exp,
-            dev_proj_det: dev_proj_det,
-          }
-
-          return mergedData
-        })
-      )
-
-      return allDevelopersData
-    }
-  },
-
-  getDeveloperByIdForAdmin: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === 'admin') {
-      const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_id: userId },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin credentials')
-
-      const developer = await prisma.jmkdevinfo.findFirst({
-        where: { developer_id: args.developer_id },
-      })
-
-      const {
-        developer_id,
-        developer_type,
-        developer_fname,
-        developer_mname,
-        developer_lname,
-        developer_phone,
-        developer_country,
-        developer_email,
-        developer_password,
-      } = developer
-
-      const newDevData = {
-        developer_id,
-        developer_type,
-        developer_fname,
-        developer_mname,
-        developer_lname,
-        developer_phone,
-        developer_country,
-        developer_email,
-        developer_password,
-      }
-
-      // tech details
-      const dev_tech_details = await prisma.jmkdevtechdet.findMany({
-        where: { developer_id: developer_id },
-      })
-      const dev_tech_det = dev_tech_details.map((element) => {
-        const {
-          tech_stack,
-          tech_stack_exp,
-          tech_last_used,
-          tech_stack_summary,
-        } = element
-        return {
-          tech_stack,
-          tech_stack_exp,
-          tech_last_used,
-          tech_stack_summary,
-        }
-      })
-
-      // tech exp
-      const dev_tech_experience = await prisma.jmkdevexp.findMany({
-        where: { developer_id: developer_id },
-      })
-      const dev_tech_exp = dev_tech_experience.map((element) => {
-        const {
-          company_name,
-          exp_desc,
-          exp_role_pos,
-          exp_start_date,
-          exp_end_date,
-        } = element
-        return {
-          company_name,
-          exp_desc,
-          exp_role_pos,
-          exp_start_date,
-          exp_end_date,
-        }
-      })
-
-      // proj details
-      const dev_proj_details = await prisma.jmkdevprojdet.findMany({
-        where: { developer_id: developer_id },
-      })
-      const dev_proj_det = dev_proj_details.map((element) => {
-        const { proj_title, proj_desc, proj_tech_used } = element
-        return { proj_title, proj_desc, proj_tech_used }
-      })
-
-      const developerWholeData = {
-        ...newDevData,
-        dev_tech_det: dev_tech_det,
-        dev_exp_det: dev_tech_exp,
-        dev_proj_det: dev_proj_det,
-      }
-
-      return developerWholeData
-    }
-
-    if (role === ROLES[2]) {
-      if (!userId) throw new ForbiddenError('invalid token')
-      const consultancy = await prisma.jmkconsulinfo.findFirst({
-        where: { serial: userId },
-      })
-      if (!consultancy)
-        throw new AuthenticationError('invalid consultancy credentials')
-      const developer = await prisma.jmkdevinfo.findFirst({
-        where: { developer_id: args.developer_id, cid: consultancy.serial },
-      })
-      return developer
     }
     throw new AuthenticationError('invalid access')
   },

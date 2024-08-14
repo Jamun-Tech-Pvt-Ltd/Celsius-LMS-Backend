@@ -10,10 +10,8 @@ import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 import { sendMail } from '../../utils/mailHandler.js'
 import registerrHTML from '../../utils/signup.js'
 import newUserSignupNotification from '../../utils/newUsersignup.js'
-import QuestionCreateTemplate from '../../utils/QuestionCreateEmail.js'
 import forgotPasswordHTML from '../../utils/forgotPassword.js'
 import QuestionInformTemplate from '../../utils/QuestionInformEmail.js'
-import SubscriptionEmailTemplate from '../../utils/SubscriptionEmail.js'
 
 import { PubSub } from 'graphql-subscriptions'
 
@@ -258,6 +256,8 @@ const studentQueryTypesAndInputs = `
         std_add_province:String
         std_add_zone:String
         std_country:String
+        c_username:String
+        c_package_type:String
      }
 
      type StudentQuestionSet {
@@ -1806,15 +1806,15 @@ const studentResolversQuery = {
         where: { std_id: userId },
       })
       if (user.cid) {
-        const organization = await prisma.jmkconsulinfo.findFirst({
+        const organization = await prisma.jmkcompany.findFirst({
           where: {
             serial: user.cid,
           },
         })
         if (!organization) throw new AuthenticationError('invalid user')
         if (organization) {
-          if (!feedback[0]) return { ...user, acc_type: organization.acc_type }
-          return { ...user, feedback, acc_type: organization.acc_type }
+          if (!feedback[0]) return { ...user, c_username: organization.c_username, c_package_type: organization.c_package_type }
+          return { ...user, feedback, c_username: organization.c_username, c_package_type: organization.c_package_type }
         }
       }
       if (!feedback[0]) return user

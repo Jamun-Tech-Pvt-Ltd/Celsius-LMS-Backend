@@ -1,13 +1,11 @@
 import { gql } from 'apollo-server-express'
-import { consultancyMutation, consultancyQuery, consultancyQueryTypesAndInputs } from './controller/consultancy/index.js'
+import { companyMutation, companyQuery, companyQueryTypesAndInputs } from './controller/company/index.js'
 import { courseQuery, courseMutation, courseQueryTypesAndInputs } from './controller/course/index.js'
-import { developerMutation, developerQuery, developerQueryTypesAndInputs } from "./controller/developer/index.js";
 import { trainerMutation, trainerQuery, trainerQueryTypesAndInputs } from './controller/trainer/index.js';
 import { adminMutation, adminQuery, adminQueryTypesAndInputs } from './controller/admin/index.js';
 import { studentMutation, studentQuery, studentQueryTypesAndInputs } from './controller/student/index.js';
 import { commonMutation, commonQuery, commonQueryTypesAndInputs } from './controller/common/index.js';
 import { jamuntekMutation, jamuntekQuery, jamuntekQueryTypesAndInputs } from './controller/jamuntek/index.js';
-import { employerMutation, employerQuery, employerQueryTypesAndInputs } from './controller/employer/index.js';
 
 
 const typeDefs = gql`
@@ -15,38 +13,32 @@ const typeDefs = gql`
    scalar Upload 
 
    ${adminQueryTypesAndInputs}
-   ${consultancyQueryTypesAndInputs}
+   ${companyQueryTypesAndInputs}
    ${courseQueryTypesAndInputs}
-   ${developerQueryTypesAndInputs}
    ${trainerQueryTypesAndInputs}
    ${studentQueryTypesAndInputs}
    ${commonQueryTypesAndInputs}
    ${jamuntekQueryTypesAndInputs}
-   ${employerQueryTypesAndInputs}
 
 
    type Query {
       ${adminQuery}
-      ${consultancyQuery}
-      ${developerQuery}
+      ${companyQuery}
       ${courseQuery}
       ${trainerQuery}
       ${studentQuery}
       ${commonQuery}
       ${jamuntekQuery}
-      ${employerQuery}
    }
 
    type Mutation {
       ${adminMutation}
-      ${consultancyMutation}
-      ${developerMutation}
+      ${companyMutation}
       ${courseMutation}
       ${trainerMutation}
       ${studentMutation}
       ${commonMutation}
       ${jamuntekMutation}
-      ${employerMutation}
    }
 `
 
