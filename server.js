@@ -31,7 +31,7 @@ const context = ({ req }) => {
   const { authorization } = req.headers;
   if (authorization) {
     try {
-      const { userId, role, exp } = jwt.verify(
+      const { userId, role, platform, c_username, c_package_type } = jwt.verify(
         authorization,
         process.env.JWT_SECRET_KEY
       );
@@ -41,7 +41,7 @@ const context = ({ req }) => {
       if (role === ROLES[1]) {
         updateTrainerActiveDate(userId)
       }
-      if (userId && role) return { userId, role };
+      if (userId && role && platform) return { userId, role, platform, c_username, c_package_type };
     } catch (error) {
       throw new AuthenticationError('Token Expired !');
     }

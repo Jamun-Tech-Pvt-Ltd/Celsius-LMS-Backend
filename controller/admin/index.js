@@ -306,6 +306,8 @@ const adminQueryTypesAndInputs = `
       usr_img_url:String
       usr_password:String
       usr_access:String
+      company_id:Int
+      company:Company
      }
      type PaymentInfo{
       pay_id: Int!
@@ -1039,14 +1041,14 @@ const adminResolvers = {
   signinAdmin: async (_, { data }) => {
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_email: data.usr_email },
+      include: {
+        company: true,
+      },
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
     const isMatch = data.usr_password == admin.usr_password
     if (!isMatch) throw new AuthenticationError('invalid user credentials')
-    const token = jwt.sign(
-      { userId: admin.usr_id, role: 'admin' },
-      process.env.JWT_SECRET_KEY
-    )
+    const token = jwt.sign({ userId: admin.usr_id, role: 'admin', platform: admin.company_id ? 'external' : 'internal', c_username: admin?.company?.c_username ?? 'internal', c_package_type: admin?.company?.c_username ?? 'internal' }, process.env.JWT_SECRET_KEY)
     return { token }
   },
 
@@ -2471,15 +2473,12 @@ const adminResolversQuery = {
     if (role === 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
         where: { usr_id: userId },
+        include: {
+          company: true
+        }
       })
-      if (!admin) throw new AuthenticationError('invalid admin credentials')
-
-      const user = await prisma.jmkuserinfo.findFirst({
-        where: {
-          usr_id: userId,
-        },
-      })
-      return user
+      if (!admin) throw new AuthenticationError('invalid admin credentials')        
+      return admin
     }
   },
 

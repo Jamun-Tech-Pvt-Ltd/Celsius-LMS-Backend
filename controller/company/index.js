@@ -1,26 +1,22 @@
 import { AuthenticationError, ForbiddenError } from 'apollo-server-express'
 import prisma from '../../database.js'
-import jwt from 'jsonwebtoken'
 import { sendMail } from '../../utils/mailHandler.js'
 import saaSRequsteEmailHTML from '../../utils/SaaSRequsteEmail.js'
-import { generatePasswordFromUsername, ROLES } from '../../utils/helper.js'
-import crypto from 'crypto'
+import saaSRequsteConfirmEmailHTML from '../../utils/SaaSRequsteConfirmEmail.js'
+import { DefaultUserAccess, generatePasswordFromUsername, ROLES } from '../../utils/helper.js'
 
 const companyQueryTypesAndInputs = `
     type Company {
+        serial:Int!
         c_name: String!
         c_email: String!
         c_username:String!
         c_panno: String!
         c_package:String!
         c_package_type:String!
+        created_at:Date!
+        c_verified:Boolean
     }
-
-    input signinCompanyInput{
-        c_username: String!
-        c_email: String!
-        c_password: String!
-     }
      
      input signupCompanyInput{
         c_name: String!
@@ -32,17 +28,14 @@ const companyQueryTypesAndInputs = `
      }
 
      input updateCompanyInput{
-        serial: String
+        serial: Int!
         c_name: String
-        c_email: String
-        c_panno: String
         c_package:String
-        c_verified:Boolean
         c_package_type:String
+        c_verified:Boolean
      }
 
 `
-
 const companyQuery = `
     getCompany(serial:Int!):Company
     getCompanyList:[Company]
@@ -50,10 +43,7 @@ const companyQuery = `
 
 const companyMutation = `
     signupCompany(data:signupCompanyInput!):String!
-    signinCompany(data:signinCompanyInput!):Token!
     updateCompany(data:updateCompanyInput):Company!
-    verifyCompaney(serial:Int!):String!
-
 `
 
 const companyResolvers = {
@@ -61,46 +51,49 @@ const companyResolvers = {
         const company = await prisma.jmkcompany.findFirst({ where: { c_email: data.c_email, c_username: data.c_username } })
         if (company) throw new AuthenticationError("company already exist with that email and username")
         const newCompany = await prisma.jmkcompany.create({
-            data: { ...data, c_password: generatePasswordFromUsername(data.c_username) }
+            data: { ...data }
         });
         if (!newCompany) throw new AuthenticationError("Something went wrong !");
-        await sendMail(newCompany.c_name, newCompany.c_email, newCompany.c_package, newCompany.c_package_type, 'Successfully Requested ', saaSRequsteEmailHTML);
+        await sendMail(newCompany.c_email, 'Successfully Requested ', saaSRequsteEmailHTML(newCompany.c_name, newCompany.c_email, newCompany.c_package, newCompany.c_package_type));
         return 'success';
     },
 
-    signinCompany: async (_, { data }) => {
-        const company = await prisma.jmkcompany.findFirst({ where: { c_email: data.c_email, c_username: data.c_username } });
-        if (!consultancy) throw new AuthenticationError("invalid credentials");
-        const isMatch = data.c_password == consultancy.c_password;
-        if (!isMatch) throw new AuthenticationError("invalid credentials");
-        const token = jwt.sign({ userId: company.serial, role: ROLES[2], platform: 'external', c_username: company.c_username, c_package_type: company.c_username }, process.env.JWT_SECRET_KEY, { expiresIn: "7d" })
-        return { token };
-    },
-
-    verifyCompaney: async (_, { serial }, { userId, role }) => {
-        if (!userId) throw new AuthenticationError("Invalid Token!!")
-        if (role === 'admin') {
-            const company = await prisma.jmkcompany.findFirst({ where: { serial } });
-            if (!company) throw new AuthenticationError("Invalid Credentials");
-            const companyUpate = await prisma.jmkcompany.update({
-                data: { c_verified: true },
-                where: { serial }
-            });
-            if (!companyUpate) throw new AuthenticationError("Invalid !!");
-            await sendMail(companyUpate.c_name, companyUpate.c_email, companyUpate.c_username, companyUpate.c_password, 'Successfully Requested ', saaSRequsteEmailHTML)
-            return companyUpate;
-        }
-        throw new AuthenticationError("invalid access !!")
-    },
-
-    updateCompany: async (_, { data }, { userId, role }) => {
-        if (!userId) throw new AuthenticationError("Invalid Token!!")
-        if (role === ROLES[2]) {
-            const company = await prisma.jmkcompany.findFirst({ where: { serial: userId } });
+    updateCompany: async (_, { data }, { userId, role, platform }) => {
+        if (!userId) throw new AuthenticationError("Invalid Token!!");
+        if (platform === 'internal' && role === 'admin') {
+            const company = await prisma.jmkcompany.findFirst({ where: { serial: data.serial } });
             if (!company) throw new AuthenticationError("Invalid Credentials");
             const companyUpate = await prisma.jmkcompany.update({
                 data: { ...data, },
                 where: { serial: data.serial }
+            });            
+            if (companyUpate.c_verified) {
+                const admin = await prisma.jmkuserinfo.findFirst({ where: { company_id: companyUpate.serial } });
+                if (!admin) {
+                    const newAdmin = await prisma.jmkuserinfo.create({
+                        data: {
+                            usr_email: companyUpate.c_email,
+                            usr_password: generatePasswordFromUsername(companyUpate.c_username),
+                            usr_fname: companyUpate.c_username,
+                            usr_lname: "Company",
+                            company_id: companyUpate.serial,
+                            usr_access: DefaultUserAccess
+                        }
+                    });
+                    await sendMail(companyUpate.c_email, 'Successfully Comany Account Verifyed', saaSRequsteConfirmEmailHTML(companyUpate.c_name, companyUpate.c_email, companyUpate.c_username, newAdmin.usr_password));
+                }
+            }
+            if (!companyUpate) throw new AuthenticationError("Invalid !!")
+            return companyUpate;
+        }
+        // not sure what companey can update on there account
+        if (platform === 'external' && role === 'admin') {
+            const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+            const company = await prisma.jmkcompany.findFirst({ where: { serial: admin.company_id } });
+            if (!company) throw new AuthenticationError("Invalid Credentials");
+            const companyUpate = await prisma.jmkcompany.update({
+                data: { ...data, },
+                where: { serial: company.serial }
             })
             if (!companyUpate) throw new AuthenticationError("Invalid !!")
             return companyUpate
@@ -117,17 +110,16 @@ const companyResolversQuery = {
             if (!company) throw new AuthenticationError("invalid");
             return company;
         }
-        if (role === ROLES[2]) {
-            const company = await prisma.jmkcompany.findFirst({ where: { serial: userId } });
-            if (!company) throw new AuthenticationError("invalid");
-            return company;
-        }
         throw new AuthenticationError("invalid acccess");
     },
     getCompanyList: async (_, args, { userId, role }) => {
         if (!userId) throw new AuthenticationError("invalid token");
         if (role === 'admin') {
-            const company = await prisma.jmkcompany.find()
+            const company = await prisma.jmkcompany.findMany({
+                orderBy: {
+                    created_at: 'desc',
+                },
+            })
             if (!company) throw new AuthenticationError("invalid")
             return company;
         }

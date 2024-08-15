@@ -1,3 +1,5 @@
+import crypto from 'crypto'
+
 const groupBy = (data, property) => {
   return data.reduce((acc, obj) => {
     const key = obj[property];
@@ -33,9 +35,216 @@ function generatePasswordFromUsername(username) {
   return hash.substring(0, 12) + randomPart; // Use first 12 characters of hash and add random part
 }
 
+const user_access = [
+  {
+    name: 'Dashboard',
+    access: [{
+      read: true,
+    }]
+  },
+  {
+    name: 'Courses',
+    option: [
+      {
+        name: 'Categories',
+        access: [{
+          create: true,
+          read: true,
+          update: true,
+          delete: true,
+        }]
+      },
+      {
+        name: 'Dynamic Courses',
+        access: [{
+          create: true,
+          read: true,
+          update: true,
+          delete: true,
+        }]
+      },
+      {
+        name: 'Running Courses',
+        access: [{
+          create: true,
+          read: true,
+          update: true,
+          delete: true,
+        }]
+      },
+    ],
+  },
+  {
+    name: 'StakeHolders',
+    option: [
+      {
+        name: 'Admins',
+        access: [{
+          create: true,
+          read: true,
+          update: true,
+          delete: true,
+        }]
+      },
+      {
+        name: 'Partners',
+        access: [{
+          create: true,
+          read: true,
+          update: true,
+          delete: true,
+        }]
+      },
+    ],
+  },
+  {
+    name: 'RegistrationInfo',
+    option: [
+      {
+        name: 'Course Registration',
+        access: [{
+          read: true,
+          update: true,
+        }]
+      },
+      {
+        name: 'Course Request',
+        access: [{
+          read: true,
+          update: true,
+        }]
+      },
+      {
+        name: 'Trainer Request',
+        access: [{
+          create: true,
+          read: true,
+          update: true,
+        }]
+      },
+      {
+        name: 'Partnership Request',
+        access: [{
+          read: true,
+        }]
+      },
+      {
+        name: 'Job Request',
+        access: [{
+          read: true,
+        }]
+      },
+      {
+        name: 'Contact Request',
+        access: [{
+          read: true,
+        }]
+      },
+    ],
+  },
+  {
+    name: 'Promo Code',
+    access: [{
+      create: true,
+      read: true,
+      update: true,
+      delete: true,
+    }]
+  },
+  {
+    name: 'Testimonials',
+    access: [{
+      create: true,
+      read: true,
+      update: true,
+      delete: true,
+    }]
+  },
+  {
+    name: 'Services',
+    access: [{
+      create: true,
+      read: true,
+      update: true,
+      delete: true,
+    }]
+  },
+  {
+    name: 'Payments',
+    access: [{
+      read: true,
+    }]
+  },
+  {
+    name: 'Attendance',
+    access: [{
+      read: true,
+    }]
+  },
+  {
+    name: 'Settings',
+    option: [
+      {
+        name: 'Website Info',
+        access: [{
+          update: true,
+        }]
+      },
+      {
+        name: 'Website Advertisment Model',
+        access: [{
+          update: true,
+        }]
+      },
+      {
+        name: 'Send Mail',
+        access: [{
+          create: true,
+        }]
+      },
+    ],
+  },
+  {
+    name: 'Blog',
+    access: [{
+      create: true,
+      read: true,
+      update: true,
+      delete: true,
+    }]
+  },
+  {
+    name: 'Faqs',
+    access: [{
+      create: true,
+      read: true,
+      update: true,
+      delete: true,
+    }]
+  },
+  {
+    name: 'Career',
+    access: [{
+      create: true,
+      read: true,
+      update: true,
+      delete: true,
+    }]
+  },
+  {
+    name: 'Privacy Policy',
+    access: [{
+      update: true,
+    }]
+  },
+]
+
+const DefaultUserAccess = JSON.stringify(user_access)
+
 export {
   groupBy,
   ROLES,
   getRandomItemsFromArray,
-  generatePasswordFromUsername
+  generatePasswordFromUsername,
+  DefaultUserAccess
 }

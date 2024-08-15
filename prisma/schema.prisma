@@ -344,31 +344,35 @@ model jmkcrsovw {
 }
 
 model jmkuserinfo {
-  usr_id       Int       @id @default(autoincrement())
-  usr_code     String?   @db.VarChar(10)
-  usr_email    String?   @db.VarChar(30)
-  usr_password String?   @db.VarChar(20)
-  usr_role     String?   @default("admin") @db.VarChar(20)
-  usr_fname    String?   @db.VarChar(20)
-  usr_mname    String?   @db.VarChar(20)
-  usr_lname    String?   @db.VarChar(20)
-  usr_img_url  String?   @db.VarChar(100)
-  usr_img_key  String?   @db.VarChar(100)
-  created_at   DateTime? @default(now())
-  usr_access   String?   @db.LongText
+  usr_id       Int         @id @default(autoincrement())
+  usr_code     String?     @db.VarChar(10)
+  usr_email    String?     @db.VarChar(30)
+  usr_password String?     @db.VarChar(20)
+  usr_role     String?     @default("admin") @db.VarChar(20)
+  usr_fname    String?     @db.VarChar(20)
+  usr_mname    String?     @db.VarChar(20)
+  usr_lname    String?     @db.VarChar(20)
+  usr_img_url  String?     @db.VarChar(100)
+  usr_img_key  String?     @db.VarChar(100)
+  created_at   DateTime?   @default(now())
+  usr_access   String?     @db.LongText
+  company_id   Int?
+  company      jmkcompany? @relation(fields: [company_id], references: [serial])
+
+  @@index([company_id], map: "jmkuserinfo_company_id_fkey")
 }
 
 model jmkcompany {
-  serial         Int       @id @default(autoincrement())
-  c_name         String    @db.VarChar(50)
-  c_email        String    @db.VarChar(50)
-  c_username     String    @unique @db.VarChar(20)
-  c_panno        String    @db.VarChar(20)
-  c_package      String    @db.VarChar(20)
-  c_package_type String    @db.VarChar(20)
-  c_password     String    @db.VarChar(20)
-  c_verified     Boolean   @default(false)
-  created_at     DateTime? @default(now())
+  serial         Int           @id @default(autoincrement())
+  c_name         String        @db.VarChar(50)
+  c_email        String        @db.VarChar(50)
+  c_username     String        @unique @db.VarChar(20)
+  c_panno        String        @db.VarChar(20)
+  c_package      String        @db.VarChar(20)
+  c_package_type String        @db.VarChar(20)
+  c_verified     Boolean       @default(false)
+  created_at     DateTime?     @default(now())
+  jmkuserinfo    jmkuserinfo[]
 }
 
 model jmkcrsdet {
