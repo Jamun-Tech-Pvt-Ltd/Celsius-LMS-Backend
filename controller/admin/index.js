@@ -8,6 +8,7 @@ import jwt from 'jsonwebtoken'
 import { uploadImgToAWS, deleteImgToAWS } from '../../utils/imageHandler.js'
 import { ROLES } from '../../utils/helper.js'
 import { sendMail } from '../../utils/mailHandler.js'
+import newUserSignupNotification from '../../utils/newUsersignup.js'
 
 const adminQueryTypesAndInputs = `
 

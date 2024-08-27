@@ -363,16 +363,20 @@ model jmkuserinfo {
 }
 
 model jmkcompany {
-  serial         Int           @id @default(autoincrement())
-  c_name         String        @db.VarChar(50)
-  c_email        String        @db.VarChar(50)
-  c_username     String        @unique @db.VarChar(20)
-  c_panno        String        @db.VarChar(20)
-  c_package      String        @db.VarChar(20)
-  c_package_type String        @db.VarChar(20)
-  c_verified     Boolean       @default(false)
-  created_at     DateTime?     @default(now())
-  jmkuserinfo    jmkuserinfo[]
+  serial           Int           @id @default(autoincrement())
+  c_name           String        @db.VarChar(100)
+  c_email          String        @db.VarChar(50)
+  c_username       String        @unique @db.VarChar(20)
+  c_country        String        @db.VarChar(50)
+  c_package        String        @db.VarChar(20)
+  c_package_type   String        @db.VarChar(20)
+  c_bussiness_type String        @db.VarChar(100)
+  c_verified       Boolean       @default(false)
+  c_phone          Int?
+  c_address        String?
+  c_taxid          String?
+  created_at       DateTime?     @default(now())
+  jmkuserinfo      jmkuserinfo[]
 }
 
 model jmkcrsdet {

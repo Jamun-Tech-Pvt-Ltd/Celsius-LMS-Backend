@@ -11,9 +11,10 @@ const companyQueryTypesAndInputs = `
         c_name: String!
         c_email: String!
         c_username:String!
-        c_panno: String!
+        c_country: String!
         c_package:String!
         c_package_type:String!
+        c_bussiness_type:String!
         created_at:Date!
         c_verified:Boolean
     }
@@ -22,17 +23,21 @@ const companyQueryTypesAndInputs = `
         c_name: String!
         c_email: String!
         c_username:String!
-        c_panno: String!
+        c_country: String!
         c_package:String!
         c_package_type:String!
+        c_bussiness_type:String!
      }
 
      input updateCompanyInput{
         serial: Int!
         c_name: String
-        c_package:String
-        c_package_type:String
+        c_email: String
+        c_country: String
         c_verified:Boolean
+        c_phone:String
+        c_address:String
+        c_taxid:String
      }
 
 `
