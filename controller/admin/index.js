@@ -13,15 +13,9 @@ import newUserSignupNotification from '../../utils/newUsersignup.js'
 const adminQueryTypesAndInputs = `
 
     input signinAdminInput {
+        username: String
         usr_email: String!
         usr_password: String!
-    }
-
-    input signupAdminInput {
-        usr_email: String!
-        usr_password: String!
-        usr_role: String!
-        usr_code:String
     }
 
     input updateAdminInput {
@@ -249,6 +243,7 @@ const adminQueryTypesAndInputs = `
       usr_img_url:String
       usr_img_key:String
       usr_access:String
+      company:Company
      }
 
      type eventsInfo{
@@ -833,7 +828,6 @@ const adminQuery = `
 const adminMutation = `
 
     signinAdmin(data:signinAdminInput!):Token
-    signupAdmin(data:signupAdminInput!):Token
     updateAdmin(data:updateAdminInput):Admin!
 
     updateStudentFromAdmin(data:updateStudentFromAdminInput):String!
@@ -1040,6 +1034,21 @@ const adminResolvers = {
   },
 
   signinAdmin: async (_, { data }) => {
+    if (data?.username) {
+      const company = await prisma.jmkcompany.findFirst({ where: { c_username: data?.username } });
+      if (!company) throw new AuthenticationError('invalid user credentials');
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_email: data.usr_email, company_id: company.serial },
+        include: {
+          company: true,
+        },
+      })
+      if (!admin) throw new AuthenticationError('invalid admin credentials')
+      const isMatch = data.usr_password == admin.usr_password
+      if (!isMatch) throw new AuthenticationError('invalid user credentials')
+      const token = jwt.sign({ userId: admin.usr_id, role: 'admin', platform: 'external', c_username: admin?.company?.c_username, c_package_type: admin?.company?.c_username }, process.env.JWT_SECRET_KEY)
+      return { token }
+    }
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_email: data.usr_email },
       include: {
@@ -1049,42 +1058,7 @@ const adminResolvers = {
     if (!admin) throw new AuthenticationError('invalid admin credentials')
     const isMatch = data.usr_password == admin.usr_password
     if (!isMatch) throw new AuthenticationError('invalid user credentials')
-    const token = jwt.sign({ userId: admin.usr_id, role: 'admin', platform: admin.company_id ? 'external' : 'internal', c_username: admin?.company?.c_username ?? 'internal', c_package_type: admin?.company?.c_username ?? 'internal' }, process.env.JWT_SECRET_KEY)
-    return { token }
-  },
-
-  signupAdmin: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new AuthenticationError('invalid Token')
-    const suAdmin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    })
-    if (!suAdmin) throw new AuthenticationError('invalid admin credentials')
-    if (role !== 'admin')
-      throw new AuthenticationError("You don't have acess to create admin")
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_email: data.usr_email },
-    })
-    if (admin)
-      throw new AuthenticationError('admin already exist with that email')
-    const newAdmin = await prisma.jmkuserinfo.create({
-      data: { ...data },
-    })
-    const token = jwt.sign(
-      { userId: newAdmin.usr_id, role: 'admin' },
-      process.env.JWT_SECRET_KEY,
-      { expiresIn: '1d' }
-    )
-    await sendMail(newAdmin.usr_email, 'Successfully Register ', registerrHTML)
-    await sendMail(
-      'info@jaamun.com',
-      'New Admin Created !',
-      newUserSignupNotification(newUser, course.crs_name)
-    )
-    await sendMail(
-      'laxman@jaamun.com',
-      'New Admin Created !',
-      newUserSignupNotification(newUser, course.crs_name)
-    )
+    const token = jwt.sign({ userId: admin.usr_id, role: 'admin', platform: 'internal' }, process.env.JWT_SECRET_KEY)
     return { token }
   },
 
@@ -1554,18 +1528,36 @@ const adminResolvers = {
     return 'success'
   },
 
-  createNewUser: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
+  createNewUser: async (_, { data }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (!role === 'admin') throw new ForbiddenError('only admin have access  to create');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-    })
-    if (!admin) throw new AuthenticationError('invalid admin')
+      include: { company: true }
+    });
+    if (!admin) throw new AuthenticationError('invalid admin');
 
     let file
     if (data.usr_img_url) {
       file = await uploadImgToAWS(data.usr_img_url, 'admin_users_profilePic/')
       if (!file.data) throw new ApolloError('Something went wrong !')
     }
+
+    if (platform === 'external') {
+      const newUser = await prisma.jmkuserinfo.create({
+        data: {
+          ...data,
+          company_id: admin.company.serial,
+          usr_img_url: file?.data?.Location ?? null,
+          usr_img_key: file?.data?.key ?? '',
+        },
+      })
+
+      if (!newUser) throw new ApolloError('something went wrong !')
+
+      return 'success'
+    }
+
     const newUser = await prisma.jmkuserinfo.create({
       data: {
         ...data,
@@ -2478,7 +2470,7 @@ const adminResolversQuery = {
           company: true
         }
       })
-      if (!admin) throw new AuthenticationError('invalid admin credentials')        
+      if (!admin) throw new AuthenticationError('invalid admin credentials')
       return admin
     }
   },
@@ -2647,13 +2639,18 @@ const adminResolversQuery = {
     return tableCount
   },
 
-  getAllUserInfo: async (_, args, { userId, role }) => {
+  getAllUserInfo: async (_, args, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
+      include: { company: true }
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
-    const allUser = await prisma.jmkuserinfo.findMany({ orderBy: { created_at: 'desc' } })
+    if (platform === 'external') {
+      const allUser = await prisma.jmkuserinfo.findMany({ where: { company_id: admin.company.serial }, orderBy: { created_at: 'desc' }, include: { company: true } })
+      return allUser
+    }
+    const allUser = await prisma.jmkuserinfo.findMany({ orderBy: { created_at: 'desc' }, include: { company: true } })
     return allUser
   },
 
@@ -2661,10 +2658,12 @@ const adminResolversQuery = {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
+      include: { company: true }
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
     const user = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: args.usr_id },
+      include: { company: true }
     })
     return user
   },
