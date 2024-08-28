@@ -5,131 +5,98 @@ import {
 } from 'apollo-server-express'
 import prisma from '../../database.js'
 import { ROLES } from '../../utils/helper.js'
+import { uploadImgToAWS } from '../../utils/imageHandler.js'
 
 const commonQueryTypesAndInputs = `
-
-input createUpdateCourseVideoInput {
-    vid_id: Int
-    vid_name: String!
-    vid_loc: Upload
-    crs_id: Int!
-    vid_date: String!
-    vid_summary:String!
-    vid_link:String
-    content:String
-}
-
-input createCourseInput {
-    crs_name: String!
-    crs_desc: String!
-    crs_duration: Float!
-    crs_rate: Int!
-    crs_ins: String!
-    crs_type: String!
-    crs_nxt_st_date: Date!
-    crs_image: String!
-    lavel: String!
-    meetLink: String
-    time: String!
- }
-
- input updateCourseInput {
-  crs_id: Int!
-  crs_name: String!
-  crs_desc: String!
-  crs_duration: Float!
-  crs_rate: Int!
-  crs_ins: String!
-  crs_type: String!
-  crs_nxt_st_date: Date!
-  crs_image: String!
-  lavel: String!
-  time: String!
-  meetLink: String
- }
-
- input deleteCourseInput {
-    crs_id: Int!
- }
-
-    type Token {
-        token : String!
-    }
-
-    type Course {
-        crs_id: ID!
-        crs_name: String!
-        crs_desc: String!
-        crs_duration: String!
-        crs_rate: String!
-        crs_ins: String!
-        crs_type: String!
-        crs_nxt_st_date:Date!
-        crs_image:String
-        time:String
-        lavel:String
-        meetLink:String
-        isDeleted:Boolean!
-    }
-
-    type PublicCourse {
-        crs_id: ID!
-        crsmain_id:ID!
-        crsmain_title: String!
-        crsmain_type: String!
-        crs_nxt_st_date : Date
-     }
-  
-     type PublicCourseType {
-        crsmain_type: String!
-        courses:[PublicCourse]
-     }
-
-     type ContactInfoType{
-      phone:String!
-      phone1:String!
-      email:String!
-     }
-  
-     type Question {
-        ques_id: ID!
-        question: String!
-        mod_id: Int!
-        ans1: String!
-        ans2: String!
-        ans3: String!
-        ans4: String!
-     }
-     type JmkALlBlog{
-      blog_type:String
-      blog_slug:String
-      blog_heading:String
-      blog_logo:String
-      blog_image:String
-      author:String
-      blog_id:Int
-      created_at:Date
-      updated_at:Date
-      created_by:String
-      blog_short_description:String
-      blog_meta_title:String
-      blog_meta_description:String
-      blog_meta_keyword:String
+  type Token {
+    token: String!
   }
 
-  type JmkBlog{
-      blog_type:String
-      blog_heading:String
-      blog_logo:String
-      author:String
-      blog_id:Int
-      blog_short_description:String
-      blog_description:String
-      blog_image:String
-      blog_meta_title:String
-      blog_meta_description:String
-      blog_meta_keyword:String
-      created_at:Date
+  input createAndUpdateCourseInput {
+    crs_id: Int
+    crs_category: String!
+    crs_name: String!
+    crs_desc: String!
+    crs_duration: Int!
+    crs_rate: Int!
+    crs_rate_us: Int!
+    crs_ins: String!
+    crs_start_date: Date
+    crs_image: Upload
+    time: String
+    lavel: String
+    meetLink: String
+    isDeleted: Boolean
+  }
+
+
+  input deleteCourseInput {
+    crs_id: Int!
+  }
+
+  type Course {
+    crs_id: Int!
+    crs_category: String!
+    crs_name: String!
+    crs_desc: String!
+    crs_duration: Int!
+    crs_rate: Int!
+    crs_rate_us: Int!
+    crs_ins: String!
+    crs_start_date: Date
+    crs_image: String
+    time: String
+    lavel: String
+    meetLink: String
+    isDeleted: Boolean!
+  }
+
+  type ContactInfoType {
+    phone: String!
+    phone1: String!
+    email: String!
+  }
+
+  type Question {
+    ques_id: ID!
+    question: String!
+    mod_id: Int!
+    ans1: String!
+    ans2: String!
+    ans3: String!
+    ans4: String!
+  }
+
+  type JmkALlBlog {
+    blog_type: String
+    blog_slug: String
+    blog_heading: String
+    blog_logo: String
+    blog_image: String
+    author: String
+    blog_id: Int
+    created_at: Date
+    updated_at: Date
+    created_by: String
+    blog_short_description: String
+    blog_meta_title: String
+    blog_meta_description: String
+    blog_meta_keyword: String
+  }
+
+  type JmkBlog {
+    blog_type: String
+    blog_heading: String
+    blog_logo: String
+    author: String
+    blog_id: Int
+    blog_short_description: String
+    blog_description: String
+    blog_image: String
+    blog_meta_title: String
+    blog_meta_description: String
+    blog_meta_keyword: String
+    created_at: Date
   }
 
   type Faq {
@@ -157,8 +124,8 @@ input createCourseInput {
     is_read: Boolean!
     created_at: Date!
   }
-
 `
+
 
 const commonQuery = `
     getAllCourseList:[Course!]!
@@ -173,8 +140,8 @@ const commonQuery = `
 `
 
 const commonMutation = `
-    createCourse(data:createCourseInput!):String!
-    updateCourse(data:updateCourseInput!):String!
+    createCourse(data:createAndUpdateCourseInput!):String!
+    updateCourse(data:createAndUpdateCourseInput!):String!
     deleteCourse(data:deleteCourseInput):String
 
     deleteNotification(serial:Int!):String!
@@ -185,15 +152,30 @@ const commonMutation = `
 
 
 const commonResolvers = {
-  createCourse: async (_, { data }, { userId, role }) => {
-    const access = ['admin', ROLES[2]]
+  createCourse: async (_, { data }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
-    if (role === access[0]) {
+    if (role === 'admin') {
+      
       const admin = await prisma.jmkuserinfo.findFirst({
         where: { usr_id: userId },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin')
-      const newCourse = await prisma.jmkcrsinfo.create({ data })
+      });
+      if (!admin) throw new AuthenticationError('invalid admin');
+
+      if (platform === 'external') {
+        data.company_id = admin.company_id;
+        const oldCourseCheck = await prisma.jmkcrsinfo.findFirst({ where: { crs_name: data.crs_name, time: data.time, crs_comapny_id: admin.company_id } });
+        if (oldCourseCheck) throw new ApolloError('this course already exist');
+      } else {
+        const oldCourseCheck = await prisma.jmkcrsinfo.findFirst({ where: { crs_name: data.crs_name, time: data.time } });
+        if (oldCourseCheck) throw new ApolloError('this course already exist');
+      }
+
+      const image = await uploadImgToAWS(data.crs_image, 'course/');
+      if (!image.data) throw new ApolloError('Someting went wrong !');
+      data.crs_image = image.data.Location;
+      data.crs_image_key = image.data.key;
+
+      const newCourse = await prisma.jmkcrsinfo.create({ data });
       if (!newCourse) throw new ApolloError('something went wrong !')
       return 'Success'
     }
@@ -210,7 +192,15 @@ const commonResolvers = {
       const crs = await prisma.jmkcrsinfo.findFirst({
         where: { crs_id: data.crs_id },
       })
-      if (!crs) throw new ApolloError('invalid course')
+      if (!crs) throw new ApolloError('invalid course');
+      if (data.crs_image) {
+        const image = await uploadImgToAWS(data.crs_image, 'course/');
+        if (!image.data) throw new ApolloError('Someting went wrong !');
+        data.crs_image = image.data.Location;
+        data.crs_image_key = image.data.key;
+      } else {
+        delete data.crs_image
+      }
       const course = await prisma.jmkcrsinfo.update({
         data: { ...data },
         where: {
@@ -223,9 +213,22 @@ const commonResolvers = {
     throw new AuthenticationError('invalid access')
   },
 
-  deleteCourse: async (_, { data }, { userId, role }) => {
+  deleteCourse: async (_, { data }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === 'admin') {
+      if (platform === 'external') {
+        const admin = await prisma.jmkuserinfo.findFirst({
+          where: { usr_id: userId },
+          include: { company: true }
+        })
+        if (!admin) throw new AuthenticationError('invalid admin')
+        const course = await prisma.jmkcrsinfo.update({
+          where: { crs_id: data.crs_id, crs_comapny_id: admin.company_id },
+          data: { isDeleted: true }
+        })
+        if (!course) throw new ApolloError('something went wrong !')
+        return 'success'
+      }
       const admin = await prisma.jmkuserinfo.findFirst({
         where: { usr_id: userId },
       })
@@ -309,40 +312,35 @@ const commonResolversQuery = {
     if (role === 'admin') {
       const admin = await prisma.jmkuserinfo.findFirst({
         where: { usr_id: userId },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin credentials')
-      if (role === 'admin') {
-        const courses = await prisma.jmkcrsinfo.findMany({
-          where: {
-            cid: null,
-          },
-        })
-        if (!courses) throw new ApolloError('Courses not found !!')
-        return courses
-      }
-    }
-    if (role === ROLES[2]) {
-      const company = await prisma.jmkcompany.findFirst({
-        where: { serial: userId },
-      })
-      if (!company)
-        throw new AuthenticationError('invalid admin credentials')
-      const courses = await prisma.jmkcrsinfo.findMany({
-        where: { cid: userId },
-      })
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const courses = await prisma.jmkcrsinfo.findMany();
       if (!courses) throw new ApolloError('Courses not found !!')
       return courses
     }
     throw new AuthenticationError('invalid access !!')
   },
-  getCourseById: async (_, args, { userId, role }) => {
+  getCourseById: async (_, args, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
-    if (!args.crs_id) throw new ForbiddenError('crs_id is required !')
-    const course = await prisma.jmkcrsinfo.findFirst({
-      where: { crs_id: args.crs_id },
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
     })
-    if (!course) throw new ApolloError('Data Not Found')
-    return course
+    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    if (role === 'admin') {
+      if (platform === 'external') {
+        const course = await prisma.jmkcrsinfo.findFirst({
+          where: { crs_id: args.crs_id, crs_comapny_id: admin.company_id },
+        })
+        if (!course) throw new ApolloError('No data found')
+        return course
+      }
+      const course = await prisma.jmkcrsinfo.findFirst({
+        where: { crs_id: args.crs_id },
+      })
+      if (!course) throw new ApolloError('No data found')
+      return course
+    }
+    throw new AuthenticationError('invalid access')
   },
   getAllActiveBlogs: async () => {
     const blogs = await prisma.jmkblog.findMany({

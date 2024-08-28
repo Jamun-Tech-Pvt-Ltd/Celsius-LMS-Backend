@@ -1,6 +1,5 @@
 import { gql } from 'apollo-server-express'
 import { companyMutation, companyQuery, companyQueryTypesAndInputs } from './controller/company/index.js'
-import { courseQuery, courseMutation, courseQueryTypesAndInputs } from './controller/course/index.js'
 import { trainerMutation, trainerQuery, trainerQueryTypesAndInputs } from './controller/trainer/index.js';
 import { adminMutation, adminQuery, adminQueryTypesAndInputs } from './controller/admin/index.js';
 import { studentMutation, studentQuery, studentQueryTypesAndInputs } from './controller/student/index.js';
@@ -14,7 +13,6 @@ const typeDefs = gql`
 
    ${adminQueryTypesAndInputs}
    ${companyQueryTypesAndInputs}
-   ${courseQueryTypesAndInputs}
    ${trainerQueryTypesAndInputs}
    ${studentQueryTypesAndInputs}
    ${commonQueryTypesAndInputs}
@@ -24,7 +22,6 @@ const typeDefs = gql`
    type Query {
       ${adminQuery}
       ${companyQuery}
-      ${courseQuery}
       ${trainerQuery}
       ${studentQuery}
       ${commonQuery}
@@ -34,7 +31,6 @@ const typeDefs = gql`
    type Mutation {
       ${adminMutation}
       ${companyMutation}
-      ${courseMutation}
       ${trainerMutation}
       ${studentMutation}
       ${commonMutation}

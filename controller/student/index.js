@@ -29,37 +29,6 @@ const studentQueryTypesAndInputs = `
       transaction_id: String!
    }
 
-    input SignupInput{
-        std_fname: String!
-        std_mname: String
-        std_lname: String!
-        std_mobile: String!
-        std_email: String!
-        std_password: String!
-        std_birth_dt: Date
-        std_institute: String
-        std_company: String
-        std_payment_type: String
-        std_payment_option: String
-        std_payment_amount: Int
-        std_remark:String
-        crsmain_id:Int
-        std_add_house_no:String
-        std_add_street:String
-        std_add_city:String
-        std_add_ward_no:Int
-        std_add_district:String
-        std_add_province:String
-        time:String
-        ref_id:String
-        std_add_zone:String
-        std_country:String
-        promo_code:String
-        crs_id:Int
-        crs_ecp_st_d:Date
-        cid:Int
-    }
-
     input UpdateUserInput {
         std_fname: String!
         std_mname: String
@@ -101,7 +70,7 @@ const studentQueryTypesAndInputs = `
      }
   
      input addNewCourseInput {
-        crsmain_id: Int!
+        crs_id: Int!
      }
   
      input removeCourseFromUserInput   {
@@ -497,7 +466,7 @@ const studentQuery = `
 
     myCourse:Course,
 
-    courseList:[PublicCourseType]
+    courseList:[Course]
     userCourseList:[UserCourse]
     getActiveUserCourse: ActiveUserCourse
 
@@ -533,10 +502,8 @@ const studentQuery = `
 const studentMutation = `
 
     signinUser(userSignIn:SigninInput!):Token
-    signupUser(userNew:SignupInput!):Token
     updateUser(data:UpdateUserInput):User
     updateUserPassword(data:UpdateUserPasswordInput):String!
-
 
     addNewCourse(data:addNewCourseInput):String!
     changeActiveCourse(data:changeActiveCourseInput):User!
@@ -626,112 +593,6 @@ const studentResolvers = {
     return { token }
   },
 
-  signupUser: async (_, { userNew }, { userId, role }) => {
-    // this logic use on multiple pannels
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_email: userNew.std_email },
-    });
-
-    if (user) throw new AuthenticationError('user already exist with that email');
-
-    const course = await prisma.jmkcrsmain.findFirst({
-      where: {
-        crsmain_id: userNew.crsmain_id,
-        isDeleted: false
-      },
-    })
-
-    if (!course) throw new AuthenticationError('invalid course')
-
-    const { std_payment_type, std_payment_option, std_payment_amount, time, ref_id, promo_code, ...rest } = userNew;
-
-    if (promo_code) {
-      const promo = await prisma.jmk_promo_code.findFirst({
-        where: { code: promo_code },
-      });
-      if (!promo) throw new ApolloError('Invalid Promo Code');
-      if (promo.upto < 1) throw new ApolloError('Invalid Promo Code');
-      if (new Date(promo.created_at).getTime() > Date.now()) throw new ApolloError('Promo Code Expire');
-      await prisma.jmk_promo_code.update({ where: { serial: promo.serial }, data: { upto: promo.upto - 1 } })
-    }
-
-    const newUser = await prisma.jmkstdinfo.create({
-      data: { ...rest, crs_id: 59, std_join_dt: new Date() },
-    })
-
-    if (userNew.crsmain_id) {
-      if (std_payment_type) {
-        await prisma.jmkstdcrsinfo.create({
-          data: {
-            crsmain_id: userNew.crsmain_id,
-            crs_start_dt: course.start_date,
-            std_id: newUser.std_id,
-            payment_type: std_payment_type,
-            payment_option: std_payment_option,
-            amt_paid: std_payment_amount ?? 0,
-            amt_due: course.rate - std_payment_amount ?? 0,
-            promo_code: promo_code ?? null,
-            time,
-            ref_id
-          },
-        })
-      } else {
-        await prisma.jmkstdcrsinfo.create({
-          data: {
-            crsmain_id: userNew.crsmain_id,
-            crs_start_dt: course.start_date,
-            std_id: newUser.std_id,
-            promo_code: promo_code ?? null
-          },
-        })
-      }
-    }
-
-    const token = jwt.sign(
-      { userId: newUser.std_id, role: ROLES[0] },
-      process.env.JWT_SECRET_KEY
-    )
-
-    await sendMail(
-      newUser.std_email,
-      'Successfully Register ',
-      registerrHTML(token, userNew.std_fname)
-    )
-
-    await sendMail(
-      'info@jaamun.com',
-      'New User Singup Notification',
-      newUserSignupNotification(newUser, course.crs_name)
-    )
-
-    const admins = await prisma.jmkuserinfo.findMany();
-    for (let index = 0; index < admins.length; index++) {
-      const admin = admins[index];
-      const accessData = JSON.parse(admin.usr_access);
-      if (admin?.usr_access?.[0]) {
-        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
-        if (findRegistrationAccess && findRegistrationAccess?.option) {
-          const registration = findRegistrationAccess.option.find((item) => item.name === 'Course Registration');
-          if (registration?.access?.[0]?.read) {
-            await prisma.jmk_notifications.create({
-              data: {
-                user_id: admin.usr_id,
-                label1: `${newUser.std_fname}`,
-                label2: course.title,
-                user_type: "Admin",
-                category: 'registered',
-                message: `has successfully registered for course`,
-                link: `/students/${newUser.std_id}`,
-                is_read: false,
-              }
-            });
-          }
-        }
-      }
-    }
-
-    return { token }
-  },
 
   updateUser: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
@@ -850,16 +711,17 @@ const studentResolvers = {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
+      include: { company: true }
     })
-    const course = await prisma.jmkcrsmain.findFirst({
-      where: { crsmain_id: parseInt(data.crsmain_id), isDeleted: false },
+    const course = await prisma.jmkcrsinfo.findFirst({
+      where: { crs_id: parseInt(data.crs_id), isDeleted: false },
     })
     const userCourse = await prisma.jmkstdcrsinfo.findFirst({
-      where: { std_id: userId, crsmain_id: parseInt(data.crsmain_id) },
+      where: { std_id: userId, crs_id: parseInt(data.crs_id) },
     })
     if (!user) throw new AuthenticationError('invalid user')
     if (!course) throw new ApolloError('Bad Request')
-    if (userCourse?.crs_id) throw new ApolloError("Great news! The course you requested has been approved and is now available on our platform. If you have any further questions or if there's anything else you'd like to learn, please don't hesitate to ask. We're here to support your learning journey!");
+    if (userCourse.std_crs_verirfy) throw new ApolloError("Great news! The course you requested has been approved and is now available on our platform. If you have any further questions or if there's anything else you'd like to learn, please don't hesitate to ask. We're here to support your learning journey!");
     if (userCourse && !userCourse?.crs_id) throw new ApolloError("Thank you for your interest, but it looks like you've already requested this course. If you have any other course suggestions or questions, feel free to reach out. We're here to assist you!")
     await prisma.jmkstdcrsinfo.create({
       data: {
@@ -868,6 +730,9 @@ const studentResolvers = {
         std_id: userId,
       },
     });
+
+
+    // notifiction to company admin
 
     const admins = await prisma.jmkuserinfo.findMany();
     for (let index = 0; index < admins.length; index++) {
@@ -1825,19 +1690,8 @@ const studentResolversQuery = {
 
   // need to chnage 
   courseList: async () => {
-    const course = await prisma.jmkcrsmain.findMany({ where: { isDeleted: false } })
-    const filter = course.reduce((all, course) => {
-      all[course.label] = [
-        ...(all[course.label] || []),
-        { ...course, crsmain_id: course.crsmain_id, crs_id: 0, crsmain_type: course.label, crsmain_title: course.title },
-      ]
-      return all
-    }, {})
-    const newObj = Object.entries(filter).map((item) => ({
-      crsmain_type: item[0],
-      courses: [...item[1]],
-    }))
-    return newObj
+    const courses = await prisma.jmkcrsinfo.findMany({ where: { isDeleted: false } })
+    return courses
   },
 
   //  used
