@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - dev
+      - backend-v3-dev
 
 jobs:
   build:
@@ -71,7 +71,7 @@ jobs:
             pm2 reload backend
 
       - name: Deploy to Dev
-        if: github.ref == 'refs/heads/dev'
+        if: github.ref == 'refs/heads/backend-v3-dev'
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST_DEV }}
@@ -82,4 +82,4 @@ jobs:
             cd Backend-server
             npx prisma db pull
             npx prisma generate
-            pm2 reload backend
+            npm run pm2
