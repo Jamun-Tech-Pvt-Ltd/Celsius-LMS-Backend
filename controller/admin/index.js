@@ -480,12 +480,18 @@ const adminQueryTypesAndInputs = `
       std_verifyed:Boolean!
      }
 
+     type _count {
+      courses:Int
+     }
+
      type CourseCategory {
       serial:Int!
       title: String!
       description: String!
       icon: String!
       created_at: Date!
+      company: Company
+      _count: _count
      }
 
      type Testimonial {
@@ -1360,8 +1366,9 @@ const adminResolvers = {
 
   },
 
-  createAndUpdateCourseCategory: async (_, { data }, { userId, role }) => {
+  createAndUpdateCourseCategory: async (_, { data }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token');
+    if (platform === 'internal') throw new AuthenticationError('internal admin cant do this action');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
     });
@@ -1372,10 +1379,11 @@ const adminResolvers = {
       if (!file.data) throw new ApolloError('Something went wrong !');
       data.icon = file?.data?.Location;
       data.icon_key = file?.data?.key;
+      data.company_id = admin.company_id;
       const newCategory = await prisma.jmk_crs_categories.create({ data });
       if (!newCategory) throw new ApolloError('Someting went wrong')
     } else {
-      const category = await prisma.jmk_crs_categories.findFirst({ where: { serial: data.serial } });
+      const category = await prisma.jmk_crs_categories.findFirst({ where: { serial: data.serial, company_id: admin.company_id } });
       if (!category) throw new ApolloError('invalid id');
       if (data.icon) {
         await deleteImgToAWS(category.icon_key)
@@ -1669,9 +1677,10 @@ const adminResolversQuery = {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
+      include: { company: true }
     })
-    if (!admin) throw new AuthenticationError('invalid admin credentials')
-    return admin
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    return admin;
   },
 
   getBlogs: async (_, args, { userId, role }) => {
@@ -2129,37 +2138,48 @@ const adminResolversQuery = {
     return data
   },
 
-  getCourseCategories: async (_, { args }, { userId, role }) => {
+  getCourseCategories: async (_, { args }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token');
+    if (platform === 'external') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+        include: { company: true }
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const categories = await prisma.jmk_crs_categories.findMany({ where: { company_id: admin.company_id }, orderBy: { created_at: 'desc' }, include: { company: true, _count: { select: { courses: true } } } });
+      if (!categories) throw new ApolloError('Data Not Found');
+      return categories
+    }
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
+      include: { company: true }
     });
     if (!admin) throw new AuthenticationError('invalid admin credentials');
-    const categories = await prisma.jmk_crs_categories.findMany({ orderBy: { created_at: 'desc' } });
+    const categories = await prisma.jmk_crs_categories.findMany({ orderBy: { created_at: 'desc' }, include: { company: true, _count: { select: { courses: true } } } });
     if (!categories) throw new ApolloError('Data Not Found')
     return categories
   },
 
-  getCourseCategory: async (_, { serial }, { userId, role }) => {
+  getCourseCategory: async (_, { serial }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
     });
     if (!admin) throw new AuthenticationError('invalid admin credentials');
+    if (platform === 'external') {
+      const category = await prisma.jmk_crs_categories.findFirst({ where: { serial, company_id: admin.company_id } });
+      if (!category) throw new ApolloError('Data Not Found');
+      return category;
+    }
     const category = await prisma.jmk_crs_categories.findFirst({ where: { serial } });
-    if (!category) throw new ApolloError('Data Not Found')
-    return category
+    if (!category) throw new ApolloError('Data Not Found');
+    return category;
   },
 
 
   getTestimonials: async (_, { args }, { userId, role }) => {
-    // if (!userId) throw new ForbiddenError('invalid token');
-    // const admin = await prisma.jmkuserinfo.findFirst({
-    //   where: { usr_id: userId},
-    // });
-    // if (!admin) throw new AuthenticationError('invalid admin credentials');
     const testimonials = await prisma.jmk_testimonial.findMany({ orderBy: { created_at: 'desc' } });
-    if (!testimonials) throw new ApolloError('Data Not Found')
+    if (!testimonials) throw new ApolloError('Data Not Found');
     return testimonials
   },
 

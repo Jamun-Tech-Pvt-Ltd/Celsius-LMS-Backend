@@ -153,22 +153,15 @@ const commonMutation = `
 
 const commonResolvers = {
   createCourse: async (_, { data }, { userId, role, platform }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === 'admin') {
-      
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === 'admin' && platform === 'external') {
       const admin = await prisma.jmkuserinfo.findFirst({
         where: { usr_id: userId },
       });
       if (!admin) throw new AuthenticationError('invalid admin');
-
-      if (platform === 'external') {
-        data.company_id = admin.company_id;
-        const oldCourseCheck = await prisma.jmkcrsinfo.findFirst({ where: { crs_name: data.crs_name, time: data.time, crs_comapny_id: admin.company_id } });
-        if (oldCourseCheck) throw new ApolloError('this course already exist');
-      } else {
-        const oldCourseCheck = await prisma.jmkcrsinfo.findFirst({ where: { crs_name: data.crs_name, time: data.time } });
-        if (oldCourseCheck) throw new ApolloError('this course already exist');
-      }
+      data.company_id = admin.company_id;
+      const oldCourseCheck = await prisma.jmkcrsinfo.findFirst({ where: { crs_name: data.crs_name, time: data.time, crs_comapny_id: admin.company_id } });
+      if (oldCourseCheck) throw new ApolloError('this course already exist');
 
       const image = await uploadImgToAWS(data.crs_image, 'course/');
       if (!image.data) throw new ApolloError('Someting went wrong !');

@@ -31,7 +31,7 @@ model jmkcrsmain {
 
 model jmkcrsinfo {
   crs_id             Int                  @id @default(autoincrement())
-  crs_category       String               @default("course") @db.VarChar(50)
+  crs_category_id    Int
   crs_name           String               @db.VarChar(200)
   crs_desc           String               @db.VarChar(1000)
   crs_duration       Float
@@ -47,6 +47,7 @@ model jmkcrsinfo {
   meetLink           String?              @db.VarChar(1000)
   created_at         DateTime             @default(now())
   crs_comapny_id     Int?
+  crs_category       jmk_crs_categories   @relation(fields: [crs_category_id], references: [serial])
   crs_comapny        jmkcompany?          @relation(fields: [crs_comapny_id], references: [serial])
   crs_week           jmk_tr_week[]
   jmk_std_attendance jmk_std_attendance[]
@@ -359,21 +360,22 @@ model jmkuserinfo {
 }
 
 model jmkcompany {
-  serial           Int           @id @default(autoincrement())
-  c_name           String        @db.VarChar(100)
-  c_email          String        @db.VarChar(50)
-  c_username       String        @unique @db.VarChar(20)
-  c_country        String        @db.VarChar(50)
-  c_package        String        @db.VarChar(20)
-  c_package_type   String        @db.VarChar(20)
-  c_bussiness_type String        @db.VarChar(100)
-  c_verified       Boolean       @default(false)
-  c_phone          Int?
-  c_address        String?
-  c_taxid          String?
-  created_at       DateTime?     @default(now())
-  jmkuserinfo      jmkuserinfo[]
-  jmkcrsinfo       jmkcrsinfo[]
+  serial             Int                  @id @default(autoincrement())
+  c_name             String               @db.VarChar(100)
+  c_email            String               @db.VarChar(50)
+  c_username         String               @unique @db.VarChar(20)
+  c_country          String               @db.VarChar(50)
+  c_package          String               @db.VarChar(20)
+  c_package_type     String               @db.VarChar(20)
+  c_bussiness_type   String               @db.VarChar(100)
+  c_verified         Boolean              @default(false)
+  c_phone            Int?
+  c_address          String?
+  c_taxid            String?
+  created_at         DateTime?            @default(now())
+  jmkuserinfo        jmkuserinfo[]
+  jmkcrsinfo         jmkcrsinfo[]
+  jmk_crs_categories jmk_crs_categories[]
 }
 
 model jmkcrsupcom {
@@ -423,7 +425,6 @@ model jmkstdfeediscount {
   fee_discount_per Int?
   std_id           Int?
 }
-
 
 model jmkstdproj {
   serial        Int       @id @default(autoincrement())
@@ -582,12 +583,15 @@ model jmk_web_career {
 }
 
 model jmk_crs_categories {
-  serial      Int      @id @default(autoincrement())
+  serial      Int          @id @default(autoincrement())
   title       String
-  description String   @db.LongText
+  description String       @db.LongText
   icon        String
-  created_at  DateTime @default(now())
   icon_key    String
+  company_id  Int
+  company     jmkcompany   @relation(fields: [company_id], references: [serial])
+  created_at  DateTime     @default(now())
+  courses     jmkcrsinfo[]
 }
 
 model jmk_services {
