@@ -82,4 +82,4 @@ jobs:
             cd Backend-server
             npx prisma db pull
             npx prisma generate
-            npm run pm2
+            pm2 reload backend
