@@ -548,8 +548,6 @@ const adminQuery = `
     getTrainerDataForAdmin:[Trainer]
     getTrainerByIdForAdmin(tr_id:Int!):Trainer
 
-    getCoursesForAdmin:[Course]
-
     getDataCountForAllTableInAdmin:[totalCount]
 
     getAllUserInfo:[userInfo]
@@ -1795,28 +1793,7 @@ const adminResolversQuery = {
     }
   },
 
-  getCoursesForAdmin: async (_, args, { userId, role, platform }) => {
-    if (!userId) throw new ForbiddenError('invalid token');
-    if (role === 'admin') {
-      if (platform === 'external') {
-        const admin = await prisma.jmkuserinfo.findFirst({
-          where: { usr_id: userId },
-        });
-        if (!admin?.company_id) throw new AuthenticationError('invalid admin credentials');
-        const courses = await prisma.jmkcrsinfo.findMany({ where: { company_id: admin.company_id }, orderBy: { created_at: 'desc' } });
-        if (!courses[0]) throw new ApolloError('No data found');
-        return courses;
-      }
-      const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_id: userId },
-      });
-      if (!admin) throw new AuthenticationError('invalid admin credentials');
-      const courses = await prisma.jmkcrsinfo.findMany({ orderBy: { created_at: 'desc' } });
-      if (!courses[0]) throw new ApolloError('No data found');
-      return courses;
-    }
-    throw new AuthenticationError('invalid access')
-  },
+
 
 
   getDataCountForAllTableInAdmin: async (_, args, { userId, role, platform }) => {

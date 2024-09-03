@@ -46,9 +46,9 @@ model jmkcrsinfo {
   isDeleted          Boolean              @default(false)
   meetLink           String?              @db.VarChar(1000)
   created_at         DateTime             @default(now())
-  crs_comapny_id     Int?
-  crs_category       jmk_crs_categories   @relation(fields: [crs_category_id], references: [serial])
-  crs_comapny        jmkcompany?          @relation(fields: [crs_comapny_id], references: [serial])
+  crs_company_id     Int                  @default(1)
+  category           jmk_crs_categories   @relation(fields: [crs_category_id], references: [serial])
+  company            jmkcompany           @relation(fields: [crs_company_id], references: [serial])
   crs_week           jmk_tr_week[]
   jmk_std_attendance jmk_std_attendance[]
   jmkcrstest         jmkcrstest[]
