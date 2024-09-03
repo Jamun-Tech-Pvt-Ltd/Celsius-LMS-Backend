@@ -8,7 +8,6 @@ import jwt from 'jsonwebtoken'
 import { uploadImgToAWS, deleteImgToAWS } from '../../utils/imageHandler.js'
 import { ROLES } from '../../utils/helper.js'
 import { sendMail } from '../../utils/mailHandler.js'
-import newUserSignupNotification from '../../utils/newUsersignup.js'
 
 const adminQueryTypesAndInputs = `
 
@@ -124,80 +123,20 @@ const adminQueryTypesAndInputs = `
       crs_name: String!
     }
   
-     type AdminTrainer {
-        tr_id: ID!
+     type Trainer {
+        tr_id: Int!
         tr_fname: String!
         tr_mname: String
         tr_lname: String!
         tr_mobile:String
-        tr_email: String
-        tr_city:String
-        tr_country: String
-        tr_main_tech1:String
-        tr_main_tech2: String
-        tr_main_tech3:String
-        tr_dob: String
+        tr_email: String!
+        tr_dob: Date
         tr_verifyed:Boolean
         tr_password:String
-        tr_resume:String
-        tr_github:String
         tr_linkedin:String
-        tr_role:String
-        tr_label:String
-        tr_remark:String
         join_courses: [trainer_join_courses]
+        company:Company!
      }
-
-
-     type devTechDet{
-      tech_stack:String
-      tech_stack_exp:String
-      tech_last_used:String
-      tech_stack_summary:String
-      
-     }
-
-     type devProjDet{
-         proj_title:String
-         proj_desc:String
-         proj_tech_used:String
-     }
-
-     type devExpDet{
-        company_name:String
-        exp_desc:String
-        exp_role_pos:String
-        exp_start_date:Date
-        exp_end_date:Date
-     }
-
-      type courseCurriculum {
-        topic: String!
-        description: String!
-      }
-        
-      type staticCourse{
-        crsmain_id:Int!
-        category: String!
-        title: String!
-        description: String!
-        requirements: String!
-        cramain_seo_desc: String!
-        cramain_seo_title: String!
-        crsmain_img_url: String!
-        duration: Float!
-        label: String!
-        language: String!
-        lavel: String!
-        rate: Int!
-        rateUs: Float
-        start_date: String!
-        short_description: String!
-        learning: [String!]!
-        timing: [String!]!
-        curriculum: [courseCurriculum!]!
-        isDeleted:Boolean
-      }
      
      type totalCount{
        name:String
@@ -306,10 +245,7 @@ const adminQueryTypesAndInputs = `
         tr_email: String
         tr_dob:Date
         tr_password: String
-        tr_github: String
         tr_linkedin: String
-        tr_role: String
-        tr_remark: String
         tr_verifyed:Boolean!
      }
 
@@ -609,8 +545,8 @@ const adminQuery = `
     getstudentByIdForAdmin(std_id:Int!):AdminStudent
     getstudentCourseByIdForAdmin(serial:Int!):UserCourseAdmin
 
-    getTrainerDataForAdmin:[AdminTrainer]
-    getTrainerByIdForAdmin(tr_id:Int!):AdminTrainer
+    getTrainerDataForAdmin:[Trainer]
+    getTrainerByIdForAdmin(tr_id:Int!):Trainer
 
     getCoursesForAdmin:[Course]
 
@@ -976,43 +912,43 @@ const adminResolvers = {
     throw new AuthenticationError('Invalid access')
   },
 
-  updateTrainerFromDashboard: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-
+  updateTrainerFromDashboard: async (_, { data }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-    })
+      include: { company: true }
+    });
+    if (!admin) throw new AuthenticationError('invalid admin');
 
-    if (!admin) throw new AuthenticationError('invalid admin')
-
-    const trainer = await prisma.jmktrinfo.update({
-      data: { ...data },
-      where: { tr_id: parseInt(data.tr_id) },
-    })
-
-    if (!trainer) throw new AuthenticationError('Something went wrong')
-
-    return 'success'
+    if (platform === 'external') {
+      const trainer = await prisma.jmktrinfo.update({
+        data: { ...data },
+        where: { tr_id: parseInt(data.tr_id) },
+      });
+      if (!trainer) throw new AuthenticationError('Something went wrong');
+      return 'success';
+    }
+    throw new AuthenticationError('Invalid access');
   },
 
-  createTrainerFromDashboard: async (_, { data }, { userId, role }) => {
+  createTrainerFromDashboard: async (_, { data }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token');
-
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-    })
-
-    if (!admin) throw new AuthenticationError('invalid admin')
-
+      include: { company: true }
+    });
+    if (!admin) throw new AuthenticationError('invalid admin');
     const checkEmail = await prisma.jmktrinfo.findFirst({
       where: { tr_email: data.tr_email },
     });
-
     if (checkEmail) throw new AuthenticationError('trainer already exist with that email');
-    data['tr_label'] = 'internal';
-    const trainer = await prisma.jmktrinfo.create({ data: { ...data }, })
-    if (!trainer) throw new AuthenticationError('Something went wrong')
-    return 'success'
+    if (platform === 'external') {
+      data.company_id = admin.company_id;
+      const trainer = await prisma.jmktrinfo.create({ data: { ...data }, });
+      if (!trainer) throw new AuthenticationError('Something went wrong');
+      return 'success';
+    }
+    if (!trainer) throw new AuthenticationError('Invalid access');
   },
 
   assignTrainerCourseFromDashboard: async (_, { data }, { userId, role }) => {
@@ -1759,29 +1695,46 @@ const adminResolversQuery = {
     throw new AuthenticationError('invalid access')
   },
 
-  getTrainerDataForAdmin: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
+  getTrainerDataForAdmin: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-    })
-    if (!admin) throw new AuthenticationError('invalid admin credentials')
+      include: { company: true }
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
     if (role === 'admin') {
-      const trainers = await prisma.jmktrinfo.findMany({ orderBy: { createdAt: 'desc' } })
-      return trainers
+      if (platform === 'internal') {
+        const trainers = await prisma.jmktrinfo.findMany({ orderBy: { createdAt: 'desc' }, include: { company: true } })
+        return trainers
+      } else {
+        const trainers = await prisma.jmktrinfo.findMany({ where: { company_id: admin.company_id }, orderBy: { createdAt: 'desc' }, include: { company: true } })
+        return trainers
+      }
     }
+    throw new AuthenticationError('invalid access')
   },
 
-  getTrainerByIdForAdmin: async (_, args, { userId, role }) => {
+  getTrainerByIdForAdmin: async (_, args, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
+      include: { company: true }
     })
-    if (!admin) throw new AuthenticationError('invalid admin credentials')
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    let trainer;
     if (role === 'admin') {
-      const trainer = await prisma.jmktrinfo.findFirst({
-        where: { tr_id: args.tr_id },
-      });
-
+      if (platform === 'internal') {
+        trainer = await prisma.jmktrinfo.findFirst({
+          where: { tr_id: args.tr_id },
+          include: { company: true }
+        });
+      } else {
+        trainer = await prisma.jmktrinfo.findFirst({
+          where: { tr_id: args.tr_id, company_id: admin.company_id },
+          include: { company: true }
+        });
+      }
+      if (!trainer) throw new AuthenticationError('no data');
       let join_courses = []
       const join_courses_data = await prisma.jmktrcrsinfo.findMany({
         where: { tr_id: trainer.tr_id },
@@ -1866,7 +1819,7 @@ const adminResolversQuery = {
   },
 
 
-  getDataCountForAllTableInAdmin: async (_, args, { userId, role }) => {
+  getDataCountForAllTableInAdmin: async (_, args, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },

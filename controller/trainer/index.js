@@ -24,23 +24,6 @@ const trainerQueryTypesAndInputs = `
         password: String!
     }
 
-    input signupTrainerInput{
-        tr_fname: String!
-        tr_mname: String
-        tr_lname: String!
-        tr_mobile: String!
-        tr_email: String!
-        tr_resume: Upload
-        tr_password: String
-        tr_city: String
-        tr_country: String
-        tr_dob: Date
-        tr_github: String
-        tr_linkedin: String
-        tr_role: String
-        tr_remark: String
-     }
-
      input updateTrainerInput {
         tr_fname: String
         tr_mname: String
@@ -65,10 +48,6 @@ const trainerQueryTypesAndInputs = `
 
      input updateActiveSession {
       crs_id:Int!
-     }
-  
-     input emailVerifyTrainer{
-      token: String!
      }
 
      input weekInput{
@@ -111,46 +90,6 @@ const trainerQueryTypesAndInputs = `
       rtans: String
      }
       
-     input TrainerStudentInput {
-        std_fname: String!
-        std_mname: String
-        std_lname: String!
-        std_email: String!
-        crs_complete: Boolean
-        crs_complete_date: Date
-        std_mobile: String!
-        std_birth_dt: Date
-        std_add_house_no:String
-        std_add_street:String
-        std_add_city:String
-        std_add_district:String
-        std_add_ward_no:String
-        std_add_province:String
-        std_add_zone:String
-        std_country:String
-        std_password:String
-      }
-
-      input TrainerStudentUpdateInput {
-        std_id: Int!
-        std_fname: String!
-        std_mname: String
-        std_lname: String!
-        std_email: String!
-        crs_complete: Boolean
-        crs_complete_date: Date
-        std_mobile: String!
-        std_birth_dt: Date
-        std_add_house_no:String
-        std_add_street:String
-        std_add_city:String
-        std_add_district:String
-        std_add_ward_no:String
-        std_add_province:String
-        std_add_zone:String
-        std_country:String
-        std_password:String
-      }
 
       input createGroupChatInput {
         group_name:String!
@@ -355,19 +294,12 @@ const trainerQuery = `
 `
 
 const trainerMutation = `
-    signupTrainer(data:signupTrainerInput!):Token
     signinTrainer(data:signinTrainerInput!):Token
     updateTrainer(data:updateTrainerInput):Trainer!
     updateTrainerPic(data:updateTrainerPicInput):Trainer!
     updateTrainerPassword(data:updateTrainerPasswordInput):String!
 
-
-    trainerEmailVerify(data: emailVerifyTrainer!): String!
-
     activeSession(data:updateActiveSession!): Trainer!
-
-    createStudentFromTrainer(data:TrainerStudentInput!):String!
-    updateStudentFromTrainer(data:TrainerStudentUpdateInput!):String!
 
     addWeek(data:weekInput!):String!
     updateWeek(data:updateWeekInput!):String!
@@ -386,35 +318,9 @@ const trainerMutation = `
     createAndUpdatePage(data:createAndUpdatePageInput):String!
     deletePage(serial:Int!):String!
 
-
 `
 
 const trainerResolvers = {
-
-  trainerEmailVerify: async (_, { data }) => {
-    const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY)
-    if (!decodedToken) throw new AuthenticationError('The token is not valid')
-    const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_id: decodedToken.userId },
-    })
-    if (!trainer) throw new AuthenticationError('Invalid Token')
-
-    const updateStatus = await prisma.jmktrinfo.update({
-      where: {
-        tr_id: trainer.tr_id,
-      },
-      data: {
-        tr_verifyed: true,
-      },
-    })
-    if (!updateStatus)
-      throw new AuthenticationError('Could not verify your email')
-    return 'Email Verification Complete'
-
-    // const generatedToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIzLCJyb2xlIjoidHJhaW5lciIsImlhdCI6MTY5MDAwMTI3NX0.jnArqzd6dCS8vhIMKU8CEm4v-uGdkP1988Vlvq9Vxp8';
-    // await sendMail("py.suhant@gmail.com", 'Successfully Register ', emailVerificationHTML(generatedToken))
-    // return "mail sent";
-  },
 
   activeSession: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
@@ -438,144 +344,6 @@ const trainerResolvers = {
     return updateSession
   },
 
-  createStudentFromTrainer: async (_, { data }, { userId }) => {
-    const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_id: userId },
-    })
-
-    if (!trainer) throw new AuthenticationError('invalid token');
-
-    const checkEmailUnique = await prisma.jmkstdinfo.findFirst({ where: { std_email: data.std_email } })
-
-    if (checkEmailUnique) throw new ApolloError('Email is already taken');
-
-    let newStudentData = {}
-
-    for (let key in data) {
-      if (data.hasOwnProperty(key) && key !== 'crs_complete' && key !== 'crs_complete_date' && data[key] !== '') {
-        if (key === 'std_add_ward_no') {
-          newStudentData[key] = parseInt(data[key])
-        } else if (key === 'std_birth_dt') {
-          newStudentData[key] = new Date(data[key])
-        } else {
-          newStudentData[key] = data[key];
-        }
-      }
-    }
-
-    const newStudent = await prisma.jmkstdinfo.create({
-      data: { ...newStudentData, cid: null, crs_id: trainer.crs_id, std_verifyed: true, std_join_dt: new Date() },
-    })
-
-    const stdCrs = await prisma.jmkstdcrsinfo.create({
-      data: {
-        crsmain_id: 2,
-        crs_start_dt: new Date(),
-        std_id: newStudent.std_id,
-        crs_complete: data.crs_complete,
-        crs_complete_date: data.crs_complete_date ?? null,
-        crs_start_dt: new Date(),
-        crs_id: trainer.crs_id,
-        std_crs_verirfy: true
-      },
-    })
-
-    if (!stdCrs) {
-      await prisma.jmkstdinfo.delete({ where: { std_id: newStudent.std_id } })
-      throw new ApolloError('Something went wrong');
-    }
-
-    if (!stdCrs) throw new ApolloError('Something went wrong');
-
-    const admins = await prisma.jmkuserinfo.findMany();
-    for (let index = 0; index < admins.length; index++) {
-      const admin = admins[index];
-      const accessData = JSON.parse(admin.usr_access);
-      if (admin?.usr_access?.[0]) {
-        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
-        if (findRegistrationAccess && findRegistrationAccess?.option) {
-          const registration = findRegistrationAccess.option.find((item) => item.name === 'Course Registration');
-          if (registration?.access?.[0]?.read) {
-            await prisma.jmk_notifications.create({
-              data: {
-                user_id: admin.usr_id,
-                label1: `${trainer.tr_fname} (Trainer)`,
-                label2: `${newStudent.std_fname}`,
-                user_type: "Admin",
-                category: 'registered',
-                message: `has added a new student `,
-                link: `/students/${newStudent.std_id}`,
-                is_read: false,
-              }
-            });
-          }
-        }
-      }
-    }
-
-    return 'Success'
-  },
-
-  updateStudentFromTrainer: async (_, { data }, { userId }) => {
-    const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_id: userId },
-    })
-
-    if (!trainer) throw new AuthenticationError('invalid token');
-
-    let newStudentData = {}
-
-    for (let key in data) {
-      if (data.hasOwnProperty(key) && key !== 'crs_complete' && key !== 'crs_complete_date' && data[key] !== '') {
-        if (key === 'std_add_ward_no') {
-          newStudentData[key] = parseInt(data[key])
-        } else if (key === 'std_birth_dt') {
-          newStudentData[key] = new Date(data[key])
-        } else {
-          newStudentData[key] = data[key];
-        }
-      }
-    }
-
-    const updateStudent = await prisma.jmkstdinfo.update({
-      data: { ...newStudentData },
-      where: { std_id: data.std_id }
-    })
-
-    if (!updateStudent) throw new ApolloError('Something went wrong');
-
-    const stdCrs = await prisma.jmkstdcrsinfo.findFirst({ where: { std_id: data.std_id, crs_id: trainer.crs_id } });
-    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: trainer.crs_id } });
-
-    if (!stdCrs) throw new ApolloError('invalid req');
-
-    const updateStdCrs = await prisma.jmkstdcrsinfo.update({
-      data: {
-        crs_complete: data.crs_complete,
-        crs_complete_date: data.crs_complete_date,
-      },
-      where: { serial: stdCrs.serial }
-    })
-
-    if (!updateStdCrs) throw new ApolloError('Something went wrong');
-
-    if (updateStdCrs.crs_complete) {
-      await prisma.jmk_notifications.create({
-        data: {
-          user_id: updateStudent.std_id,
-          label1: `Congratulations, `,
-          label2: crs.crs_name,
-          user_type: "Student",
-          category: "certificate",
-          message: `you have completed the course and unlocked the certificate`,
-          link: `/course_certificate`,
-          is_read: false,
-        }
-      });
-    }
-
-    return 'Success'
-  },
 
   signinTrainer: async (_, { data }) => {
     const trainer = await prisma.jmktrinfo.findFirst({
@@ -590,69 +358,6 @@ const trainerResolvers = {
       { userId: trainer.tr_id, role: ROLES[1] },
       process.env.JWT_SECRET_KEY
     )
-    return { token }
-  },
-
-  signupTrainer: async (_, { data }, { userId }) => {
-    const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_email: data.tr_email },
-    })
-
-    if (trainer)
-      throw new AuthenticationError('trainer already exist with that email')
-    let file
-    if (data.tr_resume) {
-      file = await uploadImgToAWS(data.tr_resume, 'trainer_resume/')
-      if (!file.data) throw new ApolloError('Someting went wrong !')
-    }
-    const newTrainer = await prisma.jmktrinfo.create({
-      data: {
-        ...data,
-        tr_resume: file?.data?.Location ?? '',
-        tr_resume_key: file?.data?.key ?? '',
-        tr_label: userId ? 'internal' : 'external'
-      },
-    })
-    const token = jwt.sign(
-      { userId: newTrainer.tr_id, purpose: 'Trainer Verification' },
-      process.env.JWT_SECRET_KEY
-    )
-
-    await sendMail(
-      newTrainer.tr_email,
-      'Successfully Register ',
-      emailVerificationHTML(
-        token,
-        `${newTrainer.tr_fname} ${newTrainer.tr_lname}`,
-        'TrainerVerification'
-      )
-    )
-
-    const admins = await prisma.jmkuserinfo.findMany();
-    for (let index = 0; index < admins.length; index++) {
-      const admin = admins[index];
-      const accessData = JSON.parse(admin.usr_access);
-      if (admin?.usr_access?.[0]) {
-        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
-        if (findRegistrationAccess && findRegistrationAccess?.option) {
-          const registration = findRegistrationAccess.option.find((item) => item.name === 'Trainer Request');
-          if (registration?.access?.[0]?.read) {
-            await prisma.jmk_notifications.create({
-              data: {
-                user_id: admin.usr_id,
-                label1: `${newTrainer.tr_fname}`,
-                label2: '',
-                user_type: "Admin",
-                category: 'trainer',
-                message: `wants to apply for the role of trainer for Jaamun.`,
-                link: `/trainer/${newTrainer.tr_id}`,
-                is_read: false,
-              }
-            });
-          }
-        }
-      }
-    }
     return { token }
   },
 

@@ -95,7 +95,6 @@ const jamuntekQueryTypesAndInputs = `
 
 const jamuntekQuery = `
    getAllCareerPage: [CareerPage!]!
-   getAutoComplete:[staticCourse]!
    getServicByTitle(title:String!):Service
 
 `
@@ -292,12 +291,6 @@ const jamuntekResolversQuery = {
     const careers = await prisma.jmk_web_career.findMany({ where: { status: true } });
     if (!careers) throw new ApolloError('Data Not Found')
     return careers
-  },
-
-  getAutoComplete: async (_) => {
-    const coursesData = await prisma.jmkcrsinfo.findMany({ where: { isDeleted: false } });
-    if (!coursesData) throw new Error('No Data Found')
-    return coursesData
   },
 
   getServicByTitle: async (_, { title }, { userId, role }) => {
