@@ -1153,27 +1153,20 @@ const trainerResolversQuery = {
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
       });
-
       if (!trainer) throw new AuthenticationError('invalid trainer credentials');
-
       const course = await prisma.jmkcrsinfo.findFirst({
         where: { crs_id: trainer.crs_id },
       });
-
       if (!course) throw new AuthenticationError('invalid trainer');
-
       const studentList = await prisma.jmkstdcrsinfo.findMany({
         where: { crs_id: course.crs_id },
       });
-
       if (!studentList) throw new ApolloError('No data');
-
       let students = [];
-
       for (let index = 0; index < studentList.length; index++) {
         if (studentList[index].std_id) {
           const student = await prisma.jmkstdinfo.findFirst({
-            where: { std_id: studentList[index].std_id },
+            where: { std_id: studentList[index].std_id, company_id: trainer.company_id },
           })
           if (student) {
             students.push({ ...student, crs_complete: studentList[index].crs_complete, crs_complete_date: studentList[index].crs_complete_date })
@@ -1196,7 +1189,7 @@ const trainerResolversQuery = {
 
       if (!stdCrs) throw new AuthenticationError('invalid');
 
-      const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: std_id } });
+      const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: std_id, company_id: trainer.company_id } });
 
       if (!student) throw new AuthenticationError('invalid');
 

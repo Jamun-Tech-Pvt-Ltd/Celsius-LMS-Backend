@@ -133,55 +133,23 @@ model jmkstdinfo {
   std_lname             String                  @db.VarChar(20)
   std_email             String                  @db.VarChar(30)
   std_mobile            String                  @db.VarChar(15)
-  std_join_dt           DateTime?               @default(dbgenerated("(curdate())")) @db.Date
   std_birth_dt          DateTime?               @db.Date
-  std_high_ql           String?                 @db.VarChar(40)
-  crs_id                Int
   std_password          String                  @db.VarChar(16)
-  std_remark            String?                 @db.VarChar(1000)
   std_pic               String?                 @db.VarChar(200)
   std_pic_key           String?                 @db.VarChar(100)
   std_verifyed          Boolean                 @default(false)
-  std_add_house_no      String?                 @db.VarChar(20)
-  std_add_street        String?                 @db.VarChar(50)
-  std_add_city          String?                 @db.VarChar(50)
-  std_add_ward_no       Int?
-  std_add_province      String?                 @db.VarChar(100)
-  std_add_zone          String?                 @db.VarChar(100)
   lastSeen              DateTime                @default(now())
-  std_add_district      String?                 @db.VarChar(50)
-  std_country           String?                 @db.VarChar(100)
-  std_company_id        String?                 @db.VarChar(200)
-  std_institute         String?                 @db.VarChar(200)
+  created_at            DateTime                @default(now())
+  updated_at            DateTime                @default(now())
+  company_id            Int
+  crs_id                Int
+  company               jmkcompany              @relation(fields: [company_id], references: [serial])
+  course                jmkcrsinfo              @relation(fields: [crs_id], references: [crs_id], onDelete: Cascade, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
   jmk_crs_blog_comments jmk_crs_blog_comments[]
   jmk_std_attendance    jmk_std_attendance[]
-  jmkgrvinfo            jmkgrvinfo[]
-  jmkcrsinfo            jmkcrsinfo?             @relation(fields: [crs_id], references: [crs_id], onDelete: Cascade, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
-  jmkstdreview          jmkstdreview[]
+  courses               jmkstdcrsinfo[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
-}
-
-model jmkstdreview {
-  std_id        Int
-  std_rate      String     @db.VarChar(200)
-  std_rate_date DateTime   @db.Date
-  serial        Int        @id @default(autoincrement())
-  jmkstdinfo    jmkstdinfo @relation(fields: [std_id], references: [std_id], onDelete: NoAction, onUpdate: NoAction, map: "jmkstdinfo_std_id_fk")
-
-  @@index([std_id], map: "jmkstdinfo_std_id_fk")
-}
-
-model jmkgrvinfo {
-  grv_id     Int        @id @default(autoincrement())
-  std_id     Int
-  grv_date   DateTime   @db.Date
-  grv_type   String     @db.VarChar(30)
-  grv_desc   String     @db.VarChar(200)
-  grv_rate   String     @db.VarChar(30)
-  jmkstdinfo jmkstdinfo @relation(fields: [std_id], references: [std_id], onDelete: NoAction, onUpdate: NoAction, map: "grv_std_fk")
-
-  @@index([std_id], map: "grv_std_fk")
 }
 
 model jmkcontact {
@@ -194,12 +162,6 @@ model jmkcontact {
   clname   String?   @db.VarChar(200)
   cdate    DateTime? @default(dbgenerated("(curdate())")) @db.Date
   cid      Int?
-}
-
-model jmkreview {
-  serial Int      @id @default(autoincrement())
-  rate   String   @db.VarChar(200)
-  date   DateTime @db.Date
 }
 
 model jmktrinfo {
@@ -271,6 +233,7 @@ model jmkstdcrsinfo {
   time              String?
   ref_id            String?
   promo_code        String?
+  student           jmkstdinfo      @relation(fields: [std_id], references: [std_id])
   promo             jmk_promo_code? @relation(fields: [promo_code], references: [code], onDelete: Cascade)
   course            jmkcrsinfo      @relation(fields: [crs_id], references: [crs_id])
 
@@ -371,6 +334,7 @@ model jmkcompany {
   jmkcrsinfo         jmkcrsinfo[]
   jmk_crs_categories jmk_crs_categories[]
   jmktrinfo          jmktrinfo[]
+  jmkstdinfo         jmkstdinfo[]
 }
 
 model jmkcrsupcom {

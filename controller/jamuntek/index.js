@@ -30,10 +30,6 @@ const jamuntekQueryTypesAndInputs = `
         bjobrole: String!
     }
 
-    input jamuntekReviewInput {
-        rate: String!
-    }
-
     input signupPartnerInput{
       pr_fname: String!
       pr_lname: String!
@@ -102,7 +98,6 @@ const jamuntekQuery = `
 const jamuntekMutation = `
     contactForm(data:contactFormInput):String
     businessForm(data:businessFormInput):String
-    jamuntekReview(data:jamuntekReviewInput):String
     signupPartner(data:signupPartnerInput!):String!
     jobReq(data:jobReqInput!):String!
 
@@ -181,18 +176,6 @@ const jamuntekResolvers = {
       }
     }
     return 'Success'
-  },
-
-  jamuntekReview: async (_, { data }) => {
-    if (!data.rate) throw new ApolloError('bad request')
-    const jamuntekReview = await prisma.jmkreview.create({
-      data: {
-        rate: data.rate,
-        date: new Date(),
-      },
-    })
-    if (!jamuntekReview) throw new Error('something went wrong!!')
-    return 'success'
   },
 
   signupPartner: async (_, { data }) => {

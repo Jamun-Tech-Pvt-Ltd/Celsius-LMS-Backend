@@ -65,9 +65,6 @@ const studentQueryTypesAndInputs = `
         new_password: String!
     }
 
-    input studentReviewInput {
-        rate: String!
-     }
   
      input addNewCourseInput {
         crs_id: Int!
@@ -513,7 +510,6 @@ const studentMutation = `
     forgotPassword(data:forgotPasswordInput):String!
     studentEmailVerify(data:studentEmailVerify!):String!
     uploadFile(file: Upload!): User
-    studentReview(data:studentReviewInput):String
 
     submitProject(data:studentProjectInput):String!
 
@@ -688,24 +684,6 @@ const studentResolvers = {
     return newUser
   },
 
-  //  not sure
-  studentReview: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: userId },
-    })
-    if (!user) throw new AuthenticationError('invalid user')
-    const student_review = await prisma.jmkstdreview.create({
-      data: {
-        std_id: userId,
-        std_rate: data.rate,
-        std_rate_date: new Date(),
-      },
-    })
-    if (!student_review) throw new Error('something went wrong!!')
-    return 'success'
-  },
-
   // used
   addNewCourse: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
@@ -741,7 +719,7 @@ const studentResolvers = {
       if (admin?.usr_access?.[0]) {
         const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
         if (findRegistrationAccess && findRegistrationAccess?.option) {
-          const registration = findRegistrationAccess.option.find((item) => item.name === 'Course Registration');
+          const registration = findRegistrationAccess.option.find((item) => item.name === 'Students');
           if (registration?.access?.[0]?.read) {
             await prisma.jmk_notifications.create({
               data: {
@@ -1665,31 +1643,16 @@ const studentResolversQuery = {
     if (role === ROLES[0]) {
       const user = await prisma.jmkstdinfo.findFirst({
         where: { std_id: userId },
-      })
-      if (!user) throw new AuthenticationError('invalid user credentials')
-      const feedback = await prisma.jmkgrvinfo.findMany({
-        where: { std_id: userId },
-      })
-      if (user.cid) {
-        const organization = await prisma.jmkcompany.findFirst({
-          where: {
-            serial: user.cid,
-          },
-        })
-        if (!organization) throw new AuthenticationError('invalid user')
-        if (organization) {
-          if (!feedback[0]) return { ...user, c_username: organization.c_username, c_package_type: organization.c_package_type }
-          return { ...user, feedback, c_username: organization.c_username, c_package_type: organization.c_package_type }
-        }
-      }
-      if (!feedback[0]) return user
-      return { ...user, feedback }
+        include: { company: true }
+      });
+      if (!user) throw new AuthenticationError('invalid user credentials');
+      return user
     }
-    throw new ForbiddenError('Bad request !!')
+    throw new ForbiddenError('Invalid user credentials !!');
   },
 
-  // need to chnage 
-  courseList: async () => {
+  courseList: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login')
     const courses = await prisma.jmkcrsinfo.findMany({ where: { isDeleted: false } })
     return courses
   },

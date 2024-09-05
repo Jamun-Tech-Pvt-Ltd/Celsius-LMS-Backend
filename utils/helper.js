@@ -101,8 +101,9 @@ const user_access = [
     name: 'RegistrationInfo',
     option: [
       {
-        name: 'Course Registration',
+        name: 'Students',
         access: [{
+          create: true,
           read: true,
           update: true,
         }]
@@ -115,7 +116,7 @@ const user_access = [
         }]
       },
       {
-        name: 'Trainer Request',
+        name: 'Trainer',
         access: [{
           create: true,
           read: true,
