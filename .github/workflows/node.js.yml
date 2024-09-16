@@ -33,7 +33,7 @@ jobs:
           target: "Backend-server"
 
       - name: Copy file to Dev server
-        if: github.ref == 'refs/heads/dev'
+        if: github.ref == 'refs/heads/backend-v3-dev'
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SSH_HOST_DEV }}
