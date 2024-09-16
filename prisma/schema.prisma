@@ -355,11 +355,12 @@ model jmkfaq {
 
 model jmk_testimonial {
   serial      Int      @id @default(autoincrement())
-  std_name    String   @db.VarChar(200)
-  crs_name    String   @db.VarChar(200)
+  usr_name    String   @db.VarChar(200)
+  usr_label   String   @db.VarChar(200)
+  usr_star    Int
+  usr_img     String   @db.VarChar(500)
+  usr_img_key String   @db.VarChar(500)
   created_at  DateTime @default(now())
-  std_img     String   @db.VarChar(500)
-  std_img_key String   @db.VarChar(500)
   testimonial String   @db.LongText
 }
 

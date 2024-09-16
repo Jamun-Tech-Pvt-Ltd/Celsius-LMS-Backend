@@ -113,6 +113,16 @@ const commonQueryTypesAndInputs = `
     status: Boolean!
     img: String!
   }
+    
+     type Testimonial {
+      serial:Int!
+      usr_name:String!
+      usr_label:String!
+      usr_star:Int!
+      testimonial:String!
+      usr_img:String!
+      created_at:Date!
+     }    
 
   type Notification {
     serial: Int!
@@ -126,6 +136,8 @@ const commonQueryTypesAndInputs = `
     is_read: Boolean!
     created_at: Date!
   }
+
+  
 `
 
 
@@ -139,6 +151,9 @@ const commonQuery = `
     getFaqByType(type:String):[Faq!]!
     getFaqById(faq_id:Int!):Faq!
     getMyNotifications:[Notification]
+
+    getTestimonials: [Testimonial]
+    getTestimonial(serial:Int!): Testimonial
 `
 
 const commonMutation = `
@@ -312,7 +327,7 @@ const commonResolversQuery = {
       if (!admin) throw new AuthenticationError('invalid admin credentials');
       if (platform === 'internal') {
         const courses = await prisma.jmkcrsinfo.findMany({ include: { company: true, category: true } });
-        if (!courses) throw new ApolloError('Courses not found !!')          
+        if (!courses) throw new ApolloError('Courses not found !!')
         return courses
       } else {
         const courses = await prisma.jmkcrsinfo.findMany({ where: { crs_company_id: admin.company_id }, include: { company: true, category: true } });
@@ -420,6 +435,24 @@ const commonResolversQuery = {
     }
 
     throw new AuthenticationError('invalid access');
+  },
+
+
+  getTestimonials: async (_, { args }, { userId, role }) => {
+    const testimonials = await prisma.jmk_testimonial.findMany({ orderBy: { created_at: 'desc' } });
+    if (!testimonials) throw new ApolloError('Data Not Found');
+    return testimonials
+  },
+
+  getTestimonial: async (_, { serial }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const testimonial = await prisma.jmk_testimonial.findFirst({ where: { serial } });
+    if (!testimonial) throw new ApolloError('Data Not Found')
+    return testimonial
   },
 }
 
