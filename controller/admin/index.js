@@ -931,7 +931,7 @@ const adminResolvers = {
     });
     if (checkCourse) throw new AuthenticationError('already assign');
 
-    const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id } });
+    const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id, crs_company_id: admin.company_id } });
     if (!course) throw new AuthenticationError('invalid');
 
     const trainerCourse = await prisma.jmktrcrsinfo.create({ data: { ...data }, })
