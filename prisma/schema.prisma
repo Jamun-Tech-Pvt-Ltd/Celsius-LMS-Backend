@@ -335,6 +335,7 @@ model jmkcompany {
   jmk_crs_categories jmk_crs_categories[]
   jmktrinfo          jmktrinfo[]
   jmkstdinfo         jmkstdinfo[]
+  jmkfaq             jmkfaq[]
 }
 
 model jmkcrsupcom {
@@ -350,6 +351,8 @@ model jmkfaq {
   question   String       @db.VarChar(200)
   answer     String       @db.VarChar(2000)
   created_at DateTime     @default(now())
+  company_id Int?
+  company    jmkcompany?   @relation(fields: [company_id], references: [serial])
   type       jmk_faq_type
 }
 
@@ -683,7 +686,8 @@ enum jmk_content_type {
 enum jmk_faq_type {
   Student
   Trainer
-  Jamuntek
+  Jaamun
+  Celsius
 }
 
 enum jmk_notification_type {

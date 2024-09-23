@@ -381,7 +381,7 @@ const commonResolversQuery = {
   getFaqByType: async (_, { type }) => {
     if (!type) throw new ForbiddenError('faq type is required !')
     const faq = await prisma.jmkfaq.findMany({
-      where: { type },
+      where: { type, company_id: null },
     })
     if (!faq) throw new ApolloError('Data Not Found')
     return faq
