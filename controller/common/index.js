@@ -118,9 +118,12 @@ const commonQueryTypesAndInputs = `
       serial:Int!
       usr_name:String!
       usr_label:String!
-      usr_star:Int!
+      usr_star:Int
+      type:String!
+      usr_company:String
       testimonial:String!
       usr_img:String!
+      usr_company_logo:String
       created_at:Date!
      }    
 

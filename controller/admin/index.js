@@ -299,10 +299,12 @@ const adminQueryTypesAndInputs = `
       serial:Int
       usr_name:String!
       usr_label:String!
-      usr_star:Int!
+      usr_company:String
+      usr_star:Int
       testimonial:String!
-      
+      usr_company_logo:Upload
       usr_img:Upload
+      type:String!
      }
 
      input serviceInput {
@@ -1300,7 +1302,7 @@ const adminResolvers = {
         where: { usr_id: userId },
       })
       if (!admin) throw new AuthenticationError('invalid admin');
-      
+
       if (data.serial) {
         const oldTestimonial = await prisma.jmk_testimonial.findFirst({ where: { serial: data.serial } });
         if (!oldTestimonial) throw new ApolloError('invalid id');
@@ -1314,6 +1316,16 @@ const adminResolvers = {
           data.usr_img = oldTestimonial.usr_img;
           data.usr_img_key = oldTestimonial.usr_img_key;
         }
+        if (data.usr_company_logo) {
+          await deleteImgToAWS(oldTestimonial.usr_company_logo_key);
+          let file = await uploadImgToAWS(data.usr_company_logo, 'testimonial_images/');
+          if (!file.data) throw new ApolloError('Something went wrong !');
+          data.usr_company_logo = file?.data?.Location;
+          data.usr_company_logo_key = file?.data?.key;
+        } else {
+          data.usr_company_logo = oldTestimonial.usr_company_logo;
+          data.usr_company_logo_key = oldTestimonial.usr_company_logo_key;
+        }
         const testimonial = await prisma.jmk_testimonial.update({ data, where: { serial: data.serial } });
         if (!testimonial) throw new ApolloError('someting went wrong');
         return 'updated'
@@ -1323,6 +1335,12 @@ const adminResolvers = {
         if (!file.data) throw new ApolloError('Something went wrong !');
         data.usr_img = file?.data?.Location;
         data.usr_img_key = file?.data?.key;
+        if (data.usr_company_logo) {
+          let file = await uploadImgToAWS(data.usr_company_logo, 'testimonial_images/');
+          if (!file.data) throw new ApolloError('Something went wrong !');
+          data.usr_company_logo = file?.data?.Location;
+          data.usr_company_logo_key = file?.data?.key;
+        }
         const newTestimonial = await prisma.jmk_testimonial.create({ data });
         if (!newTestimonial) throw new ApolloError('someting went wrong');
         return 'created'

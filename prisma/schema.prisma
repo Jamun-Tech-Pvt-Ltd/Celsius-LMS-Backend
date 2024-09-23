@@ -354,14 +354,18 @@ model jmkfaq {
 }
 
 model jmk_testimonial {
-  serial      Int      @id @default(autoincrement())
-  usr_name    String   @db.VarChar(200)
-  usr_label   String   @db.VarChar(200)
-  usr_star    Int
-  usr_img     String   @db.VarChar(500)
-  usr_img_key String   @db.VarChar(500)
-  created_at  DateTime @default(now())
-  testimonial String   @db.LongText
+  serial               Int      @id @default(autoincrement())
+  usr_name             String   @db.VarChar(200)
+  usr_label            String   @db.VarChar(200)
+  usr_company          String?  @db.VarChar(200)
+  type                 String   @default("celsius") @db.VarChar(200)
+  usr_star             Int?
+  usr_img              String   @db.VarChar(500)
+  usr_img_key          String   @db.VarChar(500)
+  usr_company_logo     String?  @db.VarChar(500)
+  usr_company_logo_key String?  @db.VarChar(500)
+  created_at           DateTime @default(now())
+  testimonial          String   @db.LongText
 }
 
 model jmktstdpayinfo {
