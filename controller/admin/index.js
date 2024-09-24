@@ -342,6 +342,7 @@ const adminQueryTypesAndInputs = `
      input MailSendInput {
       content:String!
       users:String!
+      id:int
       subject:String!
      }
 
@@ -1535,26 +1536,64 @@ const adminResolvers = {
       where: { usr_id: userId },
     });
     if (!admin) throw new AuthenticationError('invalid admin');
-
     if (platform === 'internal') {
-      throw new AuthenticationError('Not Done Yet');
+      if (data.users === 'Company') {
+        if (data.id) {
+          const admins = await prisma.jmkuserinfo.findMany({ where: { company_id: data.id } });
+          for (let index = 0; index < admins.length; index++) {
+            const admin = admins[index];
+            await sendMail(admin.usr_email, data.subject, data.content)
+          }
+        } else {
+          const admins = await prisma.jmkuserinfo.findMany({
+            where: {
+              company_id: {
+                not: null,
+              },
+            },
+          });
+          for (let index = 0; index < admins.length; index++) {
+            const admin = admins[index];
+            await sendMail(admin.usr_email, data.subject, data.content)
+          }
+        }
+        return 'send'
+      }
+      throw new AuthenticationError('Invalid opration or users type');
     } else {
       if (data.users === 'Students') {
-        const students = await prisma.jmkstdinfo.findMany({ where: { company_id: admin.company_id } });
-        for (let index = 0; index < students.length; index++) {
-          const student = students[index];
-          await sendMail(student.std_email, data.subject, data.content)
+        if (data.id) {
+          const students = await prisma.jmkstdinfo.findMany({ where: { company_id: admin.company_id, crs_id: data.id } });
+          for (let index = 0; index < students.length; index++) {
+            const student = students[index];
+            await sendMail(student.std_email, data.subject, data.content)
+          }
+        } else {
+          const students = await prisma.jmkstdinfo.findMany({ where: { company_id: admin.company_id } });
+          for (let index = 0; index < students.length; index++) {
+            const student = students[index];
+            await sendMail(student.std_email, data.subject, data.content)
+          }
         }
       }
 
       if (data.users === 'Trainers') {
-        const trainers = await prisma.jmktrinfo.findMany({ where: { company_id: admin.company_id } });
-        for (let index = 0; index < trainers.length; index++) {
-          const trainer = trainers[index];
-          await sendMail(trainer.tr_email, data.subject, data.content)
+        if (data.id) {
+          const trainers = await prisma.jmktrinfo.findMany({ where: { company_id: admin.company_id, crs_id: data.id } });
+          for (let index = 0; index < trainers.length; index++) {
+            const trainer = trainers[index];
+            await sendMail(trainer.tr_email, data.subject, data.content)
+          }
+        } else {
+          const trainers = await prisma.jmktrinfo.findMany({ where: { company_id: admin.company_id } });
+          for (let index = 0; index < trainers.length; index++) {
+            const trainer = trainers[index];
+            await sendMail(trainer.tr_email, data.subject, data.content)
+          }
         }
-      }
 
+
+      }
       if (data.users === 'Admins') {
         const admins = await prisma.jmkuserinfo.findMany({ where: { company_id: admin.company_id } });
         for (let index = 0; index < students.length; index++) {
