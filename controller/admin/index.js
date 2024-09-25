@@ -342,7 +342,7 @@ const adminQueryTypesAndInputs = `
      input MailSendInput {
       content:String!
       users:String!
-      id:int
+      id:Int
       subject:String!
      }
 
