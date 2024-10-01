@@ -57,6 +57,16 @@ const commonQueryTypesAndInputs = `
     phone: String!
     phone1: String!
     email: String!
+    logo: String
+    primary_color: String
+    secondary_color: String
+    tertiary_color: String
+    description: String
+    location: String
+    company_name: String
+    company_phone: String
+    company_account: String
+    bank_name: String
   }
 
   type Question {
@@ -147,7 +157,7 @@ const commonQueryTypesAndInputs = `
 const commonQuery = `
     getAllCourseList:[Course!]!
     getCourseById(crs_id:Int!):Course!
-    getContactInfo:ContactInfoType!
+    getContactInfo(type:String!):ContactInfoType!
     getPopupModal: webModal
     getAllActiveBlogs:[JmkALlBlog]
     getBlogBySlug(blog_slug:String!):JmkBlog!
@@ -307,10 +317,22 @@ const commonResolvers = {
 }
 
 const commonResolversQuery = {
-  getContactInfo: async () => {
-    const info = await prisma.jmk_web_details.findMany({});
-    if (info?.[0]) {
-      return info[0]
+  getContactInfo: async (_, arg, { userId, role, platform }) => {
+    if (userId && platform === 'external') {
+      const user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      if (!user) {
+        throw new ApolloError('User not found !!');
+      }
+      const info = await prisma.jmk_web_details.findFirst({ where: { type: 'Company', company_id: user.company_id } });
+
+      if (!info) {
+        throw new ApolloError('Info not found !!');
+      }
+      return info
+    }
+    const info = await prisma.jmk_web_details.findFirst({ where: { company_id: null, type: arg.type } });
+    if (info) {
+      return info
     } else {
       throw new ApolloError('Info not found !!')
     }

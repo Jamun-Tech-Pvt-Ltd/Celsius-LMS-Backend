@@ -264,10 +264,22 @@ const adminQueryTypesAndInputs = `
       contact_number:String!
      }
 
-     input web_details {
-      phone: String
-      phone1: String
-      email: String
+    input web_details {
+      phone: String!
+      phone1: String!
+      email: String!
+      type: String!
+      logo: Upload
+      qr:Upload
+      primary_color: String
+      secondary_color: String
+      tertiary_color: String
+      description: String
+      location: String
+      company_name: String
+      company_phone: String
+      company_account: String
+      bank_name: String
     }
 
     input web_modal {
@@ -1200,25 +1212,73 @@ const adminResolvers = {
     throw new AuthenticationError('invalid admin');
   },
 
-  createAndUpdateWebDetails: async (_, { data }, { userId, role }) => {
+  createAndUpdateWebDetails: async (_, { data }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
     })
     if (!admin) throw new AuthenticationError('invalid admin');
 
-    const webDetails = await prisma.jmk_web_details.findFirst();
-
-    if (!webDetails) {
-      const webDetailsCreate = await prisma.jmk_web_details.create({ data });
-      if (!webDetailsCreate) throw new ApolloError('someting went wrong');
-      return 'create'
-    } else {
-      const webDetailsUpdate = await prisma.jmk_web_details.update({ data, where: { serial: webDetails.serial } });
-      if (!webDetailsUpdate) throw new ApolloError('someting went wrong');
-      return 'updated'
+    if (platform === 'internal' && data.type !== 'Company') {
+      const webDetails = await prisma.jmk_web_details.findFirst({ where: { company_id: null, type: data.type } });
+      if (!webDetails) {
+        const webDetailsCreate = await prisma.jmk_web_details.create({ data });
+        if (!webDetailsCreate) throw new ApolloError('someting went wrong');
+        return 'create'
+      } else {
+        const webDetailsUpdate = await prisma.jmk_web_details.update({ data, where: { serial: webDetails.serial } });
+        if (!webDetailsUpdate) throw new ApolloError('someting went wrong');
+        return 'updated'
+      }
     }
 
+    if (platform === 'external' && data.type === 'Company') {
+      const webDetails = await prisma.jmk_web_details.findFirst({ where: { company_id: admin.company_id, type: 'Company' } });
+      if (data.logo) {
+        if (webDetails?.logo_key) {
+          await deleteImgToAWS(webDetails?.logo_key)
+        }
+        const file = await uploadImgToAWS(data.logo, 'company/info/');
+        data['logo'] = file?.data?.Location ?? null;
+        data['logo_key'] = file?.data?.key ?? '';
+        if (!file.data) throw new ApolloError('Something went wrong !');
+      } else {
+        if (webDetails?.logo) {
+          data['logo'] = webDetails.logo;
+          data['logo_key'] = webDetails.logo_key;
+        }
+      }
+
+      if (data.qr) {
+        if (webDetails?.qr_key) {
+          await deleteImgToAWS(webDetails?.qr_key)
+        }
+        const file = await uploadImgToAWS(data.qr, 'company/info/');
+        data['qr'] = file?.data?.Location ?? null;
+        data['qr_key'] = file?.data?.key ?? '';
+        if (!file.data) throw new ApolloError('Something went wrong !');
+      } else {
+        if (webDetails?.qr) {
+          data['qr'] = webDetails.qr;
+          data['qr_key'] = webDetails.qr_key;
+        }
+      }
+
+      data.company_id = admin.company_id;
+      data.type = 'Company';
+
+      if (!webDetails) {
+        const webDetailsCreate = await prisma.jmk_web_details.create({ data });
+        if (!webDetailsCreate) throw new ApolloError('someting went wrong');
+        return 'create'
+      } else {
+        const webDetailsUpdate = await prisma.jmk_web_details.update({ data, where: { serial: webDetails.serial } });
+        if (!webDetailsUpdate) throw new ApolloError('someting went wrong');
+        return 'updated'
+      }
+
+    }
+    throw new AuthenticationError('invalid access');
   },
 
   createAndUpdateModal: async (_, { data }, { userId, role }) => {

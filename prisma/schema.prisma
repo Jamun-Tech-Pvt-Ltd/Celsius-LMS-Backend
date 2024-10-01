@@ -352,7 +352,7 @@ model jmkfaq {
   answer     String       @db.VarChar(2000)
   created_at DateTime     @default(now())
   company_id Int?
-  company    jmkcompany?   @relation(fields: [company_id], references: [serial])
+  company    jmkcompany?  @relation(fields: [company_id], references: [serial])
   type       jmk_faq_type
 }
 
@@ -521,10 +521,25 @@ model jmk_chat_group_student {
 }
 
 model jmk_web_details {
-  serial Int    @id @default(autoincrement())
-  phone  String
-  phone1 String
-  email  String
+  serial          Int                       @id @default(autoincrement())
+  phone           String
+  phone1          String
+  email           String
+  logo            String?
+  logo_key        String?
+  tertiary_color  String?
+  primary_color   String?
+  secondary_color String?
+  description     String?                   @db.LongText
+  location        String?
+  type            jmk_web_details_type_enum
+  qr              String?
+  qr_key          String?
+  bank_name       String?
+  company_name    String?
+  company_account String?
+  company_phone   String?
+  company_id      Int?
 }
 
 model jmk_web_modal {
@@ -664,6 +679,12 @@ enum jmk_std_ques_severity_level_enum {
 enum jmk_chat_type_enum {
   Text
   Image
+}
+
+enum jmk_web_details_type_enum {
+  Jaamun
+  Celsius
+  Company
 }
 
 enum jmk_ques_ans_user_type_enum {
