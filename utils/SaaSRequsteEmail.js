@@ -6,7 +6,7 @@ const saaSRequsteEmail = (c_name, c_email, c_package, c_package_type) => `
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title></title>
   </head>
-  <body style="background: #f8f7fb;">
+  <body style="background: #f8f7fb">
     <div
       class="container"
       style="
@@ -31,10 +31,7 @@ const saaSRequsteEmail = (c_name, c_email, c_package, c_package_type) => `
         style="
           width: 470px;
           margin: 0 auto;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
+     
         "
       >
         <!-- <img
@@ -60,31 +57,26 @@ const saaSRequsteEmail = (c_name, c_email, c_package, c_package_type) => `
           class="description"
           style="
             text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+      
           "
         >
-          <strong style="font-weight: 700; margin-bottom: 6px;">Dear ${c_name},</strong>
-          You have successfully requested a new SaaS service from ${c_name}. Our team will review your request, and an admin will need to approve it before proceeding. We will get back to you shortly with further details.
+          <strong style="font-weight: 700; margin-bottom: 6px"
+            >Dear ${c_name},</strong
+          >
+          You have successfully requested a new SaaS service from ${c_name}. Our
+          team will review your request, and an admin will need to approve it
+          before proceeding. We will get back to you shortly with further
+          details.
         </div>
 
-        <ul class="list" style="list-style: none;">
-          <li>
-            <strong>Company Name:</strong> ${c_name}
-          </li>
-          <li>
-            <strong>Email:</strong> ${c_email}
-          </li>
-          <li>
-            <strong>Request Package:</strong> ${c_package}
-          </li>
-          <li>
-            <strong>Request Package Type:</strong> ${c_package_type}
-          </li>
+        <ul class="list" style="list-style: none; ">
+          <li><strong>Company Name:</strong> ${c_name}</li>
+          <li><strong>Email:</strong> ${c_email}</li>
+          <li><strong>Request Package:</strong> ${c_package}</li>
+          <li><strong>Request Package Type:</strong> ${c_package_type}</li>
         </ul>
 
-        <div class="footer" style="font-size: 16px; text-align: center;">
+        <div class="footer" style="font-size: 16px; text-align: center">
           <p>Best regards,</p>
           <p>Jaamun Team</p>
         </div>
@@ -106,6 +98,7 @@ const saaSRequsteEmail = (c_name, c_email, c_package, c_package_type) => `
     </div>
   </body>
 </html>
+
 `;
 
 export default saaSRequsteEmail;

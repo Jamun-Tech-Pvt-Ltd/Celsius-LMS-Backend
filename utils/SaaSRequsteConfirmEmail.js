@@ -31,10 +31,7 @@ const saaSRequsteConfirmEmail = (c_name, c_email, c_username, c_password) => `
         style="
           width: 470px;
           margin: 0 auto;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
+    
         "
       >
         <!-- <img
@@ -60,12 +57,10 @@ const saaSRequsteConfirmEmail = (c_name, c_email, c_username, c_password) => `
           class="description"
           style="
             text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+     
           "
         >
-          <strong style="font-weight: 700; margin-bottom: 6px;">Dear ${c_name},</strong>
+          <strong style="font-weight: 700; margin-bottom: 6px; display: block;">Dear ${c_name},</strong>
 
           We are pleased to inform you that your request for our SaaS service has
           been successfully verified. You can now access the features and
