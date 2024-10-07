@@ -19,6 +19,7 @@ const pubsub = new PubSub()
 
 const studentQueryTypesAndInputs = `
     input SigninInput{
+        username:String!
         email: String!
         password: String!
     }
@@ -78,10 +79,6 @@ const studentQueryTypesAndInputs = `
       crsmain_id: Int!
      }
   
-     input studentEmailVerify{
-      token: String!
-     }
-
      input stdQuestionInput {
       ques_id:Int
       instance_id:String
@@ -169,12 +166,12 @@ const studentQueryTypesAndInputs = `
      type UserCourse {
         serial : Int!
         crs_id: Int!
-        crsmain_id:Int!
-        crs_start_dt: Date
-        crs_name: String!
-        crs_rate: Int
-        crs_image:String!
-        crs_desc:String!
+        std_crs_verirfy: Boolean!
+        discount: Int
+        amt_paid: Int
+        amt_due:Int
+        crs_complete: Boolean!
+        course:Course!
      }
   
      type ActiveUserCourse {
@@ -199,31 +196,21 @@ const studentQueryTypesAndInputs = `
      }
      
      type User {
-        std_id: ID!
+        std_id: Int!
         std_fname: String!
         std_mname: String
         std_lname: String!
         std_email: String!
         std_pic: String
-        c_id:ID
-        acc_type:String
         std_mobile: String!
         std_birth_dt: Date
-        crs_id: ID!
-        std_status: Int
+        crs_id: Int!
+        std_verifyed: Boolean!
         std_paidup: Int
-        std_due: Int
         lastSeen:Date
-        std_add_house_no:String
-        std_add_street:String
-        std_add_city:String
-        std_add_district:String
-        std_add_ward_no:String
-        std_add_province:String
-        std_add_zone:String
-        std_country:String
-        c_username:String
-        c_package_type:String
+        created_at:Date
+        company:Company!
+        course:Course!
      }
 
      type StudentQuestionSet {
@@ -508,7 +495,6 @@ const studentMutation = `
 
     forgotPPEmailCheck(data:forgotPPEmailCheckInput): String!
     forgotPassword(data:forgotPasswordInput):String!
-    studentEmailVerify(data:studentEmailVerify!):String!
     uploadFile(file: Upload!): User
 
     submitProject(data:studentProjectInput):String!
@@ -547,46 +533,20 @@ const studentMutation = `
 `
 
 const studentResolvers = {
-
-  studentEmailVerify: async (_, { data }) => {
-    const decodedToken = jwt.decode(data.token, process.env.JWT_SECRET_KEY)
-
-    if (!decodedToken) throw new AuthenticationError('The token is not valid')
-    const student = await prisma.jmkstdinfo.findFirst({
-      where: {
-        std_id: decodedToken.userId,
-      },
-    })
-    if (!student) throw new AuthenticationError('Invalid Token')
-
-    const updateStatus = await prisma.jmkstdinfo.update({
-      where: {
-        std_id: student.std_id,
-      },
-      data: {
-        std_verifyed: true,
-      },
-    })
-
-    if (!updateStatus)
-      throw new AuthenticationError('Could not verify your email')
-    return 'Email Verification Completed'
-  },
-
   signinUser: async (_, { userSignIn }) => {
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_email: userSignIn.email },
-    })
-    if (!user) throw new AuthenticationError('invalid user credentials')
-    const isMatch = userSignIn.password == user.std_password
-    if (!isMatch) throw new AuthenticationError('invalid user credentials')
-    if (!user.std_verifyed) throw new AuthenticationError('Email not verified. Please check the mail')
+    const company = await prisma.jmkcompany.findFirst({ where: { c_username: userSignIn.username } });
+    if (!company) throw new AuthenticationError('invalid user credentials');
+    const user = await prisma.jmkstdinfo.findFirst({ where: { std_email: userSignIn.email, company_id: company.serial } });
+    if (!user) throw new AuthenticationError('invalid user credentials');
+    const isMatch = userSignIn.password == user.std_password;
+    if (!isMatch) throw new AuthenticationError('invalid user credentials');
+    if (!user.std_verifyed) throw new AuthenticationError('Email not verified. Please check the mail');
 
     const token = jwt.sign(
-      { userId: user.std_id, role: ROLES[0] },
+      { userId: user.std_id, role: ROLES[0], platform: 'external', c_username: company?.c_username, c_package_type: company?.c_username },
       process.env.JWT_SECRET_KEY
-    )
-    return { token }
+    );
+    return { token };
   },
 
 
@@ -1638,46 +1598,50 @@ const studentResolvers = {
 }
 
 const studentResolversQuery = {
-  me: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
+  me: async (_, args, { userId, role, c_username }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    if (role === ROLES[0]) {
+      const user = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+        include: { company: true, course: true }
+      });
+      if (!user) throw new AuthenticationError('invalid user credentials');
+      if (user.company.c_username !== c_username) throw new AuthenticationError('invalid user credentials');
+      return user
+    }
+    throw new ForbiddenError('Invalid user credentials !!');
+  },
+
+  courseList: async (_, args, { userId, role, c_username }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    if (role === ROLES[0]) {
+      const user = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+        include: { company: true, courses: true }
+      });
+      if (!user) throw new AuthenticationError('invalid user credentials');
+      if (user.company.c_username !== c_username) throw new AuthenticationError('invalid user credentials');
+      const course = await prisma.jmkcrsinfo.findMany({ where: { crs_company_id: user.company.serial } });
+      return course
+    };
+    throw new ForbiddenError('Invalid user credentials !!');
+  },
+
+  //  used
+  userCourseList: async (_, args, { userId, role, c_username }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
     if (role === ROLES[0]) {
       const user = await prisma.jmkstdinfo.findFirst({
         where: { std_id: userId },
         include: { company: true }
       });
       if (!user) throw new AuthenticationError('invalid user credentials');
-      return user
-    }
-    throw new ForbiddenError('Invalid user credentials !!');
-  },
-
-  courseList: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const courses = await prisma.jmkcrsinfo.findMany({ where: { isDeleted: false } })
-    return courses
-  },
-
-  //  used
-  userCourseList: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    if (role === ROLES[0]) {
-      const user = await prisma.jmkstdinfo.findFirst({
-        where: { std_id: userId },
-      })
-      if (!user) throw new AuthenticationError('invalid user credentials')
+      if (user.company.c_username !== c_username) throw new AuthenticationError('invalid user credentials');
       const stdcourse = await prisma.jmkstdcrsinfo.findMany({
         where: { std_id: userId },
-      })
-      const userCourse = []
-      for (let index = 0; index < stdcourse.length; index++) {
-        if (stdcourse[index].crs_id) {
-          const course = await prisma.jmkcrsinfo.findFirst({
-            where: { crs_id: stdcourse[index].crs_id },
-          })
-          userCourse.push({ ...course, crsmain_id: stdcourse[index].crsmain_id })
-        }
-      }
-      return userCourse
+        include: { course: true }
+      });
+      return stdcourse
     }
     throw new ForbiddenError('Bad request !!')
   },
