@@ -1621,7 +1621,7 @@ const studentResolversQuery = {
       });
       if (!user) throw new AuthenticationError('invalid user credentials');
       if (user.company.c_username !== c_username) throw new AuthenticationError('invalid user credentials');
-      const course = await prisma.jmkcrsinfo.findMany({ where: { crs_company_id: user.company.serial } });
+      const course = await prisma.jmkcrsinfo.findMany({ where: { crs_company_id: user.company.serial }, include: { category: true } });
       return course
     };
     throw new ForbiddenError('Invalid user credentials !!');
