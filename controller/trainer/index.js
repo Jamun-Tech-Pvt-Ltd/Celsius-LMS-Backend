@@ -20,6 +20,7 @@ const trainerQueryTypesAndInputs = `
     }
 
     input signinTrainerInput{
+        username:String!
         email: String!
         password: String!
     }
@@ -31,9 +32,6 @@ const trainerQueryTypesAndInputs = `
         tr_email: String
         tr_mobile: String
         tr_dob: String
-        tr_city: String
-        tr_country: String
-        tr_github: String
         tr_linkedin: String
      }
 
@@ -115,10 +113,7 @@ const trainerQueryTypesAndInputs = `
         tr_lname: String!
         tr_email: String!
         tr_mobile: String!
-        tr_city: String
-        tr_country: String
         tr_dob: Date
-        tr_github: String
         tr_pic:String
         tr_linkedin: String
         crs_id: String
@@ -134,16 +129,6 @@ const trainerQueryTypesAndInputs = `
         crs_complete: Boolean
         crs_complete_date: Date
         std_mobile: String!
-        std_join_dt: Date
-        std_birth_dt: Date
-        std_add_house_no:String
-        std_add_street:String
-        std_add_city:String
-        std_add_district:String
-        std_add_ward_no:String
-        std_add_province:String
-        std_add_zone:String
-        std_country:String
      }
   
      type TrainerDashboard {
@@ -321,18 +306,29 @@ const trainerMutation = `
 `
 
 const trainerResolvers = {
+  signinTrainer: async (_, { data }) => {
+    const company = await prisma.jmkcompany.findFirst({ where: { c_username: data.username } });
+    if (!company) throw new AuthenticationError('invalid user credentials');
+    const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_email: data.email, company_id: company.serial } });
+    if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+    const isMatch = data.password == trainer.tr_password;
+    if (!isMatch) throw new AuthenticationError('invalid trainer credentials');
+    if (!trainer.tr_verifyed) throw new ApolloError('You are not permitted to log in');
+    const token = jwt.sign(
+      { userId: trainer.tr_id, role: ROLES[1], platform: 'external', c_username: company?.c_username, c_package_type: company?.c_username },
+      process.env.JWT_SECRET_KEY
+    )
+    return { token }
+  },
 
   activeSession: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_id: userId },
-    })
+    if (!userId) throw new ForbiddenError('user need to login');
+
+    const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: userId } });
     if (!trainer) throw new AuthenticationError('invalid trainer')
 
     const checkCrsidAssign = await prisma.jmktrcrsinfo.findFirst({ where: { tr_id: trainer.tr_id, crs_id: data.crs_id } })
-
-    if (!checkCrsidAssign) throw ApolloError('Invalid request')
-
+    if (!checkCrsidAssign) throw new ApolloError('Invalid request')
 
     const updateSession = await prisma.jmktrinfo.update({
       data: {
@@ -342,23 +338,6 @@ const trainerResolvers = {
     })
     if (!updateSession) throw ApolloError('Unsuccessful to update session')
     return updateSession
-  },
-
-
-  signinTrainer: async (_, { data }) => {
-    const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_email: data.email },
-    })
-    if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-    const isMatch = data.password == trainer.tr_password
-    if (!isMatch) throw new AuthenticationError('invalid trainer credentials')
-    if (!trainer.tr_verifyed)
-      throw new ApolloError('You are not permitted to log in')
-    const token = jwt.sign(
-      { userId: trainer.tr_id, role: ROLES[1] },
-      process.env.JWT_SECRET_KEY
-    )
-    return { token }
   },
 
   updateTrainer: async (_, { data }, { userId }) => {

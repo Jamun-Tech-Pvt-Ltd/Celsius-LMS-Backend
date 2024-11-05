@@ -71,12 +71,8 @@ const studentQueryTypesAndInputs = `
         crs_id: Int!
      }
   
-     input removeCourseFromUserInput   {
-        crsmain_id: ID!
-     }
-  
      input changeActiveCourseInput {
-      crsmain_id: Int!
+      crs_id: Int!
      }
   
      input stdQuestionInput {
@@ -491,7 +487,6 @@ const studentMutation = `
 
     addNewCourse(data:addNewCourseInput):String!
     changeActiveCourse(data:changeActiveCourseInput):User!
-    removeCourseFromUser(data:removeCourseFromUserInput):String!
 
     forgotPPEmailCheck(data:forgotPPEmailCheckInput): String!
     forgotPassword(data:forgotPasswordInput):String!
@@ -548,7 +543,6 @@ const studentResolvers = {
     );
     return { token };
   },
-
 
   updateUser: async (_, { data }, { userId }) => {
     if (!userId) throw new ForbiddenError('user need to login')
@@ -646,29 +640,31 @@ const studentResolvers = {
 
   // used
   addNewCourse: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
+    if (!userId) throw new ForbiddenError('user need to login');
+
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
       include: { company: true }
-    })
+    });
+    if (!user) throw new AuthenticationError('invalid user');
+
     const course = await prisma.jmkcrsinfo.findFirst({
-      where: { crs_id: parseInt(data.crs_id), isDeleted: false },
-    })
+      where: { crs_id: data.crs_id, isDeleted: false, crs_company_id: user.company_id },
+    });
+    if (!course) throw new ApolloError('Invalid crs id');
+
     const userCourse = await prisma.jmkstdcrsinfo.findFirst({
-      where: { std_id: userId, crs_id: parseInt(data.crs_id) },
-    })
-    if (!user) throw new AuthenticationError('invalid user')
-    if (!course) throw new ApolloError('Bad Request')
-    if (userCourse.std_crs_verirfy) throw new ApolloError("Great news! The course you requested has been approved and is now available on our platform. If you have any further questions or if there's anything else you'd like to learn, please don't hesitate to ask. We're here to support your learning journey!");
-    if (userCourse && !userCourse?.crs_id) throw new ApolloError("Thank you for your interest, but it looks like you've already requested this course. If you have any other course suggestions or questions, feel free to reach out. We're here to assist you!")
+      where: { std_id: userId, crs_id: data.crs_id },
+    });
+    if (userCourse?.std_crs_verirfy) throw new ApolloError("Great news! The course you requested has been approved and is now available on our platform. If you have any further questions or if there's anything else you'd like to learn, please don't hesitate to ask. We're here to support your learning journey!");
+    if (userCourse && !userCourse?.std_crs_verirfy) throw new ApolloError("Thank you for your interest, but it looks like you've already requested this course. If you have any other course suggestions or questions, feel free to reach out. We're here to assist you!")
+
     await prisma.jmkstdcrsinfo.create({
       data: {
-        crsmain_id: parseInt(data.crsmain_id),
-        crs_start_dt: new Date(),
+        crs_id: data.crs_id,
         std_id: userId,
       },
     });
-
 
     // notifiction to company admin
 
@@ -701,7 +697,7 @@ const studentResolvers = {
   },
 
   //  used
-  changeActiveCourse: async (_, { data }, { userId }) => {
+  changeActiveCourse: async (_, { data }, { userId, }) => {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
@@ -712,9 +708,10 @@ const studentResolvers = {
     const userCourse = await prisma.jmkstdcrsinfo.findFirst({
       where: {
         std_id: userId,
-        crsmain_id: data.crsmain_id,
+        crs_id: data.crs_id,
       },
     })
+    if (!userCourse) throw new AuthenticationError('invalid crs id');
 
     const crs = await prisma.jmkcrsinfo.findFirst({
       where: {
@@ -722,11 +719,9 @@ const studentResolvers = {
       },
     })
 
-    if (!crs === user.crs_id) throw new ApolloError('Invalid opration : contact our support');
+    if (!userCourse.std_crs_verirfy) throw new ApolloError('your are not permited to use this course, wait for admin to approve or contact our support !');
 
     if (userCourse.crs_id === user.crs_id) throw new ApolloError('Already selected');
-
-    if (!userCourse.std_crs_verirfy) throw new ApolloError('your are not permited to use this course, wait for admin to approve or contact our support !');
 
     const updateUser = await prisma.jmkstdinfo.update({
       data: {
@@ -737,32 +732,6 @@ const studentResolvers = {
 
     if (!updateUser) throw new AuthenticationError('invalid user');
     return updateUser
-  },
-
-  // not sure
-  removeCourseFromUser: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: userId },
-    })
-    if (!user) throw new AuthenticationError('invalid user')
-    if (!data.crsmain_id) throw new AuthenticationError('course id required')
-    if (user.crs_id === parseInt(data.crs_id))
-      throw new AuthenticationError("Can't delete active course")
-    const checkCourse = await prisma.jmkstdcrsinfo.findFirst({
-      where: {
-        crsmain_id: parseInt(data.crsmain_id),
-        std_id: userId,
-      },
-    })
-    if (!checkCourse) throw new AuthenticationError('invalid')
-    const deleteUserCourse = await prisma.jmkstdcrsinfo.delete({
-      where: {
-        serial: checkCourse.serial,
-      },
-    })
-    if (!deleteUserCourse) throw new AuthenticationError('invalid !!')
-    return 'success'
   },
 
   // not sure
