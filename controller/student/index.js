@@ -394,6 +394,7 @@ const studentQueryTypesAndInputs = `
     std_fname:String! 
     std_mname:String 
     std_lname:String! 
+    std_email:String!
     std_pic:String
     lastSeen:Date!
    }

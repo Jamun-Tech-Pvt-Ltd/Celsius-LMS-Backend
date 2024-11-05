@@ -2149,7 +2149,22 @@ const adminResolversQuery = {
         where: { usr_id: userId },
       });
       if (!admin) throw new AuthenticationError('invalid admin credentials');
-      const requestCourse = await prisma.jmkstdcrsinfo.findMany({ where: { std_crs_verirfy: false, course: { crs_company_id: admin.company_id } }, take: 200, orderBy: { createdAt: 'desc' }, include: { course: true, student: true } });
+      const requestCourse = await prisma.jmkstdcrsinfo.findMany({
+        where: {
+          std_crs_verirfy: false,
+          course: { crs_company_id: admin.company_id },
+        },
+        take: 200,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          course: {
+            include: {
+              category: true,
+            },
+          },
+          student: true,
+        },
+      });
       if (!requestCourse) throw new ApolloError('Data Not Found')
       return requestCourse
     } else {
