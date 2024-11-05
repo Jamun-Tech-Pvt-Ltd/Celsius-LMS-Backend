@@ -717,8 +717,11 @@ const studentResolvers = {
     const crs = await prisma.jmkcrsinfo.findFirst({
       where: {
         crs_id: userCourse.crs_id,
+        crs_company_id: user.company_id
       },
-    })
+    });
+
+    if (!crs) throw new AuthenticationError('invalid crs id');
 
     if (!userCourse.std_crs_verirfy) throw new ApolloError('your are not permited to use this course, wait for admin to approve or contact our support !');
 
