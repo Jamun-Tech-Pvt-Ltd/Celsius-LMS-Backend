@@ -398,18 +398,11 @@ const adminQueryTypesAndInputs = `
      }
 
      type StudentCourseRequest {
-      id:Int!
-      std_id: Int!
-      crsmain_id: Int!
-      crsmain_title: String!
-      crsmain_type: String!
-      crsmain_duration: Float!
+      serial:Int!
       createdAt: Date!
-      std_fname: String!
-      std_lname: String!
-      std_mname: String
-      std_email: String!
-      std_verifyed:Boolean!
+      std_crs_verirfy:Boolean!
+      course:Course
+      student:Student
      }
 
      type _count {
@@ -2149,39 +2142,19 @@ const adminResolversQuery = {
     return career
   },
 
-  getStudentCourseRequest: async (_, { serial }, { userId, role }) => {
+  getStudentCourseRequest: async (_, { serial }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token');
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    });
-    if (!admin) throw new AuthenticationError('invalid admin credentials');
-    const data = [];
-    const requestCourse = await prisma.jmkstdcrsinfo.findMany({ where: { crs_id: null }, take: 200, orderBy: { createdAt: 'desc' } });
-    for (let index = 0; index < requestCourse.length; index++) {
-      if (requestCourse[index].std_id && requestCourse[index].crsmain_id) {
-        const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: requestCourse[index].std_id } });
-        const crs = await prisma.jmkcrsmain.findFirst({ where: { crsmain_id: requestCourse[index].crsmain_id } });
-        if (std && crs) {
-          data.push({
-            id: requestCourse[index].serial,
-            std_id: std.std_id,
-            crsmain_id: crs.crsmain_id,
-            crs_name: std.crs_name,
-            std_fname: std.std_fname,
-            std_lname: std.std_lname,
-            std_mname: std.std_mname,
-            std_email: std.std_email,
-            std_verifyed: std.std_verifyed,
-            crsmain_title: crs.title,
-            crsmain_type: crs.label,
-            crsmain_duration: crs.duration,
-            createdAt: requestCourse[index].createdAt
-          })
-        }
-      }
+    if (platform === 'external' && role === 'admin') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const requestCourse = await prisma.jmkstdcrsinfo.findMany({ where: { std_crs_verirfy: false, course: { crs_company_id: admin.company_id } }, take: 200, orderBy: { createdAt: 'desc' }, include: { course: true, student: true } });
+      if (!requestCourse) throw new ApolloError('Data Not Found')
+      return requestCourse
+    } else {
+      throw new ForbiddenError('invalid access');
     }
-    if (!data) throw new ApolloError('Data Not Found')
-    return data
   },
 
   getCourseCategories: async (_, { args }, { userId, role, platform }) => {
