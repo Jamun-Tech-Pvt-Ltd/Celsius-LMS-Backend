@@ -55,6 +55,7 @@ model jmkcrsinfo {
   jmkstdinfo         jmkstdinfo[]
   jmktrcrsinfo       jmktrcrsinfo[]
   jmkstdcrsinfo      jmkstdcrsinfo[]
+  jmk_std_note       jmk_std_note[]
 }
 
 model jmk_tr_week {
@@ -117,13 +118,17 @@ model jmk_std_test_ans {
   test_set_id Int
 }
 
-model jmk_std_week_note {
+model jmk_std_note {
   serial     Int      @id @default(autoincrement())
-  week_id    Int
+  crs_id     Int
   std_id     Int
-  std_note   String   @db.MediumText
+  title      String
+  note       String   @db.LongText
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
+
+  student jmkstdinfo @relation(fields: [std_id], references: [std_id])
+  course  jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
 }
 
 model jmkstdinfo {
@@ -148,6 +153,7 @@ model jmkstdinfo {
   jmk_crs_blog_comments jmk_crs_blog_comments[]
   jmk_std_attendance    jmk_std_attendance[]
   courses               jmkstdcrsinfo[]
+  jmk_std_note          jmk_std_note[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
 }
