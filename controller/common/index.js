@@ -324,7 +324,7 @@ const commonResolversQuery = {
         user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
       }
 
-      if(role === 'student'){
+      if (role === 'student') {
         user = await prisma.jmkstdinfo.findFirst({ where: { std_id: userId } });
       }
 
@@ -408,14 +408,33 @@ const commonResolversQuery = {
     if (!blog) throw new ApolloError('Data Not Found')
     return blog
   },
-  getFaqByType: async (_, { type }) => {
-    if (!type) throw new ForbiddenError('faq type is required !')
-    const faq = await prisma.jmkfaq.findMany({
-      where: { type, company_id: null },
-    })
-    if (!faq) throw new ApolloError('Data Not Found')
-    return faq
+  getFaqByType: async (_, { type }, { userId, role, platform }) => {
+    if (!type) throw new ForbiddenError('faq type is required !');
+    if (type === 'Student' && role === 'student' && platform === 'external') {
+      const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: userId } });
+      if (!student) throw new ForbiddenError('invalid credentials');
+      const faq = await prisma.jmkfaq.findMany({
+        where: { type: 'Student', company_id: student.company_id },
+      });
+      if (!faq) throw new ApolloError('Data Not Found');
+      return faq;
+    } else if (type === 'Trainer' && role === 'trainer' && platform === 'external') {
+      const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: userId } });
+      if (!trainer) throw new ForbiddenError('invalid credentials');
+      const faq = await prisma.jmkfaq.findMany({
+        where: { type: 'Trainer', company_id: trainer.company_id },
+      });
+      if (!faq) throw new ApolloError('Data Not Found');
+      return faq;
+    } else {
+      const faq = await prisma.jmkfaq.findMany({
+        where: { type, company_id: null },
+      });
+      if (!faq) throw new ApolloError('Data Not Found');
+      return faq;
+    }
   },
+
   getFaqById: async (_, { faq_id }) => {
     if (!faq_id) throw new ForbiddenError('faq id is required !')
     const faq = await prisma.jmkfaq.findFirst({
@@ -424,6 +443,7 @@ const commonResolversQuery = {
     if (!faq) throw new ApolloError('Data Not Found')
     return faq
   },
+
   getMyNotifications: async (_, { }, { userId, role }) => {
     if (role === ROLES[0]) {
       if (!userId) throw new ForbiddenError('invalid token');
@@ -469,7 +489,6 @@ const commonResolversQuery = {
 
     throw new AuthenticationError('invalid access');
   },
-
 
   getTestimonials: async (_, { args }, { userId, role }) => {
     const testimonials = await prisma.jmk_testimonial.findMany({ orderBy: { created_at: 'desc' } });
