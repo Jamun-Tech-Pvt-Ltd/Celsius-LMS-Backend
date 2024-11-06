@@ -37,14 +37,6 @@ const studentQueryTypesAndInputs = `
         std_email: String!
         std_mobile: String!
         std_birth_dt: String
-        std_add_house_no:String
-        std_add_street:String
-        std_add_city:String
-        std_add_ward_no:Int
-        std_add_district:String
-        std_add_province:String
-        std_add_zone:String
-        std_country:String
     }
 
     input UpdateUserPasswordInput{
@@ -444,8 +436,6 @@ const studentQueryTypesAndInputs = `
 const studentQuery = `
     me:User!
 
-    myCourse:Course,
-
     courseList:[Course]
     userCourseList:[UserCourse]
     getActiveUserCourse: ActiveUserCourse
@@ -484,28 +474,25 @@ const studentMutation = `
     signinUser(userSignIn:SigninInput!):Token
     updateUser(data:UpdateUserInput):User
     updateUserPassword(data:UpdateUserPasswordInput):String!
+    uploadFile(file: Upload!): User
 
     addNewCourse(data:addNewCourseInput):String!
     changeActiveCourse(data:changeActiveCourseInput):User!
 
     forgotPPEmailCheck(data:forgotPPEmailCheckInput): String!
     forgotPassword(data:forgotPasswordInput):String!
-    uploadFile(file: Upload!): User
 
     submitProject(data:studentProjectInput):String!
-
 
     createStdQuestion(data:stdQuestionInput!):String!
     updateStdQuestion(data:stdQuestionInput!):String!
     deleteStdQuestion(question_id:Int!):String!
-
 
     createQuesAns(data:stdQuesAnsInput!):String!
     updateQuesAns(data:stdQuesAnsInput!):String!
 
     createAndUpdateQuestionVote(data:quesAndAnsVoteInput!):String!
     createAndUpdateStdQuesSub(data:stdQuesSubInput!):String!
-
 
     submitStdTestAns(data:submitStdTestAnsInput!):String!
 
@@ -620,14 +607,16 @@ const studentResolvers = {
   },
 
   uploadFile: async (_, { file }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
+    if (!userId) throw new ForbiddenError('user need to login');
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
-    })
-    if (!user) throw new ForbiddenError('Someting went wrong !')
-    await deleteImgToAWS(user.std_pic_key)
-    const data = await uploadImgToAWS(file, 'user_profiles_pic/')
-    if (!data.data) throw new ApolloError('Someting went wrong !')
+    });
+    if (!user) throw new ForbiddenError('Someting went wrong !');
+    if (user.std_pic_key) {
+      await deleteImgToAWS(user.std_pic_key);
+    };
+    const data = await uploadImgToAWS(file, 'student_profile/');
+    if (!data.data) throw new ApolloError('Someting went wrong !');
     const newUser = await prisma.jmkstdinfo.update({
       data: {
         std_pic: data.data.Location,
@@ -635,8 +624,8 @@ const studentResolvers = {
       },
       where: { std_id: userId },
     })
-    if (!newUser) throw new Error('something went wrong!!')
-    return newUser
+    if (!newUser) throw new Error('something went wrong!!');
+    return newUser;
   },
 
   // used
