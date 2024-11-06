@@ -319,7 +319,15 @@ const commonResolvers = {
 const commonResolversQuery = {
   getContactInfo: async (_, arg, { userId, role, platform }) => {
     if (userId && platform === 'external') {
-      const user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      let user;
+      if (role === 'adimin') {
+        user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      }
+
+      if(role === 'student'){
+        user = await prisma.jmkstdinfo.findFirst({ where: { std_id: userId } });
+      }
+
       if (!user) {
         throw new ApolloError('User not found !!');
       }
