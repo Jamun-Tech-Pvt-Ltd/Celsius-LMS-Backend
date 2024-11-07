@@ -113,6 +113,8 @@ const adminQueryTypesAndInputs = `
         tr_mobile:String
         tr_email: String!
         tr_dob: Date
+        tr_pic:String
+        crs_id:Int
         tr_verifyed:Boolean
         tr_password:String
         tr_linkedin:String

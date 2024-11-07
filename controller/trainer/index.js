@@ -5,8 +5,6 @@ import {
 } from 'apollo-server-express'
 import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
-import { sendMail } from '../../utils/mailHandler.js'
-import emailVerificationHTML from '../../utils/EmailVerification.js'
 import { ROLES, getRandomItemsFromArray } from '../../utils/helper.js'
 import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 
@@ -107,16 +105,7 @@ const trainerQueryTypesAndInputs = `
       }
       
      type Trainer {
-        tr_id: Int!
-        tr_fname: String!
-        tr_mname: String
-        tr_lname: String!
-        tr_email: String!
-        tr_mobile: String!
-        tr_dob: Date
-        tr_pic:String
-        tr_linkedin: String
-        crs_id: String
+        course:Course
      }
 
      type TrainerStudent {
@@ -141,11 +130,11 @@ const trainerQueryTypesAndInputs = `
         tests: Int
      }
 
-     type sessionDetail{
+     type TrainerCourses{
       serial: Int
       tr_id:Int
       crs_id:Int
-      jmkcrsinfo:JmkCrsInfo
+      course:Course
     }
 
     type JmkCrsInfo {
@@ -242,7 +231,7 @@ const trainerQueryTypesAndInputs = `
 const trainerQuery = `
     trainer:Trainer!
 
-    getAssignedSessions:[sessionDetail]
+    getAssignedCourses:[TrainerCourses]
 
     getTrainerDashboard:TrainerDashboard
 
@@ -1066,32 +1055,43 @@ const trainerResolversQuery = {
     return content
   },
 
-  getAssignedSessions: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
+  getAssignedCourses: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_id: userId },
-    })
-    if (!trainer) throw new AuthenticationError('invalid trainer')
-    const sessionDetails = await prisma.jmktrcrsinfo.findMany({
-      where: {
-        tr_id: trainer.tr_id,
-      },
-      include: {
-        jmkcrsinfo: true,
-      },
-    })
-
-    return sessionDetails
+    });
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+    const courses = await prisma.jmktrcrsinfo.findMany({
+      where: { tr_id: trainer.tr_id },
+      include: { course: true },
+    });
+    if (!courses) throw new ApolloError('No Course Contact admin to assign one !');
+    return courses;
   },
 
   trainer: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
+    if (!userId) throw new ForbiddenError('user need to login');
     if (role === ROLES[1]) {
-      const user = await prisma.jmktrinfo.findFirst({
+      const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
-      })
-      if (!user) throw new AuthenticationError('invalid user credentials')
-      return user
+        include: { company: true, course: true }
+      });
+      let join_courses = []
+      const join_courses_data = await prisma.jmktrcrsinfo.findMany({
+        where: { tr_id: trainer.tr_id },
+        include: { 'jmkcrsinfo': 'crs_name' }
+      });
+
+      for (let index = 0; index < join_courses_data.length; index++) {
+        join_courses.push({
+          serial: join_courses_data[index].serial,
+          tr_id: join_courses_data[index].tr_id,
+          crs_id: join_courses_data[index].jmkcrsinfo.crs_id,
+          crs_name: join_courses_data[index].jmkcrsinfo.crs_name
+        })
+      }
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      return { ...trainer, join_courses };
     }
     throw new ForbiddenError('Bad request !!')
   },

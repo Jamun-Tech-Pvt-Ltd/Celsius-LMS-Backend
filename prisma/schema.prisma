@@ -56,6 +56,7 @@ model jmkcrsinfo {
   jmktrcrsinfo       jmktrcrsinfo[]
   jmkstdcrsinfo      jmkstdcrsinfo[]
   jmk_std_note       jmk_std_note[]
+  jmktrinfo          jmktrinfo[]
 }
 
 model jmk_tr_week {
@@ -171,25 +172,26 @@ model jmkcontact {
 }
 
 model jmktrinfo {
-  tr_id        Int            @id @default(autoincrement())
-  tr_fname     String         @db.VarChar(30)
-  tr_mname     String?        @db.VarChar(30)
-  tr_lname     String         @db.VarChar(30)
-  tr_mobile    String?        @db.VarChar(15)
-  tr_email     String         @db.VarChar(30)
-  tr_dob       DateTime?      @db.Date
-  tr_verifyed  Boolean        @default(false)
-  tr_password  String         @db.VarChar(16)
-  tr_linkedin  String?        @db.VarChar(200)
-  crs_id       Int?
-  tr_pic       String?        @db.VarChar(500)
-  tr_pic_key   String?        @db.VarChar(500)
-  lastSeen     DateTime       @default(now())
-  createdAt    DateTime       @default(now())
-  company_id   Int
-  company      jmkcompany     @relation(fields: [company_id], references: [serial])
-  jmk_crs_blog jmk_crs_blog[]
-  jmktrcrsinfo jmktrcrsinfo[]
+  tr_id       Int            @id @default(autoincrement())
+  tr_fname    String         @db.VarChar(30)
+  tr_mname    String?        @db.VarChar(30)
+  tr_lname    String         @db.VarChar(30)
+  tr_mobile   String?        @db.VarChar(15)
+  tr_email    String         @db.VarChar(30)
+  tr_dob      DateTime?      @db.Date
+  tr_verifyed Boolean        @default(false)
+  tr_password String         @db.VarChar(16)
+  tr_linkedin String?        @db.VarChar(200)
+  crs_id      Int?
+  tr_pic      String?        @db.VarChar(500)
+  tr_pic_key  String?        @db.VarChar(500)
+  lastSeen    DateTime       @default(now())
+  createdAt   DateTime       @default(now())
+  company_id  Int
+  company     jmkcompany     @relation(fields: [company_id], references: [serial])
+  course      jmkcrsinfo?    @relation(fields: [crs_id], references: [crs_id])
+  blogs       jmk_crs_blog[]
+  courses     jmktrcrsinfo[]
 }
 
 model jmkpartnerReq {
@@ -282,11 +284,11 @@ model jmkcrscontents {
 }
 
 model jmktrcrsinfo {
-  serial     Int        @id @default(autoincrement())
-  tr_id      Int
-  crs_id     Int
-  jmkcrsinfo jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction)
-  jmktrinfo  jmktrinfo  @relation(fields: [tr_id], references: [tr_id], onDelete: NoAction, onUpdate: NoAction)
+  serial  Int        @id @default(autoincrement())
+  tr_id   Int
+  crs_id  Int
+  course  jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction)
+  trainer jmktrinfo  @relation(fields: [tr_id], references: [tr_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([crs_id], map: "jmktrcrsinfo_crs_id_fkey")
   @@index([tr_id], map: "jmktrcrsinfo_tr_id_fkey")
