@@ -8,8 +8,6 @@ import jwt from 'jsonwebtoken'
 import { ROLES, getRandomItemsFromArray } from '../../utils/helper.js'
 import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 import { sendMail } from '../../utils/mailHandler.js'
-import registerrHTML from '../../utils/signup.js'
-import newUserSignupNotification from '../../utils/newUsersignup.js'
 import forgotPasswordHTML from '../../utils/forgotPassword.js'
 import QuestionInformTemplate from '../../utils/QuestionInformEmail.js'
 
@@ -419,6 +417,10 @@ const studentQueryTypesAndInputs = `
     messageTyping(receiver_id: Int!, user_id:Int!):typing!
   }
 
+  type Subscription{
+    askAttendance(receiver_id: Int!,crs_id:Int!,company_id:Int!):String!
+  }
+
   type comment {
     serial: Int!
     comment: String! 
@@ -511,7 +513,8 @@ const studentMutation = `
 
     addCommentOnPage(data:pageCommentInput):String!
 
-    addAttendance:String!
+    submitAttendance:String!
+    takeAttendance:String!
     
 `
 
@@ -1548,7 +1551,7 @@ const studentResolvers = {
     return 'success'
   },
 
-  addAttendance: async (_, { }, { userId, role }) => {
+  submitAttendance: async (_, { }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('Invalid Token');
     if (role !== ROLES[0]) throw new AuthenticationError('invalid access');
     const user = await prisma.jmkstdinfo.findFirst({
@@ -1568,6 +1571,23 @@ const studentResolvers = {
     return 'success'
   },
 
+  takeAttendance: async (_, { }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('Invalid Token');
+    if (role !== ROLES[1]) throw new AuthenticationError('invalid access');
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    });
+
+    const students = await prisma.jmkstdinfo.findMany({ where: { company_id: trainer.company_id, crs_id: trainer.crs_id } });
+    if (!students.length) throw new Error('No students found');
+
+    students.forEach(student => {
+      const receiverChannel = `attendance_channel_${student.std_id}_${student.crs_id}_${student.company_id}`;
+      pubsub.publish(receiverChannel, { askAttendance: `trainer is taking attendance` });
+    });
+
+    return 'success';
+  },
 }
 
 const studentResolversQuery = {
@@ -2162,6 +2182,14 @@ const subscription = {
     messageTyping: {
       subscribe: (_, { receiver_id, user_id }) => {
         const receiverChannel = `channel_${receiver_id}_${user_id}`
+        return pubsub.asyncIterator(receiverChannel);
+      }
+    },
+    askAttendance: {
+      subscribe: (_, { receiver_id, crs_id, company_id }) => {
+        const receiverChannel = `attendance_channel_${receiver_id}_${crs_id}_${company_id}`;
+        console.log(receiverChannel);
+        
         return pubsub.asyncIterator(receiverChannel);
       }
     },

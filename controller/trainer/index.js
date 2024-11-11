@@ -1079,15 +1079,15 @@ const trainerResolversQuery = {
       let join_courses = []
       const join_courses_data = await prisma.jmktrcrsinfo.findMany({
         where: { tr_id: trainer.tr_id },
-        include: { 'jmkcrsinfo': 'crs_name' }
+        include: { 'course': 'crs_name' }
       });
 
       for (let index = 0; index < join_courses_data.length; index++) {
         join_courses.push({
           serial: join_courses_data[index].serial,
           tr_id: join_courses_data[index].tr_id,
-          crs_id: join_courses_data[index].jmkcrsinfo.crs_id,
-          crs_name: join_courses_data[index].jmkcrsinfo.crs_name
+          crs_id: join_courses_data[index].course.crs_id,
+          crs_name: join_courses_data[index].course.crs_name
         })
       }
       if (!trainer) throw new AuthenticationError('invalid trainer credentials');
