@@ -12,6 +12,7 @@ import forgotPasswordHTML from '../../utils/forgotPassword.js'
 import QuestionInformTemplate from '../../utils/QuestionInformEmail.js'
 
 import { PubSub } from 'graphql-subscriptions'
+import { differenceInDays } from 'date-fns'
 
 const pubsub = new PubSub()
 
@@ -433,6 +434,23 @@ const studentQueryTypesAndInputs = `
     comments:[comment]
   }
 
+  type CourseAttendanceReport {
+    totalClass:Int!
+    totalPresent:Int!
+    totalAbsent:Int!
+    totalClassDays:Int!
+    crs_name:String!
+  }
+  
+  type AttendanceReport {
+    totalClass:Int!
+    totalPresent:Int!
+    totalAbsent:Int!
+    totalClassDays:Int!
+    courseAttendance:[CourseAttendanceReport!]
+  }
+    
+
 `
 
 const studentQuery = `
@@ -469,6 +487,8 @@ const studentQuery = `
 
     getPagesStudent:[page]
     getPageStudent(serial:Int!):pagesWithComments
+
+    getStudentAttendance:AttendanceReport!
 `
 
 const studentMutation = `
@@ -2108,7 +2128,7 @@ const studentResolversQuery = {
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
     })
-    if (!user) throw new AuthenticationError('invalid user')
+    if (!user) throw new AuthenticationError('invalid user');
     const channel = []
     const stdRlatedCrs = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: userId } })
 
@@ -2141,7 +2161,7 @@ const studentResolversQuery = {
     return pages
   },
 
-  getPageStudent: async (_, { serial }, { userId, rossle }) => {
+  getPageStudent: async (_, { serial }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login');
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
@@ -2158,6 +2178,51 @@ const studentResolversQuery = {
     }
   },
 
+  getStudentAttendance: async (_, { arg }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    });
+    if (!user) throw new AuthenticationError('invalid user');
+
+    let totalClass = 0;
+    let totalPresent = 0;
+    let totalAbsent = 0;
+    let totalClassDays = 0;
+    const courseAttendance = [];
+    const studentsCourse = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: user.std_id, std_crs_verirfy: true }, include: { course: true } });
+
+    for (let index = 0; index < studentsCourse.length; index++) {
+      const course = studentsCourse[index].course;
+      totalClass += course.crs_duration * 30;
+
+      const courseStartDate = studentsCourse[index].course.crs_start_date;
+      const today = new Date();
+      const plannedDays = course.crs_duration * 30;
+
+      const daysInSession = Math.min(differenceInDays(today, courseStartDate) + 1, plannedDays);
+
+      if (daysInSession <= 0) continue;
+
+      totalClassDays += daysInSession;
+
+      const presentDay = await prisma.jmk_std_attendance.count({ where: { crs_id: studentsCourse[index].crs_id, std_id: user.std_id, attendance: true } });
+      const absentDay = daysInSession - presentDay;
+
+      totalPresent += presentDay;
+      totalAbsent += absentDay;
+
+      courseAttendance.push({
+        totalClass: course.crs_duration * 30,
+        totalPresent: presentDay,
+        totalAbsent: absentDay,
+        totalClassDays: daysInSession,
+        crs_name: studentsCourse[index].course.crs_name,
+      })
+    }
+
+    return { totalClass, totalPresent, totalAbsent, totalClassDays, courseAttendance }
+  }
 }
 
 const subscription = {
@@ -2189,7 +2254,7 @@ const subscription = {
       subscribe: (_, { receiver_id, crs_id, company_id }) => {
         const receiverChannel = `attendance_channel_${receiver_id}_${crs_id}_${company_id}`;
         console.log(receiverChannel);
-        
+
         return pubsub.asyncIterator(receiverChannel);
       }
     },
