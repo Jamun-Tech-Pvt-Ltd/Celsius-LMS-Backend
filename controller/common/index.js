@@ -150,9 +150,24 @@ const commonQueryTypesAndInputs = `
     created_at: Date!
   }
 
+  type attendanceData {
+    total_attendance:Int!
+    total_classes:Int!
+    today_attendance:Boolean!,
+    student:Student,
+    course:Course
+  }
+
+  type AttendanceForAdmin {
+   total_student:Int!
+   total_classes:Int!
+   total_course:Int!
+   total_present:Int!
+   attendance:[attendanceData!]
+  }
+
   
 `
-
 
 const commonQuery = `
     getAllCourseList:[Course!]!
@@ -167,6 +182,8 @@ const commonQuery = `
 
     getTestimonials: [Testimonial]
     getTestimonial(serial:Int!): Testimonial
+
+    getAttendance:AttendanceForAdmin!
 `
 
 const commonMutation = `
@@ -505,6 +522,90 @@ const commonResolversQuery = {
     const testimonial = await prisma.jmk_testimonial.findFirst({ where: { serial } });
     if (!testimonial) throw new ApolloError('Data Not Found')
     return testimonial
+  },
+
+  getAttendance: async (_, { serial }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === 'admin' && platform === 'internal') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      throw new AuthenticationError('internal admin doesnt have access');
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    if (role === 'admin' && platform === 'external') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+
+      const total_student = await prisma.jmkstdinfo.count({ where: { company_id: admin.company_id } });
+      const total_present = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: admin.company_id } } });
+
+      let total_classes = 0;
+      const total_course = await prisma.jmkcrsinfo.findMany({ where: { crs_company_id: admin.company_id } });
+      for (let index = 0; index < total_course.length; index++) {
+        const course = total_course[index];
+        const startDate = new Date(course.crs_start_date);
+        const daysSinceStart = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+        total_classes += daysSinceStart;
+      }
+
+      const attendance = [];
+      const students = await prisma.jmkstdcrsinfo.findMany({ where: { student: { company_id: admin.company_id } }, include: { student: true, course: true } });
+      for (let index = 0; index < students.length; index++) {
+        const student = students[index];
+        const getTotalAttendance = await prisma.jmk_std_attendance.count({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true } });
+        const getTodayAttendance = await prisma.jmk_std_attendance.findFirst({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true, created_at: { gte: today, lt: tomorrow } } });
+        const startDate = new Date(student.course.crs_start_date);
+        const total_classes = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+        attendance.push({
+          total_attendance: getTotalAttendance,
+          total_classes,
+          today_attendance: getTodayAttendance ? true : false,
+          student: student.student,
+          course: student.course
+        });
+      }
+
+      return { total_student, total_classes, total_course: total_course.length, total_present, attendance };
+    }
+
+    if (role === 'trainer' && platform === 'external') {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      });
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      const total_student = await prisma.jmkstdinfo.count({ where: { company_id: trainer.company_id, crs_id: trainer.crs_id } });
+      const total_present = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: trainer.company_id }, crs_id: trainer.crs_id } });
+      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_company_id: trainer.company_id, crs_id: trainer.crs_id } });
+      const startDate = new Date(course.crs_start_date);
+      const total_classes = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+
+      const attendance = [];
+      const students = await prisma.jmkstdcrsinfo.findMany({ where: { student: { company_id: trainer.company_id }, crs_id: trainer.crs_id }, include: { student: true, course: true } });
+      for (let index = 0; index < students.length; index++) {
+        const student = students[index];
+        const getTotalAttendance = await prisma.jmk_std_attendance.count({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true } });
+        const getTodayAttendance = await prisma.jmk_std_attendance.findFirst({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true, created_at: { gte: today, lt: tomorrow } } });
+        attendance.push({
+          total_attendance: getTotalAttendance,
+          total_classes,
+          today_attendance: getTodayAttendance ? true : false,
+          student: student.student,
+          course: student.course
+        });
+      }
+
+      return { total_student, total_classes, total_course: 1, total_present, attendance };
+    }
+    throw new AuthenticationError('doesnt have access');
   },
 }
 
