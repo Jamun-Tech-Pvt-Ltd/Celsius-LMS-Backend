@@ -602,7 +602,7 @@ const commonResolversQuery = {
         where: { tr_id: userId },
       });
       if (!trainer) throw new AuthenticationError('invalid trainer credentials');
-      const total_student = await prisma.jmkstdinfo.count({ where: { company_id: trainer.company_id, crs_id: trainer.crs_id } });
+      const total_student = await prisma.jmkstdcrsinfo.count({ where: { student: { company_id: trainer.company_id }, crs_id: trainer.crs_id } });
       const total_present = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: trainer.company_id }, crs_id: trainer.crs_id } });
       const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_company_id: trainer.company_id, crs_id: trainer.crs_id } });
       const startDate = new Date(course.crs_start_date);
