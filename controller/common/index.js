@@ -209,6 +209,8 @@ const commonMutation = `
     deleteAllNotification:String!
 
     updateNotification(serial:Int!):String!
+
+    updateAttendance(date:Date!,std_id:Int!,crs_id:Int):String!
 `
 
 
@@ -345,6 +347,89 @@ const commonResolvers = {
     await prisma.jmk_notifications.update({ where: { serial }, data: { is_read: true } });
     return 'success'
   },
+
+  updateAttendance: async (_, { date, std_id, crs_id }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === 'admin' && platform === 'internal') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      throw new AuthenticationError('internal admin doesnt have access');
+    };
+
+    const attendanceDate = new Date(date);
+    attendanceDate.setUTCHours(0, 0, 0, 0);
+
+    if (role === 'admin' && platform === 'external') {
+      if (!crs_id) throw new ApolloError('admin need to provide crs_id');
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+
+      const existingAttendance = await prisma.jmk_std_attendance.findFirst({
+        where: {
+          std_id,
+          crs_id,
+          created_at: {
+            gte: attendanceDate,
+            lt: new Date(attendanceDate.getTime() + 24 * 60 * 60 * 1000),
+          },
+        },
+      });
+
+      if (existingAttendance) {
+        await prisma.jmk_std_attendance.delete({ where: { serial: existingAttendance.serial } });
+        return 'attendance removed';
+      } else {
+        await prisma.jmk_std_attendance.create({
+          data: {
+            std_id,
+            crs_id,
+            attendance: true,
+            created_at: date
+          }
+        });
+        return 'attendance added';
+      }
+    }
+
+    if (role === 'trainer' && platform === 'external') {
+      if (crs_id) throw new ApolloError('trainer doesnt need to provide crs_id');
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      });
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+
+      const existingAttendance = await prisma.jmk_std_attendance.findFirst({
+        where: {
+          std_id,
+          crs_id: trainer.crs_id,
+          created_at: {
+            gte: attendanceDate,
+            lt: new Date(attendanceDate.getTime() + 24 * 60 * 60 * 1000),
+          },
+        },
+      });
+
+      if (existingAttendance) {
+        await prisma.jmk_std_attendance.delete({ where: { serial: existingAttendance.serial } });
+        return 'attendance removed';
+      } else {
+        await prisma.jmk_std_attendance.create({
+          data: {
+            std_id,
+            crs_id: trainer.crs_id,
+            attendance: true,
+            created_at: date
+          }
+        });
+        return 'attendance added';
+      }
+    }
+    throw new AuthenticationError('doesn’t have access');
+  }
 }
 
 const commonResolversQuery = {
@@ -738,7 +823,7 @@ const commonResolversQuery = {
     }
 
     throw new AuthenticationError('doesnt have access');
-  }
+  },
 }
 
 export {
