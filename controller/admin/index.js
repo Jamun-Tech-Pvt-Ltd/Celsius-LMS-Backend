@@ -62,15 +62,6 @@ const adminQueryTypesAndInputs = `
         usr_role: String!
      }
 
-     type logInfo{
-      log_id:Int
-      ip:String
-      user_id:String
-      role:String
-      method:String
-      time:Date
-     }
-
      type studentreceipt{
       receipt_no:Int!
       receipt_date: Date
@@ -360,12 +351,6 @@ const adminQueryTypesAndInputs = `
       subject:String!
      }
 
-     input updateAttendanceByIdDateInput {
-      crs_id:Int!
-      std_id:Int!
-      date:String!
-     }
-
      type UserCourseAdmin {
       std_id:Int!
       serial:Int!
@@ -505,19 +490,6 @@ const adminQueryTypesAndInputs = `
       promoStudents: [PromoStudents]
      }
 
-     type StudentAttendanceAdmin {
-      std_id: Int!
-      std_fname: String!
-      std_mname: String
-      std_lname: String!
-      std_email: String!
-      total_atendance: Int!
-      today_atendance: Boolean!
-      crs_id: Int!
-      crs_name: String!
-      time: String!
-     }
-
 `
 
 const adminQuery = `
@@ -536,7 +508,6 @@ const adminQuery = `
     getAllUserInfo:[userInfo]
     getUserInfoById(usr_id:Int!):userInfo
 
-    getUserLog:[logInfo]
     getPaymentInfo:[PaymentInfo]
 
     getBlogs:[JmkBlog ]
@@ -576,9 +547,6 @@ const adminQuery = `
 
     getPropmo:[Promo]
     getPropmoById(serial:Int!): Promo
-
-    getAttendanceAdmin:[StudentAttendanceAdmin]
-    getAttendanceByIdAdmin(std_id:Int!,crs_id:Int!):StudentAttendanceRecod
 `
 
 const adminMutation = `
@@ -638,9 +606,6 @@ const adminMutation = `
     deletePromoById(serial:Int!):String!
 
     sendEmailByUser(data:MailSendInput!):String!
-
-
-    updateAttendanceByIdDate(data:updateAttendanceByIdDateInput!):String!
 `
 
 const adminResolvers = {
@@ -1660,59 +1625,6 @@ const adminResolvers = {
       return 'send'
     }
   },
-
-  updateAttendanceByIdDate: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    })
-    if (!admin) throw new AuthenticationError('invalid admin');
-
-    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id } });
-    if (!crs) throw new Error('Course not found');
-
-    const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: data.std_id } });
-    if (!std) throw new Error('Student not found');
-
-    const today = new Date(data.date);
-    console.log(today);
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    const attendance = await prisma.jmk_std_attendance.findFirst({
-      where: {
-        crs_id: data.crs_id,
-        std_id: data.std_id,
-        attendance: true,
-        created_at: {
-          gte: today,
-          lt: tomorrow,
-        }
-      }
-    });
-    if (!attendance) {
-      await prisma.jmk_std_attendance.create({
-        data: {
-          std_id: data.std_id,
-          crs_id: data.crs_id,
-          attendance: true,
-          created_at: new Date(data.date)
-        }
-      })
-    } else {
-      await prisma.jmk_std_attendance.update({
-        where: {
-          serial: attendance.serial,
-        },
-        data: {
-          attendance: attendance.attendance ? false : true,
-        }
-      })
-    }
-    return 'Updated'
-  },
-
 }
 
 const adminResolversQuery = {
@@ -1724,26 +1636,6 @@ const adminResolversQuery = {
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials');
     return admin;
-  },
-
-  getBlogs: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === 'admin') {
-      const blogs = await prisma.jmkblog.findMany({ orderBy: { created_at: 'desc' } });
-      return blogs;
-    }
-  },
-
-  getBlog: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === 'admin') {
-      const blog = await prisma.jmkblog.findFirst({
-        where: {
-          blog_id: args.blog_id
-        }
-      });
-      return blog;
-    }
   },
 
   getPayments: async (_, args, { userId, role }) => {
@@ -1896,9 +1788,6 @@ const adminResolversQuery = {
     }
   },
 
-
-
-
   getDataCountForAllTableInAdmin: async (_, args, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
@@ -2033,28 +1922,6 @@ const adminResolversQuery = {
       include: { company: true }
     })
     return user
-  },
-
-  getUserLog: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    })
-    if (!admin) throw new AuthenticationError('invalid admin credentials')
-    const logs = await prisma.jmkloginfo.findMany({})
-    const logging = []
-    logs.map((log) => {
-      let monitor = log.log_desc.split(' ')
-      logging.push({
-        log_id: log.log_id,
-        ip: monitor[0],
-        user_id: monitor[1],
-        role: monitor[2],
-        method: monitor[3],
-        time: `${monitor[4]} ${monitor[5]} ${monitor[6]} ${monitor[7]} ${monitor[8]} ${monitor[9]} ${monitor[10]} ${monitor[11]}`,
-      })
-    })
-    return logging
   },
 
   getPaymentInfo: async (_, args, { userId, role }) => {
@@ -2377,116 +2244,23 @@ const adminResolversQuery = {
     return { ...promo, promoStudents: students }
   },
 
-  getAttendanceAdmin: async (_, { serial }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token');
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    });
-    if (!admin) throw new AuthenticationError('invalid admin credentials');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    let attendanceData = [];
-    const students = await prisma.jmkstdcrsinfo.findMany({ where: { std_crs_verirfy: true } });
-    if (students?.[0]) {
-      for (let index = 0; index < students.length; index++) {
-        const element = students[index];
-        if (element && element.crs_id !== 59 && element.crs_id) {
-          const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: element.std_id } });
-          if (std?.crs_id) {
-            const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: std.crs_id } });
-            if (std) {
-              const attendance = await prisma.jmk_std_attendance.findFirst({
-                where: {
-                  crs_id: std.crs_id, std_id: element.std_id, created_at: {
-                    gte: today,
-                    lt: tomorrow,
-                  }
-                }
-              });
-              const attendanceCount = await prisma.jmk_std_attendance.count({ where: { crs_id: std.crs_id, std_id: element.std_id } });
-              attendanceData.push({
-                std_id: std.std_id,
-                std_fname: std.std_fname,
-                std_mname: std.std_mname,
-                std_lname: std.std_lname,
-                std_email: std.std_email,
-                total_atendance: attendanceCount,
-                today_atendance: attendance ? true : false,
-                crs_id: crs.crs_id,
-                crs_name: crs.crs_name,
-                time: crs.time
-              })
-            }
-          }
-        }
-      }
+  getBlogs: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const blogs = await prisma.jmkblog.findMany({ orderBy: { created_at: 'desc' } });
+      return blogs;
     }
-    return attendanceData
   },
 
-  getAttendanceByIdAdmin: async (_, { std_id, crs_id }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token');
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    });
-    if (!admin) throw new AuthenticationError('invalid admin credentials');
-
-    const allAttendance = []
-
-    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id } });
-    if (!crs) throw new Error('Course not found');
-
-    const std = await prisma.jmkstdinfo.findFirst({ where: { std_id } });
-    if (!std) throw new Error('Student not found');
-
-    let totalClasses = Math.ceil((new Date() - new Date(crs.crs_nxt_st_date)) / (1000 * 60 * 60 * 24)) ?? 0;
-
-    if (new Date(crs.crs_nxt_st_date).getTime() > Date.now()) {
-      return []
-    }
-
-    totalClasses = (crs.crs_duration * 30) < totalClasses ? (crs.crs_duration * 30) : totalClasses;
-
-    const total_attendance = await prisma.jmk_std_attendance.count({ where: { crs_id: std.crs_id, std_id } }) ?? 0;
-
-    const startDate = new Date(crs.crs_nxt_st_date);
-    for (let index = 0; index < totalClasses; index++) {
-      const currentDate = new Date(startDate);
-      currentDate.setDate(startDate.getDate() + index);
-
-      const tomorrow = new Date(currentDate);
-      tomorrow.setDate(currentDate.getDate() + 1);
-      const attendance = await prisma.jmk_std_attendance.findFirst({
+  getBlog: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const blog = await prisma.jmkblog.findFirst({
         where: {
-          attendance: true,
-          crs_id: std.crs_id, std_id, created_at: {
-            gte: currentDate,
-            lt: tomorrow,
-          }
+          blog_id: args.blog_id
         }
       });
-
-      allAttendance.push({
-        serial: index,
-        attendance: attendance ? true : false,
-        created_at: currentDate,
-        std_id,
-      })
-    }
-
-    const total_duration = crs.crs_duration * 30 ?? 0;
-    const total_absent = totalClasses - total_attendance ?? 0;
-    return {
-      attendance: allAttendance,
-      total_duration,
-      total_absent,
-      total_attendance,
-      crs_id: crs.crs_id,
-      std_fname: std.std_fname,
-      std_lname: std.std_lname,
-      std_email: std.std_email,
+      return blog;
     }
   },
 }

@@ -389,11 +389,6 @@ model jmktstdpayinfo {
   crs_id         Int?
 }
 
-model jmkloginfo {
-  log_id   Int     @id @default(autoincrement())
-  log_desc String? @db.VarChar(200)
-}
-
 model jmkstdfeediscount {
   serial           Int  @id @default(autoincrement())
   fee_id           Int?

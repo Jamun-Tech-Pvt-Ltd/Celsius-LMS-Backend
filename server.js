@@ -10,7 +10,6 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import graphqlUploadExpress from 'graphql-upload/graphqlUploadExpress.mjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
-import logger from './utils/logger.js';
 import { SubscriptionServer } from 'subscriptions-transport-ws'; // Import the SubscriptionServer class
 import typeDefs from './typeDefs.js'
 import resolvers from './resolvers.js'
@@ -55,8 +54,6 @@ async function startServer() {
   const app = express();
   app.use(express.json());
   app.use(graphqlUploadExpress());
-
-  app.use(logger);
 
   const schema = makeExecutableSchema({
     typeDefs,
