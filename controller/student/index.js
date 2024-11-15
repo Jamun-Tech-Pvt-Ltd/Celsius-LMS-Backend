@@ -449,7 +449,46 @@ const studentQueryTypesAndInputs = `
     totalClassDays:Int!
     courseAttendance:[CourseAttendanceReport!]
   }
+
+  type course_with_week {
+    crs_id: Int!
+    crs_name: String!
+    meetLink: String!
+    time: String!
+    crs_duration: Int!
+    crs_image: String
+    crs_week: [courseWeek]
+  }
+
+  type recent_class {
+    serial:Int!
+    course:course_with_week!
+    crs_complete:Boolean!
+  }
+
+  type total_time_spend {
+    date: Date!
+    time:Int!
+  }
+
+  type quiz_report {
+   total_questions:Int!
+   total_correct_answers:Int!
+   total_grade:Float!
+   total_time_spend:[total_time_spend]
+  }
     
+  type StudentDashboardData {
+    total_course:Int!
+    total_class:Int!
+    total_present:Int!
+    course_completion:Float!
+    class_attendance:Float!
+    recent_class:[recent_class]
+    resent_project:[courseWeekContent]
+    resent_lessons:[courseWeekContent]
+    quiz_report:quiz_report
+  }
 
 `
 
@@ -489,6 +528,8 @@ const studentQuery = `
     getPageStudent(serial:Int!):pagesWithComments
 
     getStudentAttendance:AttendanceReport!
+
+    getStudentDashboardData:StudentDashboardData
 `
 
 const studentMutation = `
@@ -2222,6 +2263,94 @@ const studentResolversQuery = {
     }
 
     return { totalClass, totalPresent, totalAbsent, totalClassDays, courseAttendance }
+  },
+
+  getStudentDashboardData: async (_, { arg }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const student = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+      include: {
+        course: {
+          include: {
+            crs_week: {
+              orderBy: { created_at: 'desc' },
+              include: {
+                jmk_week_content: {
+                  orderBy: { date: 'desc' },
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+    if (!student) throw new AuthenticationError('invalid user');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    // attandance
+    const total_present = await prisma.jmk_std_attendance.count({ where: { std_id: userId, crs_id: student.crs_id, attendance: true } });
+    const total_course = Math.round(student.course.crs_duration * 30);
+    const start_date = new Date(student.course.crs_start_date);
+    const total_class = Math.floor((today - start_date) / (1000 * 60 * 60 * 24));
+    const actual_total_class = Math.min(total_class, total_course);
+    const course_completion = ((actual_total_class / total_course) * 100).toFixed(2);
+    const class_attendance = ((total_present / actual_total_class) * 100).toFixed(2);
+    const recent_class = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id, std_crs_verirfy: true }, include: { course: { include: { crs_week: true } } }, orderBy: { createdAt: 'desc' }, take: 2 });
+
+
+    const resent_project = [];
+    const resent_lessons = [];
+    const allQuiz = [];
+
+    for (let index = 0; index < student.course.crs_week.length; index++) {
+      const jmk_week_content = student.course.crs_week[index].jmk_week_content;
+      jmk_week_content.forEach(item => {
+        if (item.type === 'Video' && resent_lessons.length < 2) {
+          resent_lessons.push(item);
+        } else if (item.type === 'Project' && resent_project.length < 2) {
+          resent_project.push(item);
+        } else if (item.type === 'Test') {
+          allQuiz.push(item)
+        }
+      });
+    }
+
+    let total_questions = 0;
+    let total_correct_answers = 0;
+    let total_time_spend_by_month = {};
+
+    for (let index = 0; index < allQuiz.length; index++) {
+      const week = allQuiz[index];
+      const history = await prisma.jmk_std_test_result.findMany({ where: { content_id: week.content_id, std_id: userId }, orderBy: { created_at: 'desc' } });
+      for (let index = 0; index < history.length; index++) {
+
+        total_questions += parseInt(history[index].score.split('/')[1] !== 'undefined' ? history[index].score.split('/')[1] : 1);
+        total_correct_answers += parseInt(history[index].score.split('/')[0] ?? 0);
+
+        const monthKey = new Date(history[index].created_at).toISOString().slice(0, 7);
+
+        if (!total_time_spend_by_month[monthKey]) {
+          total_time_spend_by_month[monthKey] = 0;
+        }
+
+        total_time_spend_by_month[monthKey] += parseInt(history[index].time_taken.replace('minutes'));
+      }
+    }
+
+    const total_time_spend = Object.keys(total_time_spend_by_month).map(monthKey => {
+      return {
+        date: monthKey,
+        time: total_time_spend_by_month[monthKey]
+      };
+    });
+
+    const total_grade = ((total_correct_answers / total_questions) * 100).toFixed(2);
+
+    return { total_course, total_class: actual_total_class, total_present, course_completion, class_attendance, recent_class, resent_project, resent_lessons, quiz_report: { total_questions, total_correct_answers, total_grade, total_time_spend } };
   }
 }
 
