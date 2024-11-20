@@ -1179,7 +1179,7 @@ const adminResolvers = {
     })
     if (!admin) throw new AuthenticationError('invalid admin');
 
-    if ((data.type === 'Jaamun' || data.type === 'Ceslsius') && platform === 'external') {
+    if ((data.type === 'Jaamun' || data.type === 'Celsius') && platform === 'external') {
       throw new ApolloError('first learn how systerm works and send main admin token for jaamun and celsius type access . dont go tree house always focus sometime on systerm.');
     }
 
