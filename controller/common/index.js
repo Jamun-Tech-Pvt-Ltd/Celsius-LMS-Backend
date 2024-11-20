@@ -455,6 +455,7 @@ const commonResolversQuery = {
       return info
     }
     const info = await prisma.jmk_web_details.findFirst({ where: { company_id: null, type: arg.type } });
+    
     if (info) {
       return info
     } else {

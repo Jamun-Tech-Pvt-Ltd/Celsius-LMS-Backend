@@ -1173,11 +1173,19 @@ const adminResolvers = {
   },
 
   createAndUpdateWebDetails: async (_, { data }, { userId, role, platform }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
+    if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
     })
     if (!admin) throw new AuthenticationError('invalid admin');
+
+    if ((data.type === 'Jaamun' || data.type === 'Ceslsius') && platform === 'external') {
+      throw new ApolloError('first learn how systerm works and send main admin token for jaamun and celsius type access . dont go tree house always focus sometime on systerm.');
+    }
+
+    if (data.type === 'Company' && platform === 'internal') {
+      throw new ApolloError('first learn how systerm works and send company admin token for company type access . dont go tree house always focus sometime on systerm.');
+    }
 
     if (platform === 'internal' && data.type !== 'Company') {
       const webDetails = await prisma.jmk_web_details.findFirst({ where: { company_id: null, type: data.type } });
