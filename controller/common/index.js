@@ -167,7 +167,6 @@ const commonQueryTypesAndInputs = `
   }
 
   type Attendance {
-    serial:Int!
     attendance:Boolean!
     created_at:Date!
   }
@@ -762,6 +761,7 @@ const commonResolversQuery = {
 
     if (role === 'trainer' && platform === 'external') {
       if (!std_id) throw new ApolloError('trainer need to provide std_id');
+      if (crs_id) throw new ApolloError('trainer doesnt need to provide crs_id');
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
         include: { course: true }
