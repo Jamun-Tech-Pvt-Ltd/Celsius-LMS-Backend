@@ -120,16 +120,6 @@ const trainerQueryTypesAndInputs = `
         std_mobile: String!
      }
   
-     type TrainerDashboard {
-        students: Int
-        courses: Int
-        weeks: Int
-        videos: Int
-        files: Int
-        projects: Int
-        tests: Int
-     }
-
      type TrainerCourses{
       serial: Int
       tr_id:Int
@@ -195,6 +185,21 @@ const trainerQueryTypesAndInputs = `
       img: String!
       comments_count:Int
       created_at:Date!
+     }
+
+     type TrainerDashboard {
+        total_students: Int!
+        total_class:Int!
+        total_present:Int!
+        total_course: Int!
+        course_completion: Float!
+        class_attendance: Int!
+        total_video:Int! 
+        total_files:Int! 
+        total_project:Int! 
+        total_test:Int! 
+        course: Course!
+        courses: [course_with_week]
      }
 `
 
@@ -1066,27 +1071,69 @@ const trainerResolversQuery = {
     if (role === ROLES[1]) {
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
-      })
+        include: {
+          courses: {
+            include: {
+              course: {
+                include: { crs_week: true }
+              }
+            },
+            take: 2,
+            orderBy: { created_at: 'desc' },
+          },
+          course: {
+            include: {
+              crs_week: {
+                orderBy: { created_at: 'desc' },
+                include: {
+                  jmk_week_content: {
+                    orderBy: { date: 'desc' },
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
       if (!trainer) throw new AuthenticationError('invalid trainer credentials');
-      let videos = 0;
-      let files = 0;
-      let projects = 0;
-      let tests = 0;
-      const weeks = await prisma.jmk_tr_week.count({ where: { crs_id: trainer.crs_id } });
-      const currentWeeks = await prisma.jmk_tr_week.findMany({ where: { crs_id: trainer.crs_id } });
-      const courses = await prisma.jmktrcrsinfo.count({ where: { tr_id: userId, } });
-      const students = await prisma.jmkstdcrsinfo.count({ where: { crs_id: trainer.crs_id, } });
-      for (let index = 0; index < currentWeeks.length; index++) {
-        const videosCount = await prisma.jmk_week_content.count({ where: { type: 'Video', week_id: currentWeeks[index].week_id } });
-        const filesCount = await prisma.jmk_week_content.count({ where: { type: 'Note', week_id: currentWeeks[index].week_id } });
-        const projectsCount = await prisma.jmk_week_content.count({ where: { type: 'Project', week_id: currentWeeks[index].week_id } });
-        const testsCount = await prisma.jmk_week_content.count({ where: { type: 'Test', week_id: currentWeeks[index].week_id } });
-        videos += videosCount;
-        files += filesCount;
-        projects += projectsCount;
-        tests += testsCount;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      const total_present = await prisma.jmk_std_attendance.count({ where: { crs_id: trainer.crs_id, attendance: true } });
+      const total_students = await prisma.jmkstdcrsinfo.count({ where: { crs_id: trainer.crs_id, std_crs_verirfy: true } });
+      const total_course = Math.round(trainer.course.crs_duration * 30);
+      const start_date = new Date(trainer.course.crs_start_date);
+      const total_class = Math.floor((today - start_date) / (1000 * 60 * 60 * 24));
+      const actual_total_class = Math.min(total_class, total_course);
+      const course_completion = ((actual_total_class / total_course) * 100).toFixed(2);
+      const class_attendance = ((total_present / (actual_total_class * total_students)) * 100).toFixed(2);
+
+      const courses = trainer.courses.map(item => item.course);
+
+      let total_video = 0;
+      let total_files = 0;
+      let total_project = 0;
+      let total_test = 0;
+
+      for (let index = 0; index < trainer.course.crs_week.length; index++) {
+        const jmk_week_content = trainer.course.crs_week[index].jmk_week_content;
+        jmk_week_content.forEach(item => {
+          if (item.type === 'Video') {
+            total_video += 1;
+          } else if (item.type === 'Project') {
+            total_project += 1;
+          } else if (item.type === 'Test') {
+            total_test += 1;
+          } else {
+            total_files += 1;
+          }
+        });
       }
-      return { students, weeks, videos, files, projects, tests, courses }
+
+      return { total_students, total_present, total_course, total_class: actual_total_class, course: trainer.course, course_completion, class_attendance, courses, total_video, total_files, total_project, total_test }
     }
   },
 

@@ -450,16 +450,6 @@ const studentQueryTypesAndInputs = `
     courseAttendance:[CourseAttendanceReport!]
   }
 
-  type course_with_week {
-    crs_id: Int!
-    crs_name: String!
-    meetLink: String!
-    time: String!
-    crs_duration: Int!
-    crs_image: String
-    crs_week: [courseWeek]
-  }
-
   type recent_class {
     serial:Int!
     course:course_with_week!

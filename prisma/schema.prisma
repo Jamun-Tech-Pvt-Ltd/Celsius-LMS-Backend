@@ -289,6 +289,7 @@ model jmktrcrsinfo {
   crs_id  Int
   course  jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction)
   trainer jmktrinfo  @relation(fields: [tr_id], references: [tr_id], onDelete: NoAction, onUpdate: NoAction)
+  created_at   DateTime   @default(now())
 
   @@index([crs_id], map: "jmktrcrsinfo_crs_id_fkey")
   @@index([tr_id], map: "jmktrcrsinfo_tr_id_fkey")

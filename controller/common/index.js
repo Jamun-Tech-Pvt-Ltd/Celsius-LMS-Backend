@@ -11,6 +11,16 @@ const commonQueryTypesAndInputs = `
   type Token {
     token: String!
   }
+    
+  type course_with_week {
+    crs_id: Int!
+    crs_name: String!
+    meetLink: String!
+    time: String!
+    crs_duration: Int!
+    crs_image: String
+    crs_week: [courseWeek]
+  }
 
   input createAndUpdateCourseInput {
     crs_id: Int
