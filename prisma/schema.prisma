@@ -284,12 +284,12 @@ model jmkcrscontents {
 }
 
 model jmktrcrsinfo {
-  serial  Int        @id @default(autoincrement())
-  tr_id   Int
-  crs_id  Int
-  course  jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction)
-  trainer jmktrinfo  @relation(fields: [tr_id], references: [tr_id], onDelete: NoAction, onUpdate: NoAction)
-  created_at   DateTime   @default(now())
+  serial     Int        @id @default(autoincrement())
+  tr_id      Int
+  crs_id     Int
+  course     jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction)
+  trainer    jmktrinfo  @relation(fields: [tr_id], references: [tr_id], onDelete: NoAction, onUpdate: NoAction)
+  created_at DateTime   @default(now())
 
   @@index([crs_id], map: "jmktrcrsinfo_crs_id_fkey")
   @@index([tr_id], map: "jmktrcrsinfo_tr_id_fkey")
@@ -318,6 +318,7 @@ model jmkuserinfo {
   usr_img_url  String?     @db.VarChar(100)
   usr_img_key  String?     @db.VarChar(100)
   created_at   DateTime?   @default(now())
+  lastSeen     DateTime    @default(now())
   usr_access   String?     @db.LongText
   company_id   Int?
   company      jmkcompany? @relation(fields: [company_id], references: [serial])

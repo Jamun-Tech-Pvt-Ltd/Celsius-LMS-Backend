@@ -16,6 +16,7 @@ import resolvers from './resolvers.js'
 import { ROLES } from './utils/helper.js';
 import { updateStdActiveDate } from './controller/student/index.js';
 import { updateTrainerActiveDate } from './controller/trainer/index.js';
+import { updateAdminActiveDate } from './controller/admin/index.js';
 
 new PrismaClient();
 
@@ -39,6 +40,9 @@ const context = ({ req }) => {
       }
       if (role === ROLES[1]) {
         updateTrainerActiveDate(userId)
+      }
+      if (role === 'admin') {
+        updateAdminActiveDate(userId)
       }
       if (userId && role && platform) return { userId, role, platform, c_username, c_package_type };
     } catch (error) {

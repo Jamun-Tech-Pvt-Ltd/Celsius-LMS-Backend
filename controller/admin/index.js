@@ -113,12 +113,6 @@ const adminQueryTypesAndInputs = `
         company:Company!
      }
      
-     type totalCount{
-       name:String
-       count:Int
-       link:String
-     }
-
      type userInfo{
       usr_id:Int!
       usr_code:String
@@ -490,6 +484,26 @@ const adminQueryTypesAndInputs = `
       promoStudents: [PromoStudents]
      }
 
+    type adminDashboard {
+      total_user:Int!
+      total_admins:Int!
+      total_student:Int!
+      total_trainer:Int!
+      total_active_user:Int!
+      total_active_student:Int!
+      total_active_trainer:Int!
+      total_active_admin:Int!
+      total_courses:Int!
+      total_company:Int
+      total_support:Int
+      total_video:Int 
+      total_files:Int
+      total_project:Int
+      total_test:Int
+      overall_attendance:Float
+      recent_course:[course_with_week]
+    }
+
 `
 
 const adminQuery = `
@@ -503,7 +517,7 @@ const adminQuery = `
     getTrainerDataForAdmin:[Trainer]
     getTrainerByIdForAdmin(tr_id:Int!):Trainer
 
-    getDataCountForAllTableInAdmin:[totalCount]
+    getAdminDashboard:adminDashboard!
 
     getAllUserInfo:[userInfo]
     getUserInfoById(usr_id:Int!):userInfo
@@ -1796,111 +1810,105 @@ const adminResolversQuery = {
     }
   },
 
-  getDataCountForAllTableInAdmin: async (_, args, { userId, role, platform }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
+  getAdminDashboard: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
     });
-
     if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const categories = await prisma.jmk_crs_categories.count();
-    const courses = await prisma.jmkcrsinfo.count({ where: { isDeleted: false } });
-    const students = await prisma.jmkstdinfo.count({ where: { std_verifyed: true } });
-    const trainers = await prisma.jmktrinfo.count({ where: { tr_verifyed: true } });
-    const users = await prisma.jmkuserinfo.count();
-    const partners = await prisma.jmk_partner_ui.count();
-    const services = await prisma.jmk_services.count();
-    const blogs = await prisma.jmkblog.count({ where: { status: true } });
+    let data = {};
+    if (platform === 'internal') {
+      const student = await prisma.jmkstdinfo.count();
+      const trainer = await prisma.jmktrinfo.count();
+      const total_admins = await prisma.jmkuserinfo.count();
+      const total_active_student = await prisma.jmkstdinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo } } });
+      const total_active_trainer = await prisma.jmktrinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo } } });
+      const total_active_admin = await prisma.jmkuserinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo } } });
+      data.total_admins = total_admins;
+      data.total_student = student;
+      data.total_trainer = trainer;
+      data.total_user = student + trainer + total_admins;
+      data.total_active_user = total_active_student + total_active_trainer + total_active_admin;
+      data.total_active_student = total_active_student;
+      data.total_active_trainer = total_active_trainer;
+      data.total_active_admin = total_active_admin;
+      data.total_company = await prisma.jmkcompany.count({ where: { c_verified: true } });
+      data.total_courses = await prisma.jmkcrsinfo.count();
+      data.total_support = await prisma.jmkcontact.count();
 
-    let tableCount = [];
+    } else {
+      const student = await prisma.jmkstdinfo.count({ where: { company_id: admin.company_id } });
+      const trainer = await prisma.jmktrinfo.count({ where: { company_id: admin.company_id } });
+      const total_admins = await prisma.jmkuserinfo.count({ where: { company_id: admin.company_id } });
+      const total_active_student = await prisma.jmkstdinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo } } });
+      const total_active_trainer = await prisma.jmktrinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo }, company_id: admin.company_id } });
+      const total_active_admin = await prisma.jmkuserinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo }, company_id: admin.company_id } });
+      data.total_admins = total_admins;
+      data.total_student = student;
+      data.total_trainer = trainer;
+      data.total_user = student + trainer + total_admins;
+      data.total_active_user = total_active_student + total_active_trainer + total_active_admin;
+      data.total_active_student = total_active_student;
+      data.total_active_trainer = total_active_trainer;
+      data.total_active_admin = total_active_admin;
+      const courses = await prisma.jmkcrsinfo.findMany({
+        where: { crs_company_id: admin.company_id },
+        include: {
+          crs_week: {
+            include: {
+              jmk_week_content: true,
+            },
+          },
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
+      });
+      data.total_courses = courses.length;
 
-    const access = JSON.parse(admin.usr_access ?? '[]');
+      data.recent_course = []
+      data.total_video = 0;
+      data.total_files = 0;
+      data.total_project = 0;
+      data.total_test = 0;
+      let total_classes = 0;
 
-    if (access) {
-      const findDashboardAccess = access.find((item) => item.name === 'Dashboard');
-      if (findDashboardAccess.access?.[0].read) {
-
-        const findCoursesAccess = access.find((item) => item.name === 'Courses');
-        if (findCoursesAccess) {
-          const findCategoryAccess = findCoursesAccess.option.find((item) => item.name === 'Categories');
-          if (findCategoryAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Categories',
-              count: categories ?? 0,
-              link: '/categories',
-            })
+      for (let index = 0; index < courses.length; index++) {
+        const course = courses[index];
+        if (data.recent_course.length < 2) {
+          data.recent_course.push(course);
+        };
+        const total_course = Math.round(course.crs_duration * 30);
+        const start_date = new Date(course.crs_start_date);
+        const total_class = Math.floor((today - start_date) / (1000 * 60 * 60 * 24));
+        const actual_total_class = Math.min(total_class, total_course);
+        total_classes += actual_total_class;
+        for (let index = 0; index < course.crs_week.length; index++) {
+          const week = course.crs_week[index];
+          for (let index = 0; index < week.jmk_week_content.length; index++) {
+            const jmk_week_content = week.jmk_week_content[index];
+            if (jmk_week_content.type === 'Video') {
+              data.total_video += 1;
+            } else if (jmk_week_content.type === 'Project') {
+              data.total_project += 1;
+            } else if (jmk_week_content.type === 'Test') {
+              data.total_test += 1;
+            } else {
+              data.total_files += 1;
+            }
           }
-          const findRunningCourseAccess = findCoursesAccess.option.find((item) => item.name === 'Running Courses');
-          if (findRunningCourseAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Courses',
-              count: courses ?? 0,
-              link: '/courses',
-            })
-          }
-        }
-
-        const findStakeHoldersAccess = access.find((item) => item.name === 'StakeHolders');
-        if (findStakeHoldersAccess) {
-          const findAdminsAccess = findStakeHoldersAccess.option.find((item) => item.name === 'Admins');
-          if (findAdminsAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Admins',
-              count: users ?? 0,
-              link: '/users',
-            })
-          }
-          const findPartnersAccess = findStakeHoldersAccess.option.find((item) => item.name === 'Partners');
-          if (findPartnersAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Partners (UI)',
-              count: partners ?? 0,
-              link: '/partners',
-            })
-          }
-        }
-
-        const findRegistrationInfoAccess = access.find((item) => item.name === 'RegistrationInfo');
-        if (findRegistrationInfoAccess) {
-          const findStudentsAccess = findRegistrationInfoAccess.option.find((item) => item.name === 'Students');
-          if (findStudentsAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Students',
-              count: students ?? 0,
-              link: '/students',
-            })
-          }
-          const findTrainerAccess = findRegistrationInfoAccess.option.find((item) => item.name === 'Trainer');
-          if (findTrainerAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Trainers',
-              count: trainers ?? 0,
-              link: '/trainer',
-            })
-          }
-        }
-
-        const findServicesAccess = access.find((item) => item.name === 'Services');
-        if (findServicesAccess.access?.[0].read) {
-          tableCount.push({
-            name: 'Services',
-            count: services ?? 0,
-            link: '/services',
-          })
-        }
-
-        const findBlogAccess = access.find((item) => item.name === 'Blog');
-        if (findBlogAccess.access?.[0].read) {
-          tableCount.push({
-            name: 'Blogs',
-            count: blogs ?? 0,
-            link: '/blogs',
-          })
         }
       }
+
+      const total_attendance = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: admin.company_id } } });
+      data.overall_attendance = ((total_attendance / total_classes) * 100).toFixed(2);
     }
-    return tableCount
+
+    return data;
   },
 
   getAllUserInfo: async (_, args, { userId, role, platform }) => {
@@ -2273,10 +2281,21 @@ const adminResolversQuery = {
   },
 }
 
+const updateAdminActiveDate = async (userId) => {
+  await prisma.jmkuserinfo.update({
+    data: {
+      lastSeen: new Date()
+    }, where: {
+      usr_id: userId
+    }
+  })
+}
+
 export {
   adminQueryTypesAndInputs,
   adminQuery,
   adminMutation,
   adminResolvers,
   adminResolversQuery,
+  updateAdminActiveDate
 }
