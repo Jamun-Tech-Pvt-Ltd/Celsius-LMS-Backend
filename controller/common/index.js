@@ -445,7 +445,7 @@ const commonResolversQuery = {
   getContactInfo: async (_, arg, { userId, role, platform }) => {
     if (userId && platform === 'external') {
       let user;
-      if (role === 'adimin') {
+      if (role === 'admin') {
         user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
       }
 
