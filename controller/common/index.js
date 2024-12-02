@@ -68,6 +68,7 @@ const commonQueryTypesAndInputs = `
     phone1: String!
     email: String!
     logo: String
+    qr: String 
     primary_color: String
     secondary_color: String
     tertiary_color: String
