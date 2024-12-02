@@ -2287,8 +2287,8 @@ const studentResolversQuery = {
     const start_date = new Date(student.course.crs_start_date);
     const total_class = Math.floor((today - start_date) / (1000 * 60 * 60 * 24));
     const actual_total_class = Math.min(total_class, total_course);
-    const course_completion = ((actual_total_class / total_course) * 100).toFixed(2);
-    const class_attendance = ((total_present / actual_total_class) * 100).toFixed(2);
+    const course_completion = ((actual_total_class / total_course) * 100).toFixed(2) ?? 0;
+    const class_attendance = ((total_present / actual_total_class) * 100).toFixed(2) ?? 0;
     const recent_class = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id, std_crs_verirfy: true }, include: { course: { include: { crs_week: true } } }, orderBy: { createdAt: 'desc' }, take: 2 });
 
 
