@@ -57,6 +57,7 @@ model jmkcrsinfo {
   jmkstdcrsinfo      jmkstdcrsinfo[]
   jmk_std_note       jmk_std_note[]
   jmktrinfo          jmktrinfo[]
+  jmktstdpayinfo     jmktstdpayinfo[]
 }
 
 model jmk_tr_week {
@@ -155,6 +156,7 @@ model jmkstdinfo {
   jmk_std_attendance    jmk_std_attendance[]
   courses               jmkstdcrsinfo[]
   jmk_std_note          jmk_std_note[]
+  jmktstdpayinfo        jmktstdpayinfo[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
 }
@@ -346,6 +348,7 @@ model jmkcompany {
   jmktrinfo          jmktrinfo[]
   jmkstdinfo         jmkstdinfo[]
   jmkfaq             jmkfaq[]
+  jmktcompanypay     jmktcompanypay[]
 }
 
 model jmkcrsupcom {
@@ -381,21 +384,27 @@ model jmk_testimonial {
   testimonial          String   @db.LongText
 }
 
-model jmktstdpayinfo {
-  pay_id         Int       @id @default(autoincrement())
-  payment_date   DateTime? @default(dbgenerated("(curdate())")) @db.Date
-  pay_amount     Int?
-  std_id         Int?
-  transaction_id String?   @db.VarChar(30)
-  pay_verified   Boolean?  @default(false)
-  crs_id         Int?
+model jmktcompanypay {
+  pay_id      Int        @id @default(autoincrement())
+  start_date  DateTime   @default(now())
+  end_date    DateTime   @default(now())
+  pay_amount  Int
+  transaction String     @db.VarChar(100)
+  users       Int
+  company_id  Int
+  company     jmkcompany @relation(fields: [company_id], references: [serial])
 }
 
-model jmkstdfeediscount {
-  serial           Int  @id @default(autoincrement())
-  fee_id           Int?
-  fee_discount_per Int?
-  std_id           Int?
+model jmktstdpayinfo {
+  pay_id       Int        @id @default(autoincrement())
+  payment_date DateTime   @default(now())
+  pay_amount   Int
+  transaction  String     @db.VarChar(100)
+  pay_verified Boolean    @default(false)
+  crs_id       Int
+  std_id       Int
+  student      jmkstdinfo @relation(fields: [std_id], references: [std_id])
+  course       jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
 }
 
 model jmkstdproj {

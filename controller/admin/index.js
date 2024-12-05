@@ -1092,29 +1092,32 @@ const adminResolvers = {
     return 'success'
   },
 
-
-  updatePaymentStatus: async (_, { pay_id }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
+  updatePaymentStatus: async (_, { pay_id }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'external') throw new AuthenticationError('only company admin can update user payment');
 
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-    })
-    if (!admin) throw new AuthenticationError('invalid admin')
+    });
+    if (!admin) throw new AuthenticationError('invalid admin');
 
-    const paymentdet = await prisma.jmktstdpayinfo.findFirst({
-      where: {
-        pay_id,
-      },
-    })
+    const paymentdet = await prisma.jmktstdpayinfo.findFirst({ where: { pay_id, student: { company_id: admin.company_id } } });
+    if (!paymentdet) throw new ApolloError('No such payement info exist');
 
-    if (!paymentdet) throw new ApolloError('No such payement info exist')
-    await prisma.jmktstdpayinfo.update({
-      data: {
-        pay_verified: !paymentdet.pay_verified,
-      },
-      where: {
-        pay_id,
-      },
+    const updatePayment = await prisma.jmktstdpayinfo.update({
+      where: { pay_id: paymentdet.pay_id },
+      data: { pay_verified: true }
+    });
+    if (!updatePayment) throw new AuthenticationError('invalid id');
+
+    const crs_recod = await prisma.jmkstdcrsinfo.findFirst({ where: { std_id: updatePayment.std_id, crs_id: updatePayment.crs_id } });
+    if (!crs_recod) throw new ApolloError(`if you get this error then contact our support team . and send them ${updatePayment.pay_id}`);
+
+    await prisma.jmkstdcrsinfo.update({
+      where: { serial: crs_recod.serial }, data: {
+        amt_paid: crs_recod.amt_paid + updatePayment.pay_amount,
+        amt_due: crs_recod.amt_due - updatePayment.pay_amount,
+      }
     })
 
     return 'success'
