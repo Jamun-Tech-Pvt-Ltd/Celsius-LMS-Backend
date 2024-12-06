@@ -524,6 +524,16 @@ const adminQueryTypesAndInputs = `
       users: Int!
       company: Company!
     }
+
+    type StudentPayment {
+      pay_id: Int!
+      payment_date: Date!
+      pay_amount: Int!
+      transaction: String!
+      pay_verified: Boolean!
+      course: Course!
+      student: Student!
+    }
 `
 
 const adminQuery = `
@@ -584,6 +594,9 @@ const adminQuery = `
 
     getCompanyPayments: [CompanyPayment!]!
     getCompanyPaymentById(pay_id: Int!): CompanyPayment
+
+    getStudentPayments: [StudentPayment!]!
+
 `
 
 const adminMutation = `
@@ -604,11 +617,7 @@ const adminMutation = `
     updateSelectedUser(data:updateUserInput):String!
     deleteUserById(usrId:Int!):String!
 
-    
-    updatePaymentStatus(pay_id:Int!): String
-
     updateContactInfo(data:contactInfoUpdate):String
-
 
     updateBlog(data:UpdateJmkBlogInput): String
     deleteBlog(blog_id: Int!): String
@@ -646,6 +655,8 @@ const adminMutation = `
 
     createAndUpdatePayment(data:CompanyPaymentInput):String!
     deleteCompanyPayment(pay_id:Int!):String!
+
+    updatePaymentStatus(pay_id:Int!): String
 `
 
 const adminResolvers = {
@@ -2404,6 +2415,19 @@ const adminResolversQuery = {
     const payments = await prisma.jmktcompanypay.findFirst({ where: { pay_id }, include: { company: true } });
     return payments;
   },
+
+  getStudentPayments: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'external') throw new ForbiddenError('only company admin can get user payment');
+    if (role !== 'admin') throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new ForbiddenError('invalid token');
+    const payments = await prisma.jmktstdpayinfo.findMany({ where: { student: { company_id: admin.company_id } }, orderBy: { created_at: 'desc' }, include: { student: true, course: true } });
+    return payments;
+  },
+
 }
 
 const updateAdminActiveDate = async (userId) => {

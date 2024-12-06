@@ -23,10 +23,10 @@ const studentQueryTypesAndInputs = `
         password: String!
     }
 
-    input addStudentPaymentInput{
-      payment_date: Date!
-      pay_amount: Int!
-      transaction_id: String!
+    input StudentPaymentInput{
+      date: Date!
+      amount: Int!
+      transaction: String!
    }
 
     input UpdateUserInput {
@@ -558,7 +558,7 @@ const studentMutation = `
  
     updateMessageSeen(id:Int!, type:String!):String!
 
-    addStudentPayInfo(data:addStudentPaymentInput): String!
+    createStudentPayment(data:StudentPaymentInput): String!
 
     applyCourseCoupon(code:String!):String!
 
@@ -1538,19 +1538,21 @@ const studentResolvers = {
     return "success";
   },
 
-  addStudentPayInfo: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
+  createStudentPayment: async (_, { data }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === ROLES[0]) throw new ForbiddenError('only student can create payment info');
+    if (platform !== 'external') throw new ForbiddenError('invalid token');
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
     })
-    if (!user) throw new AuthenticationError('invalid user')
+    if (!user) throw new AuthenticationError('invalid user');
     await prisma.jmktstdpayinfo.create({
       data: {
-        std_id: user.std_id,
-        payment_date: new Date(data.payment_date),
-        pay_amount: parseInt(data.pay_amount),
-        transaction_id: data.transaction_id,
+        payment_date: data.date,
+        pay_amount: data.amount,
+        transaction: data.transaction,
         crs_id: user.crs_id,
+        std_id: user.std_id,
       },
     })
     return 'success'
