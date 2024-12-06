@@ -348,7 +348,7 @@ model jmkcompany {
   jmktrinfo          jmktrinfo[]
   jmkstdinfo         jmkstdinfo[]
   jmkfaq             jmkfaq[]
-  jmktcompanypay     jmktcompanypay[]
+  payments           jmktcompanypay[]
 }
 
 model jmkcrsupcom {
@@ -393,6 +393,7 @@ model jmktcompanypay {
   users       Int
   company_id  Int
   company     jmkcompany @relation(fields: [company_id], references: [serial])
+  created_at  DateTime   @default(now())
 }
 
 model jmktstdpayinfo {
@@ -405,6 +406,7 @@ model jmktstdpayinfo {
   std_id       Int
   student      jmkstdinfo @relation(fields: [std_id], references: [std_id])
   course       jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
+  created_at   DateTime   @default(now())
 }
 
 model jmkstdproj {

@@ -345,6 +345,17 @@ const adminQueryTypesAndInputs = `
       subject:String!
      }
 
+     input CompanyPaymentInput {
+      pay_id:Int
+      start_date:Date!
+      pay_amount:Int!
+      transaction:String!
+      package:String!
+      package_type:String!
+      users:Int!
+      company_id:Int!
+     }
+
      type UserCourseAdmin {
       std_id:Int!
       serial:Int!
@@ -504,6 +515,15 @@ const adminQueryTypesAndInputs = `
       recent_course:[course_with_week]
     }
 
+    type CompanyPayment {
+      pay_id: Int!
+      start_date: Date!
+      end_date: Date!
+      pay_amount: Int!
+      transaction: String!
+      users: Int!
+      company: Company!
+    }
 `
 
 const adminQuery = `
@@ -561,6 +581,9 @@ const adminQuery = `
 
     getPropmo:[Promo]
     getPropmoById(serial:Int!): Promo
+
+    getCompanyPayments: [CompanyPayment!]!
+    getCompanyPaymentById(pay_id: Int!): CompanyPayment
 `
 
 const adminMutation = `
@@ -620,6 +643,9 @@ const adminMutation = `
     deletePromoById(serial:Int!):String!
 
     sendEmailByUser(data:MailSendInput!):String!
+
+    createAndUpdatePayment(data:CompanyPaymentInput):String!
+    deleteCompanyPayment(pay_id:Int!):String!
 `
 
 const adminResolvers = {
@@ -1122,7 +1148,6 @@ const adminResolvers = {
 
     return 'success'
   },
-
 
   createAndUpdateFaq: async (_, { data }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
@@ -1649,6 +1674,81 @@ const adminResolvers = {
 
       return 'send'
     }
+  },
+
+  createAndUpdatePayment: async (_, { data }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'internal') throw new ForbiddenError('invalid admin token');
+    const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+    if (!admin) throw new ForbiddenError('invalid token');
+
+    const company = await prisma.jmkcompany.findFirst({ where: { serial: data.company_id }, include: { payments: true } });
+    if (!company) throw new ApolloError('Invalid company id');
+
+    const calculateEndDate = (startDate, packageType) => {
+      const start = new Date(startDate);
+
+      if (packageType === 'yearly') {
+        start.setFullYear(start.getFullYear() + 1);
+      } else if (packageType === 'monthly') {
+        start.setMonth(start.getMonth() + 1);
+      } else {
+        throw new Error('Invalid package type');
+      }
+
+      return start.toISOString();
+    };
+
+    const currentDate = new Date();
+
+    if (data.pay_id) {
+      const findPayment = await prisma.jmktcompanypay.findFirst({ where: { pay_id: data.pay_id, company_id: data.company_id } });
+      if (!findPayment) throw new Error('Invalid pay_id or company_id');
+      await prisma.jmktcompanypay.update({
+        where: { pay_id: findPayment.pay_id },
+        data: {
+          start_date: data.start_date,
+          pay_amount: data.pay_amount,
+          transaction: data.transaction,
+          users: data.users,
+          end_date: calculateEndDate(data.start_date, data.package)
+        }
+      });
+      await prisma.jmkcompany.update({ where: { serial: company.serial }, data: { c_package: data.package, c_package_type: data.package_type } }); return 'Updated payment recod';
+    }
+
+    const checkThisMonthPayment = company.payments.find(
+      (item) => new Date(item.end_date) > currentDate
+    );
+
+    if (checkThisMonthPayment) {
+      throw new ApolloError(
+        'Company already paid for this month. If you want to add more dates to this company, try updating the existing payment.'
+      );
+    }
+
+    await prisma.jmktcompanypay.create({
+      data: {
+        start_date: data.start_date,
+        pay_amount: data.pay_amount,
+        transaction: data.transaction,
+        users: data.users,
+        company_id: data.company_id,
+        end_date: calculateEndDate(data.start_date, data.package)
+      }
+    });
+    await prisma.jmkcompany.update({ where: { serial: company.serial }, data: { c_package: data.package, c_package_type: data.package_type } });
+    return 'Created payment recod';
+  },
+
+  deleteCompanyPayment: async (_, { pay_id }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'internal') throw new ForbiddenError('invalid admin token');
+    const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+    if (!admin) throw new ForbiddenError('invalid token');
+    const payment = await prisma.jmktcompanypay.delete({ where: { pay_id } });
+    if (!payment) throw new ApolloError('someting went wrong');
+    return 'deleted'
   },
 }
 
@@ -2281,6 +2381,28 @@ const adminResolversQuery = {
       });
       return blog;
     }
+  },
+
+  getCompanyPayments: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'internal') throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new ForbiddenError('invalid token');
+    const payments = await prisma.jmktcompanypay.findMany({ orderBy: { end_date: 'desc' }, include: { company: true } });
+    return payments;
+  },
+
+  getCompanyPaymentById: async (_, { pay_id }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'internal') throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new ForbiddenError('invalid token');
+    const payments = await prisma.jmktcompanypay.findFirst({ where: { pay_id }, include: { company: true } });
+    return payments;
   },
 }
 
