@@ -266,8 +266,10 @@ const trainerMutation = `
 
 const trainerResolvers = {
   signinTrainer: async (_, { data }) => {
-    const company = await prisma.jmkcompany.findFirst({ where: { c_username: data.username } });
+    const company = await prisma.jmkcompany.findFirst({ where: { c_username: data.username }, include: { payments: { where: { end_date: { gt: new Date() } } } } });
     if (!company) throw new AuthenticationError('invalid user credentials');
+    if (!company.c_verified) throw new AuthenticationError('Your company is not verify yet , contact our support team for more info');
+    if (company.payments.length === 0) throw new AuthenticationError('Your company package is expired, contact our support team for more info');
     const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_email: data.email, company_id: company.serial } });
     if (!trainer) throw new AuthenticationError('invalid trainer credentials');
     const isMatch = data.password == trainer.tr_password;

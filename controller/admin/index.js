@@ -792,14 +792,29 @@ const adminResolvers = {
       const company = await prisma.jmkcompany.findFirst({ where: { c_username: data?.username } });
       if (!company) throw new AuthenticationError('invalid user credentials');
       const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_email: data.usr_email, company_id: company.serial },
-        include: {
-          company: true,
+        where: {
+          usr_email: data.usr_email,
+          company_id: company.serial,
         },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin credentials')
+        include: {
+          company: {
+            include: {
+              payments: {
+                where: {
+                  end_date: { gt: new Date() }
+                }
+              }
+            }
+          },
+        },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      if (!admin.company.c_verified) throw new AuthenticationError('Your company is not verify yet , contact our support team for more info');
+      if (admin.company.payments.length === 0) {
+        throw new Error('Your Company not verify or company payment expired , contact our support team for more info');
+      }
       const isMatch = data.usr_password == admin.usr_password
-      if (!isMatch) throw new AuthenticationError('invalid user credentials')
+      if (!isMatch) throw new AuthenticationError('invalid user credentials');
       const token = jwt.sign({ userId: admin.usr_id, role: 'admin', platform: 'external', c_username: admin?.company?.c_username, c_package_type: admin?.company?.c_username }, process.env.JWT_SECRET_KEY)
       return { token }
     }

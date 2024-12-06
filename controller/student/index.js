@@ -571,14 +571,15 @@ const studentMutation = `
 
 const studentResolvers = {
   signinUser: async (_, { userSignIn }) => {
-    const company = await prisma.jmkcompany.findFirst({ where: { c_username: userSignIn.username } });
+    const company = await prisma.jmkcompany.findFirst({ where: { c_username: userSignIn.username }, include: { payments: { where: { end_date: { gt: new Date() } } } } });
     if (!company) throw new AuthenticationError('invalid user credentials');
+    if (!company.c_verified) throw new AuthenticationError('Your company is not verify yet , contact our support team for more info');
+    if (company.payments.length === 0) throw new AuthenticationError('Your company package is expired, contact our support team for more info');
     const user = await prisma.jmkstdinfo.findFirst({ where: { std_email: userSignIn.email, company_id: company.serial } });
     if (!user) throw new AuthenticationError('invalid user credentials');
     const isMatch = userSignIn.password == user.std_password;
     if (!isMatch) throw new AuthenticationError('invalid user credentials');
     if (!user.std_verifyed) throw new AuthenticationError('Email not verified. Please check the mail');
-
     const token = jwt.sign(
       { userId: user.std_id, role: ROLES[0], platform: 'external', c_username: company?.c_username, c_package_type: company?.c_username },
       process.env.JWT_SECRET_KEY
