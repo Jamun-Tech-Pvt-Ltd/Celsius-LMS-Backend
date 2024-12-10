@@ -12,8 +12,8 @@ const companyQueryTypesAndInputs = `
         c_email: String!
         c_username:String!
         c_country: String!
-        c_package:String!
-        c_package_type:String!
+        c_package:Package!
+        c_package_type:PackageType!
         c_bussiness_type:String!
         created_at:Date!
         c_verified:Boolean
@@ -24,8 +24,8 @@ const companyQueryTypesAndInputs = `
         c_email: String!
         c_username:String!
         c_country: String!
-        c_package:String!
-        c_package_type:String!
+        c_package:Package!
+        c_package_type:PackageType!
         c_bussiness_type:String!
      }
 

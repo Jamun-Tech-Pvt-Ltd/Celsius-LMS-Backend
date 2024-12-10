@@ -350,8 +350,8 @@ const adminQueryTypesAndInputs = `
       start_date:Date!
       pay_amount:Int!
       transaction:String!
-      package:String!
-      package_type:String!
+      package:Package!
+      package_type:PackageType!
       users:Int!
       company_id:Int!
      }
@@ -1714,9 +1714,9 @@ const adminResolvers = {
     const calculateEndDate = (startDate, packageType) => {
       const start = new Date(startDate);
 
-      if (packageType === 'yearly') {
+      if (packageType === 'Yearly') {
         start.setFullYear(start.getFullYear() + 1);
-      } else if (packageType === 'monthly') {
+      } else if (packageType === 'Monthly') {
         start.setMonth(start.getMonth() + 1);
       } else {
         throw new Error('Invalid package type');
@@ -1737,7 +1737,7 @@ const adminResolvers = {
           pay_amount: data.pay_amount,
           transaction: data.transaction,
           users: data.users,
-          end_date: calculateEndDate(data.start_date, data.package)
+          end_date: calculateEndDate(data.start_date, data.package_type)
         }
       });
       await prisma.jmkcompany.update({ where: { serial: company.serial }, data: { c_package: data.package, c_package_type: data.package_type } }); return 'Updated payment recod';
@@ -1760,7 +1760,7 @@ const adminResolvers = {
         transaction: data.transaction,
         users: data.users,
         company_id: data.company_id,
-        end_date: calculateEndDate(data.start_date, data.package)
+        end_date: calculateEndDate(data.start_date, data.package_type)
       }
     });
     await prisma.jmkcompany.update({ where: { serial: company.serial }, data: { c_package: data.package, c_package_type: data.package_type } });

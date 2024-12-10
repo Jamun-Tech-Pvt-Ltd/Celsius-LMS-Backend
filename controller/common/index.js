@@ -11,6 +11,17 @@ const commonQueryTypesAndInputs = `
   type Token {
     token: String!
   }
+
+  enum Package {
+    Basic
+    Pro
+    Advance
+  }
+
+  enum PackageType {
+    Yearly
+    Monthly
+  }
     
   type course_with_week {
     crs_id: Int!

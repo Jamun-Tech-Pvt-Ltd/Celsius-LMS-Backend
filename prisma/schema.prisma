@@ -329,19 +329,19 @@ model jmkuserinfo {
 }
 
 model jmkcompany {
-  serial             Int                  @id @default(autoincrement())
-  c_name             String               @db.VarChar(100)
-  c_email            String               @db.VarChar(50)
-  c_username         String               @unique @db.VarChar(20)
-  c_country          String               @db.VarChar(50)
-  c_package          String               @db.VarChar(20)
-  c_package_type     String               @db.VarChar(20)
-  c_bussiness_type   String               @db.VarChar(100)
-  c_verified         Boolean              @default(false)
+  serial             Int                           @id @default(autoincrement())
+  c_name             String                        @db.VarChar(100)
+  c_email            String                        @db.VarChar(50)
+  c_username         String                        @unique @db.VarChar(20)
+  c_country          String                        @db.VarChar(50)
+  c_package          jmk_company_package_type
+  c_package_type     jmk_company_package_type_type
+  c_bussiness_type   String                        @db.VarChar(100)
+  c_verified         Boolean                       @default(false)
   c_phone            Int?
   c_address          String?
   c_taxid            String?
-  created_at         DateTime?            @default(now())
+  created_at         DateTime?                     @default(now())
   jmkuserinfo        jmkuserinfo[]
   jmkcrsinfo         jmkcrsinfo[]
   jmk_crs_categories jmk_crs_categories[]
@@ -731,4 +731,15 @@ enum jmk_notification_type {
   Student
   Trainer
   Admin
+}
+
+enum jmk_company_package_type {
+  Basic
+  Pro
+  Advance
+}
+
+enum jmk_company_package_type_type {
+  Yearly
+  Monthly
 }
