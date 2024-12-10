@@ -581,7 +581,7 @@ const studentResolvers = {
     if (!isMatch) throw new AuthenticationError('invalid user credentials');
     if (!user.std_verifyed) throw new AuthenticationError('Email not verified. Please check the mail');
     const token = jwt.sign(
-      { userId: user.std_id, role: ROLES[0], platform: 'external', c_username: company?.c_username, c_package_type: company?.c_username },
+      { userId: user.std_id, role: ROLES[0], platform: 'external', c_username: company?.c_username, c_package_type: company?.c_package_type, c_package: company?.c_package },
       process.env.JWT_SECRET_KEY
     );
     return { token };
