@@ -193,7 +193,7 @@ const trainerQueryTypesAndInputs = `
         total_present:Int!
         total_course: Int!
         course_completion: Float!
-        class_attendance: Int!
+        class_attendance: Float!
         total_video:Int! 
         total_files:Int! 
         total_project:Int! 
