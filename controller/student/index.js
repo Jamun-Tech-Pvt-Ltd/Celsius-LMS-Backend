@@ -2341,9 +2341,13 @@ const studentResolversQuery = {
       };
     });
 
-    const total_grade = ((total_correct_answers / total_questions) * 100).toFixed(2);
+    const total_grade = (typeof total_correct_answers === 'number' &&
+      typeof total_questions === 'number' &&
+      total_questions > 0)
+      ? ((total_correct_answers / total_questions) * 100).toFixed(2)
+      : '0.00';
 
-    return { total_course, total_class: actual_total_class, total_present, course_completion, class_attendance, recent_class, resent_project, resent_lessons, quiz_report: { total_questions, total_correct_answers, total_grade, total_time_spend } };
+    return { total_course, total_class: actual_total_class, total_present, course_completion, class_attendance, recent_class, resent_project, resent_lessons, quiz_report: { total_questions, total_correct_answers, total_grade: total_grade, total_time_spend } };
   }
 }
 
