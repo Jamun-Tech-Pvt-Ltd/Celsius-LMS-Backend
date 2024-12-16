@@ -1541,7 +1541,7 @@ const studentResolvers = {
 
   createStudentPayment: async (_, { data }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token');
-    if (role === ROLES[0]) throw new ForbiddenError('only student can create payment info');
+    if (role !== ROLES[0]) throw new ForbiddenError('only student can create payment info');
     if (platform !== 'external') throw new ForbiddenError('invalid token');
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
