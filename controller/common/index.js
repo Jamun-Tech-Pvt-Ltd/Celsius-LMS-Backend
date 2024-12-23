@@ -232,6 +232,8 @@ const commonMutation = `
     updateNotification(serial:Int!):String!
 
     updateAttendance(date:Date!,std_id:Int!,crs_id:Int):String!
+
+    userActiveTime:String!
 `
 
 
@@ -450,7 +452,78 @@ const commonResolvers = {
       }
     }
     throw new AuthenticationError('doesn’t have access');
-  }
+  },
+
+  userActiveTime: async (_, { user }, { userId, role, platform }) => {
+    if (!user) throw new Error('user type is required');
+    if (!userId) throw new ForbiddenError('invalid token');
+
+    let user_id;
+    let user_type;
+
+    // Handling admin role
+    if (role === 'admin') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      user_id = admin.usr_id;
+      user_type = 'Admin';
+    }
+
+    // Handling student role
+    if (role === 'student') {
+      const std = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      });
+      if (!std) throw new AuthenticationError('invalid student credentials');
+      user_id = std.std_id;
+      user_type = 'Student';
+    }
+
+    // Handling trainer role
+    if (role === 'trainer') {
+      const tr = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      });
+      if (!tr) throw new AuthenticationError('invalid trainer credentials');
+      user_id = tr.tr_id;
+      user_type = 'Trainer';
+    }
+
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+
+    const data = await prisma.jmk_std_track_data.findFirst({
+      where: {
+        user_id,
+        created_at: {
+          gte: currentDate,
+          lt: new Date(currentDate.getTime() + 86400000),
+        },
+      },
+    });
+
+    if (data) {
+      await prisma.jmk_std_track_data.update({
+        where: { user_id },
+        data: {
+          time: data.time + 1,
+        },
+      });
+    } else {
+      await prisma.jmk_std_track_data.create({
+        data: {
+          user_id,
+          user_type,
+          time: 1,
+        },
+      });
+    }
+
+    return { message: 'User activity tracked successfully' };
+  },
+
 }
 
 const commonResolversQuery = {
@@ -476,7 +549,7 @@ const commonResolversQuery = {
       return info
     }
     const info = await prisma.jmk_web_details.findFirst({ where: { company_id: null, type: arg.type } });
-    
+
     if (info) {
       return info
     } else {
