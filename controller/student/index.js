@@ -164,22 +164,12 @@ const studentQueryTypesAndInputs = `
      type ActiveUserCourse {
         serial : Int!
         crs_id: Int!
-        crs_start_dt: Date
-        crs_name: String!
-        crs_image:String!
-        crs_desc:String!
-        crs_ins:String!
         crs_complete: Boolean!
         crs_complete_date:Date
-        crs_duration:Float!
         discount: Int
         amt_paid: Int
         amt_due: Int
-        crs_rate: Int
-        promo_discount: Int
-        promo_code: String
-        meetLink: String
-        time: String
+        course: Course
      }
      
      type User {
@@ -1703,14 +1693,10 @@ const studentResolversQuery = {
       if (!user) throw new AuthenticationError('invalid user credentials')
       const stdcourse = await prisma.jmkstdcrsinfo.findFirst({
         where: { std_id: userId, crs_id: user.crs_id },
-        include: { promo: true }
+        include: { course: true }
       })
       if (!stdcourse) throw new ForbiddenError('invalid')
-
-      const crs = await prisma.jmkcrsinfo.findFirst({
-        where: { crs_id: user.crs_id },
-      })
-      return { ...stdcourse, ...crs, promo_discount: stdcourse.promo?.discount ?? null, promo_code: stdcourse.promo?.code ?? null }
+      return stdcourse
     }
     throw new ForbiddenError('Bad request !!')
   },
