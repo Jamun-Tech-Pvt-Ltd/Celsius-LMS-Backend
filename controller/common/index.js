@@ -201,6 +201,12 @@ const commonQueryTypesAndInputs = `
     course:Course!
     attendance:[Attendance]
   }
+
+  type Activity {
+    time:Int!
+    serial:Int!
+    created_at:Date!
+  }    
 `
 
 const commonQuery = `
@@ -454,8 +460,7 @@ const commonResolvers = {
     throw new AuthenticationError('doesn’t have access');
   },
 
-  userActiveTime: async (_, { user }, { userId, role, platform }) => {
-    if (!user) throw new Error('user type is required');
+  userActiveTime: async (_, arg, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token');
 
     let user_id;
@@ -506,7 +511,7 @@ const commonResolvers = {
 
     if (data) {
       await prisma.jmk_std_track_data.update({
-        where: { user_id },
+        where: { serial: data.serial },
         data: {
           time: data.time + 1,
         },
@@ -521,7 +526,7 @@ const commonResolvers = {
       });
     }
 
-    return { message: 'User activity tracked successfully' };
+    return 'User activity tracked successfully';
   },
 
 }

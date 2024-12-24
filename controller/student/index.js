@@ -469,6 +469,7 @@ const studentQueryTypesAndInputs = `
     resent_lessons:[courseWeekContent]
     quiz_report:quiz_report
     meetings:[Course]
+    activity:[Activity]
   }
 
 `
@@ -2281,7 +2282,7 @@ const studentResolversQuery = {
     const course_completion = ((actual_total_class / total_course) * 100).toFixed(2) ?? 0;
     const class_attendance = ((total_present / actual_total_class) * 100).toFixed(2) ?? 0;
     const recent_class = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id, std_crs_verirfy: true }, include: { course: { include: { crs_week: true } } }, orderBy: { createdAt: 'desc' }, take: 2 });
-
+    const activity = await prisma.jmk_std_track_data.findMany({ where: { user_id: student.std_id, user_type: 'Student' } });
 
     const resent_project = [];
     const resent_lessons = [];
@@ -2294,7 +2295,7 @@ const studentResolversQuery = {
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
         const [startTimeString, endTimeString] = course.course.time.split(",") || [];
-        
+
         const [startHour, startMinute] = startTimeString.split(":").map(Number);
         const [endHour, endMinute] = endTimeString.split(":").map(Number);
 
@@ -2358,7 +2359,7 @@ const studentResolversQuery = {
       ? ((total_correct_answers / total_questions) * 100).toFixed(2)
       : '0.00';
 
-    return { total_course, total_class: actual_total_class, total_present, course_completion, class_attendance, recent_class, resent_project, resent_lessons, meetings, quiz_report: { total_questions, total_correct_answers, total_grade: total_grade, total_time_spend } };
+    return { total_course, total_class: actual_total_class, total_present, course_completion, activity, class_attendance, recent_class, resent_project, resent_lessons, meetings, quiz_report: { total_questions, total_correct_answers, total_grade: total_grade, total_time_spend } };
   }
 }
 
