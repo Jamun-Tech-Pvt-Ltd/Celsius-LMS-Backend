@@ -468,6 +468,7 @@ const studentQueryTypesAndInputs = `
     resent_project:[courseWeekContent]
     resent_lessons:[courseWeekContent]
     quiz_report:quiz_report
+    meetings:[Course]
   }
 
 `
@@ -2260,7 +2261,8 @@ const studentResolversQuery = {
               }
             }
           }
-        }
+        },
+        courses: { include: { course: true } }
       }
     });
     if (!student) throw new AuthenticationError('invalid user');
@@ -2283,7 +2285,30 @@ const studentResolversQuery = {
 
     const resent_project = [];
     const resent_lessons = [];
+    const meetings = [];
     const allQuiz = [];
+
+    for (let index = 0; index < student.courses.length; index++) {
+      const course = student.courses[index];
+      if (course.course.time) {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const [startTimeString, endTimeString] = course.course.time.split(",") || [];
+        
+        const [startHour, startMinute] = startTimeString.split(":").map(Number);
+        const [endHour, endMinute] = endTimeString.split(":").map(Number);
+
+        const startMinutes = startHour * 60 + startMinute;
+        let endMinutes = endHour * 60 + endMinute;
+
+        if (endMinutes < startMinutes) {
+          endMinutes += 24 * 60;
+        }
+        if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+          meetings.push(course.course)
+        }
+      }
+    }
 
     for (let index = 0; index < student.course.crs_week.length; index++) {
       const jmk_week_content = student.course.crs_week[index].jmk_week_content;
@@ -2333,7 +2358,7 @@ const studentResolversQuery = {
       ? ((total_correct_answers / total_questions) * 100).toFixed(2)
       : '0.00';
 
-    return { total_course, total_class: actual_total_class, total_present, course_completion, class_attendance, recent_class, resent_project, resent_lessons, quiz_report: { total_questions, total_correct_answers, total_grade: total_grade, total_time_spend } };
+    return { total_course, total_class: actual_total_class, total_present, course_completion, class_attendance, recent_class, resent_project, resent_lessons, meetings, quiz_report: { total_questions, total_correct_answers, total_grade: total_grade, total_time_spend } };
   }
 }
 

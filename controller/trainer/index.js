@@ -200,6 +200,7 @@ const trainerQueryTypesAndInputs = `
         total_test:Int! 
         course: Course!
         courses: [course_with_week]
+        meetings:[Course]
      }
 `
 
@@ -1119,6 +1120,30 @@ const trainerResolversQuery = {
       let total_files = 0;
       let total_project = 0;
       let total_test = 0;
+      const meetings = [];
+
+
+      for (let index = 0; index < trainer.courses.length; index++) {
+        const course = trainer.courses[index];
+        if (course.course.time) {
+          const now = new Date();
+          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+          const [startTimeString, endTimeString] = course.course.time.split(",") || [];
+
+          const [startHour, startMinute] = startTimeString.split(":").map(Number);
+          const [endHour, endMinute] = endTimeString.split(":").map(Number);
+
+          const startMinutes = startHour * 60 + startMinute;
+          let endMinutes = endHour * 60 + endMinute;
+
+          if (endMinutes < startMinutes) {
+            endMinutes += 24 * 60;
+          }
+          if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+            meetings.push(course.course)
+          }
+        }
+      }
 
       for (let index = 0; index < trainer.course.crs_week.length; index++) {
         const jmk_week_content = trainer.course.crs_week[index].jmk_week_content;
@@ -1135,7 +1160,7 @@ const trainerResolversQuery = {
         });
       }
 
-      return { total_students, total_present, total_course, total_class: actual_total_class, course: trainer.course, course_completion, class_attendance, courses, total_video, total_files, total_project, total_test }
+      return { total_students, total_present, meetings, total_course, total_class: actual_total_class, course: trainer.course, course_completion, class_attendance, courses, total_video, total_files, total_project, total_test }
     }
   },
 
