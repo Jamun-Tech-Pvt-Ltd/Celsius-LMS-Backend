@@ -184,6 +184,7 @@ const studentQueryTypesAndInputs = `
         crs_id: Int!
         std_verifyed: Boolean!
         std_paidup: Int
+        logo:String
         lastSeen:Date
         created_at:Date
         company:Company!
@@ -1647,7 +1648,8 @@ const studentResolversQuery = {
       });
       if (!user) throw new AuthenticationError('invalid user credentials');
       if (user.company.c_username !== c_username) throw new AuthenticationError('invalid user credentials');
-      return user
+      const logo = await prisma.jmk_web_details.findFirst({ where: { company_id: user.company_id } });
+      return { ...user, logo: logo?.logo ?? null }
     }
     throw new ForbiddenError('Invalid user credentials !!');
   },

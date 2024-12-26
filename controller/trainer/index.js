@@ -1064,7 +1064,8 @@ const trainerResolversQuery = {
         })
       }
       if (!trainer) throw new AuthenticationError('invalid trainer credentials');
-      return { ...trainer, join_courses };
+      const logo = await prisma.jmk_web_details.findFirst({ where: { company_id: trainer.company_id } });
+      return { ...trainer, join_courses, logo: logo?.logo ?? null };
     }
     throw new ForbiddenError('Bad request !!')
   },
