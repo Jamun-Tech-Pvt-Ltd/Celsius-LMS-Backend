@@ -851,8 +851,15 @@ const adminResolvers = {
     if (role === 'admin' && platform === 'external') {
       const admin = await prisma.jmkuserinfo.findFirst({
         where: { usr_id: userId },
+        include: { company: { include: { jmkstdinfo: true, jmktrinfo: true, jmkuserinfo: true, payments: { where: { end_date: { gt: new Date() } } } } } }
       });
       if (!admin) throw new AuthenticationError('invalid admin');
+      const totalUser = (admin.company.jmkstdinfo.length ?? 0) + (admin.company.jmkuserinfo.length ?? 0) + (admin.company.jmktrinfo.length ?? 0);
+
+      if (admin.company.payments[0].users >= totalUser) {
+        throw new Error('you have reached your user limit')
+      }
+
       const findStd = await prisma.jmkstdinfo.findFirst({ where: { std_email: data.std_email } });
       if (findStd) throw new Error('Student with this email already exist');
       const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id, crs_company_id: admin.company_id } });
@@ -933,9 +940,14 @@ const adminResolvers = {
     if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-      include: { company: true }
+      include: { company: { include: { jmkstdinfo: true, jmktrinfo: true, jmkuserinfo: true, payments: { where: { end_date: { gt: new Date() } } } } } }
     });
     if (!admin) throw new AuthenticationError('invalid admin');
+    const totalUser = (admin.company.jmkstdinfo.length ?? 0) + (admin.company.jmkuserinfo.length ?? 0) + (admin.company.jmktrinfo.length ?? 0);
+
+    if (admin.company.payments[0].users >= totalUser) {
+      throw new Error('you have reached your user limit')
+    }
     const checkEmail = await prisma.jmktrinfo.findFirst({
       where: { tr_email: data.tr_email },
     });
@@ -1044,9 +1056,16 @@ const adminResolvers = {
     if (!role === 'admin') throw new ForbiddenError('only admin have access  to create');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-      include: { company: true }
+      include: { company: { include: { jmkstdinfo: true, jmktrinfo: true, jmkuserinfo: true, payments: { where: { end_date: { gt: new Date() } } } } } }
     });
     if (!admin) throw new AuthenticationError('invalid admin');
+
+    if (platform === 'external') {
+      const totalUser = (admin.company.jmkstdinfo.length ?? 0) + (admin.company.jmkuserinfo.length ?? 0) + (admin.company.jmktrinfo.length ?? 0);
+      if (admin.company.payments[0].users >= totalUser) {
+        throw new Error('you have reached your user limit')
+      }
+    }
 
     let file
     if (data.usr_img_url) {
