@@ -2330,19 +2330,19 @@ const studentResolversQuery = {
 
     for (let index = 0; index < allQuiz.length; index++) {
       const week = allQuiz[index];
-      const history = await prisma.jmk_std_test_result.findMany({ where: { content_id: week.content_id, std_id: userId }, orderBy: { created_at: 'desc' } });
-      for (let index = 0; index < history.length; index++) {
+      const history = await prisma.jmk_std_test_result.findFirst({ where: { content_id: week.content_id, std_id: userId }, orderBy: { created_at: 'desc' } });
 
-        total_questions += parseInt(history[index].score.split('/')[1] !== 'undefined' ? history[index].score.split('/')[1] : 1);
-        total_correct_answers += parseInt(history[index].score.split('/')[0] ?? 0);
+      if (history) {
+        total_questions += parseInt(history.score.split('/')[1] !== 'undefined' ? history.score.split('/')[1] : 1);
+        total_correct_answers += parseInt(history.score.split('/')[0] ?? 0);
 
-        const monthKey = new Date(history[index].created_at).toISOString().slice(0, 7);
+        const monthKey = new Date(history.created_at).toISOString().slice(0, 7);
 
         if (!total_time_spend_by_month[monthKey]) {
           total_time_spend_by_month[monthKey] = 0;
         }
 
-        total_time_spend_by_month[monthKey] += parseInt(history[index].time_taken.replace('minutes'));
+        total_time_spend_by_month[monthKey] += parseInt(history.time_taken.replace('minutes'));
       }
     }
 
