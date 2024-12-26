@@ -186,6 +186,7 @@ const commonQueryTypesAndInputs = `
    total_course:Int!
    total_present:Int!
    attendance:[attendanceData!]
+   ovaralAttendance:[Attendance]
   }
 
   type Attendance {
@@ -785,6 +786,7 @@ const commonResolversQuery = {
     if (role === 'trainer' && platform === 'external') {
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
+        include: { course: true }
       });
       if (!trainer) throw new AuthenticationError('invalid trainer credentials');
       const total_student = await prisma.jmkstdcrsinfo.count({ where: { student: { company_id: trainer.company_id }, crs_id: trainer.crs_id } });
@@ -794,13 +796,30 @@ const commonResolversQuery = {
       const total_classes = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
 
       const attendance = [];
+      const ovaralAttendance = [];
       const students = await prisma.jmkstdcrsinfo.findMany({ where: { student: { company_id: trainer.company_id }, crs_id: trainer.crs_id }, include: { student: true, course: true } });
       for (let index = 0; index < students.length; index++) {
         const student = students[index];
-        const getTotalAttendance = await prisma.jmk_std_attendance.count({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true } });
+        const getTotalAttendance = await prisma.jmk_std_attendance.findMany({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true } });
         const getTodayAttendance = await prisma.jmk_std_attendance.findFirst({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true, created_at: { gte: today, lt: tomorrow } } });
+
+        const courseStartDate = new Date(trainer.course.crs_start_date);
+        const totalClasses = Math.ceil((today - courseStartDate) / (1000 * 60 * 60 * 24));
+        const attendanceDays = Array.from({ length: totalClasses }, (_, index) => {
+          const date = new Date(courseStartDate);
+          date.setDate(courseStartDate.getDate() + index);
+          return { attendance: false, created_at: date };
+        });
+
+        getTotalAttendance.forEach(record => {
+          const dayIndex = Math.floor((new Date(record.created_at) - courseStartDate) / (1000 * 60 * 60 * 24));
+          if (dayIndex >= 0 && dayIndex < totalClasses) {
+            attendanceDays[dayIndex].attendance = true;
+          }
+        });
+        ovaralAttendance.push(...attendanceDays)
         attendance.push({
-          total_attendance: getTotalAttendance,
+          total_attendance: getTotalAttendance.length,
           total_classes,
           today_attendance: getTodayAttendance ? true : false,
           student: student.student,
@@ -808,7 +827,7 @@ const commonResolversQuery = {
         });
       }
 
-      return { total_student, total_classes, total_course: 1, total_present, attendance };
+      return { total_student, total_classes, total_course: 1, total_present, attendance, ovaralAttendance };
     }
 
     throw new AuthenticationError('doesnt have access');

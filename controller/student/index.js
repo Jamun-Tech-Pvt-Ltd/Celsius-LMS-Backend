@@ -438,6 +438,7 @@ const studentQueryTypesAndInputs = `
     totalAbsent:Int!
     totalClassDays:Int!
     courseAttendance:[CourseAttendanceReport!]
+    ovaralAttendance:[Attendance]
   }
 
   type recent_class {
@@ -2201,50 +2202,84 @@ const studentResolversQuery = {
   },
 
   getStudentAttendance: async (_, { arg }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login');
+    if (!userId) throw new ForbiddenError('user needs to login');
+  
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
+      include: { 
+        courses: { 
+          where: { std_crs_verirfy: true },
+          include: { course: true } 
+        } 
+      }
     });
     if (!user) throw new AuthenticationError('invalid user');
-
-    let totalClass = 0;
-    let totalPresent = 0;
-    let totalAbsent = 0;
-    let totalClassDays = 0;
+  
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+  
+    let totalClass = 0, totalPresent = 0, totalAbsent = 0, totalClassDays = 0;
     const courseAttendance = [];
-    const studentsCourse = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: user.std_id, std_crs_verirfy: true }, include: { course: true } });
-
-    for (let index = 0; index < studentsCourse.length; index++) {
-      const course = studentsCourse[index].course;
-      totalClass += course.crs_duration * 30;
-
-      const courseStartDate = studentsCourse[index].course.crs_start_date;
-      const today = new Date();
-      const plannedDays = course.crs_duration * 30;
-
+    const attendanceRecords = await prisma.jmk_std_attendance.findMany({
+      where: { std_id: userId, attendance: true },
+    });
+  
+    user.courses.forEach((course) => {
+      const { crs_duration, crs_start_date, crs_name } = course.course;
+      const plannedDays = crs_duration * 30;
+      const courseStartDate = new Date(crs_start_date);
+  
       const daysInSession = Math.min(differenceInDays(today, courseStartDate) + 1, plannedDays);
-
-      if (daysInSession <= 0) continue;
-
+      if (daysInSession <= 0) return;
+  
+      const presentDays = attendanceRecords.filter(
+        (record) => record.crs_id === course.crs_id
+      ).length;
+  
+      const absentDays = daysInSession - presentDays;
+  
+      totalClass += plannedDays;
       totalClassDays += daysInSession;
-
-      const presentDay = await prisma.jmk_std_attendance.count({ where: { crs_id: studentsCourse[index].crs_id, std_id: user.std_id, attendance: true } });
-      const absentDay = daysInSession - presentDay;
-
-      totalPresent += presentDay;
-      totalAbsent += absentDay;
-
+      totalPresent += presentDays;
+      totalAbsent += absentDays;
+  
       courseAttendance.push({
-        totalClass: course.crs_duration * 30,
-        totalPresent: presentDay,
-        totalAbsent: absentDay,
+        crs_name,
+        totalClass: plannedDays,
         totalClassDays: daysInSession,
-        crs_name: studentsCourse[index].course.crs_name,
-      })
-    }
-
-    return { totalClass, totalPresent, totalAbsent, totalClassDays, courseAttendance }
+        totalPresent: presentDays,
+        totalAbsent: absentDays,
+      });
+    });
+  
+    const ovaralAttendance = user.courses.flatMap((course) => {
+      const startDate = new Date(course.course.crs_start_date);
+      const totalClasses = Math.min(
+        Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)) + 1,
+        course.course.crs_duration * 30
+      );
+  
+      const attendance = Array.from({ length: totalClasses }, (_, index) => {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + index);
+        return { attendance: false, created_at: date };
+      });
+  
+      attendanceRecords
+        .filter((record) => record.crs_id === course.crs_id)
+        .forEach((record) => {
+          const dayIndex = Math.floor((new Date(record.created_at) - startDate) / (1000 * 60 * 60 * 24));
+          if (dayIndex >= 0 && dayIndex < totalClasses) {
+            attendance[dayIndex].attendance = true;
+          }
+        });
+  
+      return attendance;
+    });    
+  
+    return { totalClass, totalPresent, totalAbsent, totalClassDays, courseAttendance, ovaralAttendance };
   },
+  
 
   getStudentDashboardData: async (_, { arg }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login');
