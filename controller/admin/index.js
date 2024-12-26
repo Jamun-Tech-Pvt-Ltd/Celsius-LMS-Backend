@@ -856,7 +856,7 @@ const adminResolvers = {
       if (!admin) throw new AuthenticationError('invalid admin');
       const totalUser = (admin.company.jmkstdinfo.length ?? 0) + (admin.company.jmkuserinfo.length ?? 0) + (admin.company.jmktrinfo.length ?? 0);
 
-      if (admin.company.payments[0].users >= totalUser) {
+      if (admin.company.payments[0].users <= totalUser) {
         throw new Error('you have reached your user limit')
       }
 
@@ -945,7 +945,7 @@ const adminResolvers = {
     if (!admin) throw new AuthenticationError('invalid admin');
     const totalUser = (admin.company.jmkstdinfo.length ?? 0) + (admin.company.jmkuserinfo.length ?? 0) + (admin.company.jmktrinfo.length ?? 0);
 
-    if (admin.company.payments[0].users >= totalUser) {
+    if (admin.company.payments[0].users <= totalUser) {
       throw new Error('you have reached your user limit')
     }
     const checkEmail = await prisma.jmktrinfo.findFirst({
@@ -1062,7 +1062,7 @@ const adminResolvers = {
 
     if (platform === 'external') {
       const totalUser = (admin.company.jmkstdinfo.length ?? 0) + (admin.company.jmkuserinfo.length ?? 0) + (admin.company.jmktrinfo.length ?? 0);
-      if (admin.company.payments[0].users >= totalUser) {
+      if (admin.company.payments[0].users <= totalUser) {
         throw new Error('you have reached your user limit')
       }
     }
