@@ -58,6 +58,7 @@ model jmkcrsinfo {
   jmk_std_note       jmk_std_note[]
   jmktrinfo          jmktrinfo[]
   jmktstdpayinfo     jmktstdpayinfo[]
+  jmk_std_todos      jmk_std_todos[]
 }
 
 model jmk_tr_week {
@@ -157,6 +158,7 @@ model jmkstdinfo {
   courses               jmkstdcrsinfo[]
   jmk_std_note          jmk_std_note[]
   jmktstdpayinfo        jmktstdpayinfo[]
+  jmk_std_todos         jmk_std_todos[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
 }
@@ -329,27 +331,28 @@ model jmkuserinfo {
 }
 
 model jmkcompany {
-  serial             Int                           @id @default(autoincrement())
-  c_name             String                        @db.VarChar(100)
-  c_email            String                        @db.VarChar(50)
-  c_username         String                        @unique @db.VarChar(20)
-  c_country          String                        @db.VarChar(50)
-  c_package          jmk_company_package_type
-  c_package_type     jmk_company_package_type_type
-  c_bussiness_type   String                        @db.VarChar(100)
-  c_verified         Boolean                       @default(false)
-  c_phone            Int?
-  c_address          String?
-  c_taxid            String?
-  created_at         DateTime?                     @default(now())
-  c_storage          Int                           @default(0)
-  jmkuserinfo        jmkuserinfo[]
-  jmkcrsinfo         jmkcrsinfo[]
-  jmk_crs_categories jmk_crs_categories[]
-  jmktrinfo          jmktrinfo[]
-  jmkstdinfo         jmkstdinfo[]
-  jmkfaq             jmkfaq[]
-  payments           jmktcompanypay[]
+  serial                  Int                           @id @default(autoincrement())
+  c_name                  String                        @db.VarChar(100)
+  c_email                 String                        @db.VarChar(50)
+  c_username              String                        @unique @db.VarChar(20)
+  c_country               String                        @db.VarChar(50)
+  c_package               jmk_company_package_type
+  c_package_type          jmk_company_package_type_type
+  c_bussiness_type        String                        @db.VarChar(100)
+  c_verified              Boolean                       @default(false)
+  c_phone                 Int?
+  c_address               String?
+  c_taxid                 String?
+  created_at              DateTime?                     @default(now())
+  c_storage               Int                           @default(0)
+  jmkuserinfo             jmkuserinfo[]
+  jmkcrsinfo              jmkcrsinfo[]
+  jmk_crs_categories      jmk_crs_categories[]
+  jmktrinfo               jmktrinfo[]
+  jmkstdinfo              jmkstdinfo[]
+  jmkfaq                  jmkfaq[]
+  payments                jmktcompanypay[]
+  jmk_company_package_req jmk_company_package_req[]
 }
 
 model jmkcrsupcom {
@@ -696,6 +699,40 @@ model jmk_std_track_data {
   created_at DateTime              @default(now())
 }
 
+model jmk_ticket {
+  serial      Int                   @id @default(autoincrement())
+  user_type   jmk_notification_type
+  user_id     Int
+  title       String
+  description String
+  created_at  DateTime              @default(now())
+}
+
+model jmk_company_package_req {
+  serial       Int                           @id @default(autoincrement())
+  company_id   Int
+  users        Int
+  storage      Int
+  package      jmk_company_package_type
+  package_type jmk_company_package_type_type
+  status       jmk_company_package_req_type  @default(Pending)
+  description  String
+  created_at   DateTime                      @default(now())
+  company      jmkcompany                    @relation(fields: [company_id], references: [serial])
+}
+
+model jmk_std_todos {
+  serial      Int        @id @default(autoincrement())
+  std_id      Int
+  crs_id      Int
+  title       String
+  is_complete Boolean    @default(false)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @default(now())
+  student     jmkstdinfo @relation(fields: [std_id], references: [std_id])
+  course      jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
@@ -751,4 +788,10 @@ enum jmk_company_package_type {
 enum jmk_company_package_type_type {
   Yearly
   Monthly
+}
+
+enum jmk_company_package_req_type {
+  Pending
+  Approved
+  Rejected
 }

@@ -123,6 +123,12 @@ const studentQueryTypesAndInputs = `
       comment:String!
     }
 
+    input student_todo_input {
+      serial: Int
+      title:String!
+      is_complete:Boolean
+    }      
+
      type Feedback {
         grv_id : ID!
         std_id: String!
@@ -472,6 +478,17 @@ const studentQueryTypesAndInputs = `
     quiz_report:quiz_report
     meetings:[Course]
     activity:[Activity]
+    todos:[student_todo]
+  }
+  
+  type student_todo {
+    serial:Int!
+    std_id:Int!
+    crs_id:Int!
+    title:String!
+    is_complete:Boolean!
+    created_at:Date!
+    updated_at:Date!
   }
 
 `
@@ -545,6 +562,9 @@ const studentMutation = `
 
     createStdNote(data:createStdNoteInput):String!
     deleteStdNote(serial:Int!):String!
+
+    createAndUpdateTodo(data:student_todo_input):String!
+    deleteTodo(serial:Int!):String!
 
     isTypingMessage(isTyping:Boolean!, receiver_id:Int!):String!
 
@@ -1310,6 +1330,54 @@ const studentResolvers = {
     if (!checkNote) throw new AuthenticationError('invalid access');
     const note = await prisma.jmk_std_note.delete({ where: { serial } });
     if (!note) throw new ApolloError('invalid note id');
+    return 'deleted';
+  },
+
+  createAndUpdateTodo: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    });
+    if (!user) throw new AuthenticationError('invalid user');
+
+    if (data.serial) {
+      const updatetodo = await prisma.jmk_std_todos.update({
+        data: {
+          title: data.title,
+          is_complete: data.is_complete,
+          updated_at: new Date()
+        },
+        where: {
+          serial: data.serial
+        }
+      });
+      if (!updatetodo) throw new ApolloError('Someting went wrong !');
+      return 'Updated !';
+    } else {
+      const createTodo = await prisma.jmk_std_todos.create({
+        data: {
+          crs_id: user.crs_id,
+          std_id: userId,
+          is_complete: data.is_complete ?? false,
+          title: data.title,
+        }
+      })
+
+      if (!createTodo) throw new ApolloError('Someting went wrong !');
+      return 'Created !';
+    }
+  },
+
+  deleteTodo: async (_, { serial }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    });
+    if (!user) throw new AuthenticationError('invalid user');
+    const checkTodo = await prisma.jmk_std_todos.findFirst({ where: { serial, crs_id: user.crs_id, std_id: user.std_id } });
+    if (!checkTodo) throw new AuthenticationError('invalid access');
+    const todo = await prisma.jmk_std_todos.delete({ where: { serial } });
+    if (!todo) throw new ApolloError('invalid note id');
     return 'deleted';
   },
 
@@ -2282,7 +2350,6 @@ const studentResolversQuery = {
     return { totalClass, totalPresent, totalAbsent, totalClassDays, courseAttendance, ovaralAttendance };
   },
 
-
   getStudentDashboardData: async (_, { arg }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login');
     const student = await prisma.jmkstdinfo.findFirst({
@@ -2396,7 +2463,9 @@ const studentResolversQuery = {
       ? ((total_correct_answers / total_questions) * 100).toFixed(2)
       : '0.00';
 
-    return { total_course, total_class: actual_total_class, total_present, course_completion, activity, class_attendance, recent_class, resent_project, resent_lessons, meetings, quiz_report: { total_questions, total_correct_answers, total_grade: total_grade, total_time_spend } };
+    const todos = await prisma.jmk_std_todos.findMany({ where: { std_id: student.std_id, crs_id: student.crs_id } });
+
+    return { total_course, total_class: actual_total_class, total_present, course_completion, activity, class_attendance, todos, recent_class, resent_project, resent_lessons, meetings, quiz_report: { total_questions, total_correct_answers, total_grade: total_grade, total_time_spend } };
   }
 }
 
