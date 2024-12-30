@@ -62,6 +62,7 @@ const adminQueryTypesAndInputs = `
         usr_lname: String
         usr_email: String!
         usr_role: String!
+        logo:String
      }
 
      type studentreceipt{
@@ -1808,7 +1809,8 @@ const adminResolversQuery = {
       include: { company: true }
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials');
-    return admin;
+    const logo = await prisma.jmk_web_details.findFirst({ where: { company_id: admin.company_id } });
+    return ({ ...admin, logo: logo?.logo ?? null });
   },
 
   getPayments: async (_, args, { userId, role }) => {
