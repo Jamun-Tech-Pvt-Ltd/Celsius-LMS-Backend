@@ -18,9 +18,27 @@ const commonQueryTypesAndInputs = `
     Advance
   }
 
+  enum Package_Request_Status {
+    Pending
+    Approved
+    Rejected
+  }
+
   enum PackageType {
     Yearly
     Monthly
+  }
+
+  enum jmk_ticket_status_type {
+    Pending
+    Completed
+    Canceled
+  }
+
+  enum jmk_user_enum_type {
+    Student
+    Trainer
+    Admin
   }
     
   type course_with_week {
@@ -50,10 +68,15 @@ const commonQueryTypesAndInputs = `
     isDeleted: Boolean
   }
 
-
   input deleteCourseInput {
     crs_id: Int!
   }
+
+  input ticket_input {
+    title:String!
+    description:String!
+    img:Upload
+  }  
 
   type Course {
     crs_id: Int!
@@ -207,7 +230,20 @@ const commonQueryTypesAndInputs = `
     time:Int!
     serial:Int!
     created_at:Date!
-  }    
+  }
+  
+  type Ticket {
+    serial:Int!
+    title:String!
+    description:String!
+    img:String
+    user_type: jmk_user_enum_type
+    status: jmk_ticket_status_type
+    trainer: Trainer
+    student: Student
+    admin:Admin
+    company:Company
+  }  
 `
 
 const commonQuery = `
@@ -226,6 +262,9 @@ const commonQuery = `
 
     getAttendance:AttendanceForAdmin!
     getAttendanceByStudentId(std_id:Int,crs_id:Int):AttendanceRecod!
+
+    getTickets:[Ticket]
+    getTicket(serial:Int!):Ticket
 `
 
 const commonMutation = `
@@ -235,6 +274,9 @@ const commonMutation = `
 
     deleteNotification(serial:Int!):String!
     deleteAllNotification:String!
+
+    createTicket(data:ticket_input):String!
+    updateTicket(serial:Int!,status:jmk_ticket_status_type):String!
 
     updateNotification(serial:Int!):String!
 
@@ -530,6 +572,80 @@ const commonResolvers = {
     return 'User activity tracked successfully';
   },
 
+  createTicket: async (_, { data }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    let user_type;
+    if (role === 'admin' && platform === 'internal') {
+      throw new AuthenticationError('internal admin cannot create ticket');
+    };
+
+    if (role === 'admin' && platform === 'external') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      user_type = "Admin"
+    }
+
+    if (role === 'trainer' && platform === 'external') {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      });
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      user_type = "Trainer"
+    }
+
+    if (role === 'student' && platform === 'external') {
+      const student = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      });
+      if (!student) throw new AuthenticationError('invalid student credentials');
+      user_type = "Student"
+    }
+    if (!user_type) throw new AuthenticationError('invalid token');
+
+    if (data.img) {
+      const image = await uploadImgToAWS(data.img, 'ticket/');
+      data.img = image.data.Location;
+      data.img_key = image.data.key;
+    }
+
+    const ticket = await prisma.jmk_ticket.create({
+      data: {
+        user_id: userId,
+        user_type,
+        ...data
+      }
+    });
+    if (!ticket) throw new ApolloError('someting went wrong');
+    return "Ticket created";
+  },
+
+  updateTicket: async (_, { status, serial }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    let user_type;
+    if (role === 'admin' && platform === 'internal') {
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const ticket = await prisma.jmk_ticket.findFirst({ where: { serial, user_type: 'Admin' } });
+      if (!ticket) throw new ApolloError('invalid id');
+      const update = await prisma.jmk_ticket.update({ where: { serial }, data: { status } });
+      if (!update) throw new ApolloError('invalid id');
+      return "Ticket status updatde";
+    };
+
+    if (role === 'admin' && platform === 'external') {
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const ticket = await prisma.jmk_ticket.findFirst({ where: { serial, OR: [{ user_type: 'Trainer' }, { user_type: 'Student' }] } });
+      if (!ticket) throw new ApolloError('invalid id');
+      const update = await prisma.jmk_ticket.update({ where: { serial }, data: { status } });
+      if (!update) throw new ApolloError('invalid id');
+      return "Ticket status updatde";
+    }
+    if (!ticket) throw new ApolloError('someting went wrong');
+    throw new AuthenticationError('internal admin cannot create ticket');
+  },
 }
 
 const commonResolversQuery = {
@@ -943,6 +1059,90 @@ const commonResolversQuery = {
     }
 
     throw new AuthenticationError('doesnt have access');
+  },
+
+  getTickets: async (_, { args }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === 'admin' && platform === 'internal') {
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, company_id: null } });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const data = await prisma.jmk_ticket.findMany({ where: { user_type: 'Admin' } });
+      const withUser = data.map(async (item) => {
+        if (item.user_type === 'Admin') {
+          const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: item.user_id }, include: { company: true } });
+          return { ...item, admin, company: admin.company }
+        }
+        return item
+      })
+      return withUser;
+    }
+    if (role === 'admin' && platform === 'external') {
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const data = await prisma.jmk_ticket.findMany({ where: { OR: [{ user_type: 'Trainer' }, { user_type: 'Student' }, { user_type: 'Admin', user_id: userId }] } });
+      const withUser = data.map(async (item) => {
+        if (item.user_type === 'Student') {
+          const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: item.user_id, company_id: admin.company_id } });
+          return { ...item, student }
+        }
+        if (item.user_type === 'Trainer') {
+          const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: item.user_id, company_id: admin.company_id } });
+          return { ...item, trainer }
+        }
+        return item
+      })
+      return withUser;
+    }
+    if (role === 'trainer' && platform === 'external') {
+      const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: userId } });
+      if (!trainer) throw new AuthenticationError('invalid admin credentials');
+      const data = await prisma.jmk_ticket.findMany({ where: { user_type: 'Trainer', user_id: userId } });
+      return data;
+    }
+    if (role === 'student' && platform === 'external') {
+      const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: userId } });
+      if (!student) throw new AuthenticationError('invalid admin credentials');
+      const data = await prisma.jmk_ticket.findMany({});
+      return data;
+    }
+  },
+
+  getTicket: async (_, { serial }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === 'admin' && platform === 'internal') {
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, company_id: null } });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const data = await prisma.jmk_ticket.findFirst({ where: { serial, user_type: 'Admin' } });
+      if (!data) throw new ApolloError('no data');
+      const company = await prisma.jmkuserinfo.findFirst({ where: { usr_id: data.user_id }, include: { company: true } });
+      return ({ ...data, admin: company, company: company.company });
+    }
+    if (role === 'admin' && platform === 'external') {
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const data = await prisma.jmk_ticket.findFirst({ where: { serial, OR: [{ user_type: 'Trainer' }, { user_type: 'Student' }] } });
+      let student = null;
+      let trainer = null;
+      if (data?.user_type === 'Student') {
+        student = await prisma.jmkstdinfo.findFirst({ where: { std_id: data.user_id } });
+      }
+      if (data?.user_type === 'Trainer') {
+        trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: data.user_id } });
+      }
+      if (!data) throw new ApolloError('no data');
+      return ({ ...data, student, trainer });
+    }
+    if (role === 'trainer' && platform === 'external') {
+      const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: userId } });
+      if (!trainer) throw new AuthenticationError('invalid admin credentials');
+      return await prisma.jmk_ticket.findFirst({ where: { serial, user_type: 'Trainer', user_id: userId } });
+    }
+    if (role === 'student' && platform === 'external') {
+      const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: userId } });
+      if (!student) throw new AuthenticationError('invalid admin credentials');
+      return await prisma.jmk_ticket.findFirst({ where: { serial, user_type: 'Student', user_id: userId } });
+    }
+    throw new ForbiddenError('invalid token');
   },
 }
 

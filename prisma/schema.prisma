@@ -319,8 +319,8 @@ model jmkuserinfo {
   usr_fname    String?     @db.VarChar(20)
   usr_mname    String?     @db.VarChar(20)
   usr_lname    String?     @db.VarChar(20)
-  usr_img_url  String?     @db.VarChar(100)
-  usr_img_key  String?     @db.VarChar(100)
+  usr_img_url  String?     @db.VarChar(2000)
+  usr_img_key  String?     @db.VarChar(1000)
   created_at   DateTime?   @default(now())
   lastSeen     DateTime    @default(now())
   usr_access   String?     @db.LongText
@@ -700,12 +700,15 @@ model jmk_std_track_data {
 }
 
 model jmk_ticket {
-  serial      Int                   @id @default(autoincrement())
+  serial      Int                    @id @default(autoincrement())
   user_type   jmk_notification_type
+  status      jmk_ticket_status_type @default(Pending)
   user_id     Int
   title       String
+  img         String?
+  img_key     String?
   description String
-  created_at  DateTime              @default(now())
+  created_at  DateTime               @default(now())
 }
 
 model jmk_company_package_req {
@@ -794,4 +797,10 @@ enum jmk_company_package_req_type {
   Pending
   Approved
   Rejected
+}
+
+enum jmk_ticket_status_type {
+  Pending
+  Completed
+  Canceled
 }

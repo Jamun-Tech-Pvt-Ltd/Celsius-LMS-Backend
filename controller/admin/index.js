@@ -57,7 +57,9 @@ const adminQueryTypesAndInputs = `
    
      type Admin {
         usr_id: Int!
-        usr_code: String
+        usr_fname: String
+        usr_mname: String
+        usr_lname: String
         usr_email: String!
         usr_role: String!
      }
