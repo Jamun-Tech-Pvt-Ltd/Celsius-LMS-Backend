@@ -12,6 +12,27 @@ const commonQueryTypesAndInputs = `
     token: String!
   }
 
+  enum Package {
+    Basic
+    Pro
+    Advance
+  }
+
+  enum PackageType {
+    Yearly
+    Monthly
+  }
+    
+  type course_with_week {
+    crs_id: Int!
+    crs_name: String!
+    meetLink: String!
+    time: String!
+    crs_duration: Int!
+    crs_image: String
+    crs_week: [courseWeek]
+  }
+
   input createAndUpdateCourseInput {
     crs_id: Int
     crs_category_id: Int!
@@ -58,6 +79,7 @@ const commonQueryTypesAndInputs = `
     phone1: String!
     email: String!
     logo: String
+    qr: String 
     primary_color: String
     secondary_color: String
     tertiary_color: String
@@ -150,9 +172,43 @@ const commonQueryTypesAndInputs = `
     created_at: Date!
   }
 
-  
-`
+  type attendanceData {
+    total_attendance:Int!
+    total_classes:Int!
+    today_attendance:Boolean!,
+    student:Student,
+    course:Course
+  }
 
+  type AttendanceForAdmin {
+   total_student:Int!
+   total_classes:Int!
+   total_course:Int!
+   total_present:Int!
+   attendance:[attendanceData!]
+   ovaralAttendance:[Attendance]
+  }
+
+  type Attendance {
+    attendance:Boolean!
+    created_at:Date!
+  }
+
+  type AttendanceRecod {
+    total_present:Int!
+    total_classes:Int!
+    total_course:Int!
+    student:Student!
+    course:Course!
+    attendance:[Attendance]
+  }
+
+  type Activity {
+    time:Int!
+    serial:Int!
+    created_at:Date!
+  }    
+`
 
 const commonQuery = `
     getAllCourseList:[Course!]!
@@ -167,6 +223,9 @@ const commonQuery = `
 
     getTestimonials: [Testimonial]
     getTestimonial(serial:Int!): Testimonial
+
+    getAttendance:AttendanceForAdmin!
+    getAttendanceByStudentId(std_id:Int,crs_id:Int):AttendanceRecod!
 `
 
 const commonMutation = `
@@ -178,6 +237,10 @@ const commonMutation = `
     deleteAllNotification:String!
 
     updateNotification(serial:Int!):String!
+
+    updateAttendance(date:Date!,std_id:Int!,crs_id:Int):String!
+
+    userActiveTime:String!
 `
 
 
@@ -314,12 +377,173 @@ const commonResolvers = {
     await prisma.jmk_notifications.update({ where: { serial }, data: { is_read: true } });
     return 'success'
   },
+
+  updateAttendance: async (_, { date, std_id, crs_id }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === 'admin' && platform === 'internal') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      throw new AuthenticationError('internal admin doesnt have access');
+    };
+
+    const attendanceDate = new Date(date);
+    attendanceDate.setUTCHours(0, 0, 0, 0);
+
+    if (role === 'admin' && platform === 'external') {
+      if (!crs_id) throw new ApolloError('admin need to provide crs_id');
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+
+      const existingAttendance = await prisma.jmk_std_attendance.findFirst({
+        where: {
+          std_id,
+          crs_id,
+          created_at: {
+            gte: attendanceDate,
+            lt: new Date(attendanceDate.getTime() + 24 * 60 * 60 * 1000),
+          },
+        },
+      });
+
+      if (existingAttendance) {
+        await prisma.jmk_std_attendance.delete({ where: { serial: existingAttendance.serial } });
+        return 'attendance removed';
+      } else {
+        await prisma.jmk_std_attendance.create({
+          data: {
+            std_id,
+            crs_id,
+            attendance: true,
+            created_at: date
+          }
+        });
+        return 'attendance added';
+      }
+    }
+
+    if (role === 'trainer' && platform === 'external') {
+      if (crs_id) throw new ApolloError('trainer doesnt need to provide crs_id');
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      });
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+
+      const existingAttendance = await prisma.jmk_std_attendance.findFirst({
+        where: {
+          std_id,
+          crs_id: trainer.crs_id,
+          created_at: {
+            gte: attendanceDate,
+            lt: new Date(attendanceDate.getTime() + 24 * 60 * 60 * 1000),
+          },
+        },
+      });
+
+      if (existingAttendance) {
+        await prisma.jmk_std_attendance.delete({ where: { serial: existingAttendance.serial } });
+        return 'attendance removed';
+      } else {
+        await prisma.jmk_std_attendance.create({
+          data: {
+            std_id,
+            crs_id: trainer.crs_id,
+            attendance: true,
+            created_at: date
+          }
+        });
+        return 'attendance added';
+      }
+    }
+    throw new AuthenticationError('doesn’t have access');
+  },
+
+  userActiveTime: async (_, arg, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+
+    let user_id;
+    let user_type;
+
+    // Handling admin role
+    if (role === 'admin') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      user_id = admin.usr_id;
+      user_type = 'Admin';
+    }
+
+    // Handling student role
+    if (role === 'student') {
+      const std = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+      });
+      if (!std) throw new AuthenticationError('invalid student credentials');
+      user_id = std.std_id;
+      user_type = 'Student';
+    }
+
+    // Handling trainer role
+    if (role === 'trainer') {
+      const tr = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+      });
+      if (!tr) throw new AuthenticationError('invalid trainer credentials');
+      user_id = tr.tr_id;
+      user_type = 'Trainer';
+    }
+
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+
+    const data = await prisma.jmk_std_track_data.findFirst({
+      where: {
+        user_id,
+        created_at: {
+          gte: currentDate,
+          lt: new Date(currentDate.getTime() + 86400000),
+        },
+      },
+    });
+
+    if (data) {
+      await prisma.jmk_std_track_data.update({
+        where: { serial: data.serial },
+        data: {
+          time: data.time + 1,
+        },
+      });
+    } else {
+      await prisma.jmk_std_track_data.create({
+        data: {
+          user_id,
+          user_type,
+          time: 1,
+        },
+      });
+    }
+
+    return 'User activity tracked successfully';
+  },
+
 }
 
 const commonResolversQuery = {
   getContactInfo: async (_, arg, { userId, role, platform }) => {
     if (userId && platform === 'external') {
-      const user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      let user;
+      if (role === 'admin') {
+        user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      }
+
+      if (role === 'student') {
+        user = await prisma.jmkstdinfo.findFirst({ where: { std_id: userId } });
+      }
+
       if (!user) {
         throw new ApolloError('User not found !!');
       }
@@ -331,17 +555,20 @@ const commonResolversQuery = {
       return info
     }
     const info = await prisma.jmk_web_details.findFirst({ where: { company_id: null, type: arg.type } });
+
     if (info) {
       return info
     } else {
       throw new ApolloError('Info not found !!')
     }
   },
+
   getPopupModal: async (_, { args }) => {
     const modal = await prisma.jmk_web_modal.findFirst({ where: { status: true } });
     if (!modal) throw new ApolloError('Data Not Found')
     return modal
   },
+
   getAllCourseList: async (_, args, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     if (role === 'admin') {
@@ -363,6 +590,7 @@ const commonResolversQuery = {
     }
     throw new AuthenticationError('invalid access !!')
   },
+
   getCourseById: async (_, args, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
@@ -385,6 +613,7 @@ const commonResolversQuery = {
     }
     throw new AuthenticationError('invalid access')
   },
+
   getAllActiveBlogs: async () => {
     const blogs = await prisma.jmkblog.findMany({
       where: { status: true },
@@ -392,6 +621,7 @@ const commonResolversQuery = {
     if (!blogs) throw new ApolloError('No data Found')
     return blogs
   },
+
   getBlogBySlug: async (_, args) => {
     if (!args.blog_slug) throw new ForbiddenError('blog_slug is required !')
     const blog = await prisma.jmkblog.findFirst({
@@ -400,14 +630,34 @@ const commonResolversQuery = {
     if (!blog) throw new ApolloError('Data Not Found')
     return blog
   },
-  getFaqByType: async (_, { type }) => {
-    if (!type) throw new ForbiddenError('faq type is required !')
-    const faq = await prisma.jmkfaq.findMany({
-      where: { type, company_id: null },
-    })
-    if (!faq) throw new ApolloError('Data Not Found')
-    return faq
+
+  getFaqByType: async (_, { type }, { userId, role, platform }) => {
+    if (!type) throw new ForbiddenError('faq type is required !');
+    if (type === 'Student' && role === 'student' && platform === 'external') {
+      const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: userId } });
+      if (!student) throw new ForbiddenError('invalid credentials');
+      const faq = await prisma.jmkfaq.findMany({
+        where: { type: 'Student', company_id: student.company_id },
+      });
+      if (!faq) throw new ApolloError('Data Not Found');
+      return faq;
+    } else if (type === 'Trainer' && role === 'trainer' && platform === 'external') {
+      const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: userId } });
+      if (!trainer) throw new ForbiddenError('invalid credentials');
+      const faq = await prisma.jmkfaq.findMany({
+        where: { type: 'Trainer', company_id: trainer.company_id },
+      });
+      if (!faq) throw new ApolloError('Data Not Found');
+      return faq;
+    } else {
+      const faq = await prisma.jmkfaq.findMany({
+        where: { type, company_id: null },
+      });
+      if (!faq) throw new ApolloError('Data Not Found');
+      return faq;
+    }
   },
+
   getFaqById: async (_, { faq_id }) => {
     if (!faq_id) throw new ForbiddenError('faq id is required !')
     const faq = await prisma.jmkfaq.findFirst({
@@ -416,6 +666,7 @@ const commonResolversQuery = {
     if (!faq) throw new ApolloError('Data Not Found')
     return faq
   },
+
   getMyNotifications: async (_, { }, { userId, role }) => {
     if (role === ROLES[0]) {
       if (!userId) throw new ForbiddenError('invalid token');
@@ -462,7 +713,6 @@ const commonResolversQuery = {
     throw new AuthenticationError('invalid access');
   },
 
-
   getTestimonials: async (_, { args }, { userId, role }) => {
     const testimonials = await prisma.jmk_testimonial.findMany({ orderBy: { created_at: 'desc' } });
     if (!testimonials) throw new ApolloError('Data Not Found');
@@ -478,6 +728,221 @@ const commonResolversQuery = {
     const testimonial = await prisma.jmk_testimonial.findFirst({ where: { serial } });
     if (!testimonial) throw new ApolloError('Data Not Found')
     return testimonial
+  },
+
+  getAttendance: async (_, { serial }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === 'admin' && platform === 'internal') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      throw new AuthenticationError('internal admin doesnt have access');
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    if (role === 'admin' && platform === 'external') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+
+      const total_student = await prisma.jmkstdinfo.count({ where: { company_id: admin.company_id } });
+      const total_present = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: admin.company_id } } });
+
+      let total_classes = 0;
+      const total_course = await prisma.jmkcrsinfo.findMany({ where: { crs_company_id: admin.company_id } });
+      for (let index = 0; index < total_course.length; index++) {
+        const course = total_course[index];
+        const startDate = new Date(course.crs_start_date);
+        const daysSinceStart = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+        total_classes += daysSinceStart;
+      }
+
+      const attendance = [];
+      const students = await prisma.jmkstdcrsinfo.findMany({ where: { student: { company_id: admin.company_id } }, include: { student: true, course: true } });
+      for (let index = 0; index < students.length; index++) {
+        const student = students[index];
+        const getTotalAttendance = await prisma.jmk_std_attendance.count({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true } });
+        const getTodayAttendance = await prisma.jmk_std_attendance.findFirst({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true, created_at: { gte: today, lt: tomorrow } } });
+        const startDate = new Date(student.course.crs_start_date);
+        const total_classes = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+        attendance.push({
+          total_attendance: getTotalAttendance,
+          total_classes,
+          today_attendance: getTodayAttendance ? true : false,
+          student: student.student,
+          course: student.course
+        });
+      }
+
+      return { total_student, total_classes, total_course: total_course.length, total_present, attendance };
+    }
+
+    if (role === 'trainer' && platform === 'external') {
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+        include: { course: true }
+      });
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      const total_student = await prisma.jmkstdcrsinfo.count({ where: { student: { company_id: trainer.company_id }, crs_id: trainer.crs_id } });
+      const total_present = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: trainer.company_id }, crs_id: trainer.crs_id } });
+      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_company_id: trainer.company_id, crs_id: trainer.crs_id } });
+      const startDate = new Date(course.crs_start_date);
+      const total_classes = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+
+      const attendance = [];
+      const ovaralAttendance = [];
+      const students = await prisma.jmkstdcrsinfo.findMany({ where: { student: { company_id: trainer.company_id }, crs_id: trainer.crs_id }, include: { student: true, course: true } });
+      for (let index = 0; index < students.length; index++) {
+        const student = students[index];
+        const getTotalAttendance = await prisma.jmk_std_attendance.findMany({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true } });
+        const getTodayAttendance = await prisma.jmk_std_attendance.findFirst({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true, created_at: { gte: today, lt: tomorrow } } });
+
+        const courseStartDate = new Date(trainer.course.crs_start_date);
+        const totalClasses = Math.ceil((today - courseStartDate) / (1000 * 60 * 60 * 24));
+        const attendanceDays = Array.from({ length: totalClasses }, (_, index) => {
+          const date = new Date(courseStartDate);
+          date.setDate(courseStartDate.getDate() + index);
+          return { attendance: false, created_at: date };
+        });
+
+        getTotalAttendance.forEach(record => {
+          const dayIndex = Math.floor((new Date(record.created_at) - courseStartDate) / (1000 * 60 * 60 * 24));
+          if (dayIndex >= 0 && dayIndex < totalClasses) {
+            attendanceDays[dayIndex].attendance = true;
+          }
+        });
+        ovaralAttendance.push(...attendanceDays)
+        attendance.push({
+          total_attendance: getTotalAttendance.length,
+          total_classes,
+          today_attendance: getTodayAttendance ? true : false,
+          student: student.student,
+          course: student.course
+        });
+      }
+
+      return { total_student, total_classes, total_course: 1, total_present, attendance, ovaralAttendance };
+    }
+
+    throw new AuthenticationError('doesnt have access');
+  },
+
+  getAttendanceByStudentId: async (_, { std_id, crs_id }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === 'admin' && platform === 'internal') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      throw new AuthenticationError('internal admin doesnt have access');
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (role === 'admin' && platform === 'external') {
+      if (!std_id && !crs_id) throw new ApolloError('admin need to provide std_id and crs_id');
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id, crs_company_id: admin.company_id } });
+      const student = await prisma.jmkstdinfo.findFirst({ where: { std_id, company_id: admin.company_id } });
+      const attendanceData = await prisma.jmk_std_attendance.findMany({ where: { std_id, crs_id, attendance: true } });
+      const startDate = new Date(course.crs_start_date);
+      const total_classes = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      const total_course = course.crs_duration * 30;
+
+      const attendance = Array.from({ length: total_classes }, (_, index) => {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + index);
+        return {
+          attendance: false,
+          created_at: date,
+        };
+      });
+
+      attendanceData.forEach(record => {
+        const dayIndex = Math.floor((new Date(record.created_at) - startDate) / (1000 * 60 * 60 * 24));
+        if (dayIndex >= 0 && dayIndex < total_classes) {
+          attendance[dayIndex].attendance = true;
+        }
+      });
+
+      return { total_present: attendanceData.length, total_classes, student, course, total_course, attendance: attendance.reverse() };
+    }
+
+    if (role === 'trainer' && platform === 'external') {
+      if (!std_id) throw new ApolloError('trainer need to provide std_id');
+      if (crs_id) throw new ApolloError('trainer doesnt need to provide crs_id');
+      const trainer = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+        include: { course: true }
+      });
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      const student = await prisma.jmkstdinfo.findFirst({ where: { std_id, company_id: trainer.company_id } });
+      const attendanceData = await prisma.jmk_std_attendance.findMany({ where: { std_id, crs_id: trainer.crs_id, attendance: true } });
+      const startDate = new Date(trainer.course.crs_start_date);
+      const total_classes = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      const total_course = trainer.course.crs_duration * 30;
+
+      const attendance = Array.from({ length: total_classes }, (_, index) => {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + index);
+        return {
+          attendance: false,
+          created_at: date,
+        };
+      });
+
+      attendanceData.forEach(record => {
+        const dayIndex = Math.floor((new Date(record.created_at) - startDate) / (1000 * 60 * 60 * 24));
+        if (dayIndex >= 0 && dayIndex < total_classes) {
+          attendance[dayIndex].attendance = true;
+        }
+      });
+
+      return { total_present: attendanceData.length, total_classes, student, course: trainer.course, total_course, attendance: attendance.reverse() };
+    }
+
+    if (role === 'student' && platform === 'external') {
+      if (crs_id || std_id) throw new ApolloError('student doesnt need to provide arg');
+      const student = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+        include: { course: true }
+      });
+      if (!student) throw new AuthenticationError('invalid student credentials');
+      const attendanceData = await prisma.jmk_std_attendance.findMany({ where: { std_id: student.std_id, crs_id: student.crs_id, attendance: true } });
+      const startDate = new Date(student.course.crs_start_date);
+      const total_classes = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      const total_course = student.course.crs_duration * 30;
+
+      const attendance = Array.from({ length: total_classes }, (_, index) => {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + index);
+        return {
+          attendance: false,
+          created_at: date,
+        };
+      });
+
+      attendanceData.forEach(record => {
+        const dayIndex = Math.floor((new Date(record.created_at) - startDate) / (1000 * 60 * 60 * 24));
+        if (dayIndex >= 0 && dayIndex < total_classes) {
+          attendance[dayIndex].attendance = true;
+        }
+      });
+
+      return { total_present: attendanceData.length, total_classes, student, course: student.course, total_course, attendance: attendance.reverse() };
+    }
+
+    throw new AuthenticationError('doesnt have access');
   },
 }
 

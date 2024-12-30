@@ -62,15 +62,6 @@ const adminQueryTypesAndInputs = `
         usr_role: String!
      }
 
-     type logInfo{
-      log_id:Int
-      ip:String
-      user_id:String
-      role:String
-      method:String
-      time:Date
-     }
-
      type studentreceipt{
       receipt_no:Int!
       receipt_date: Date
@@ -113,6 +104,9 @@ const adminQueryTypesAndInputs = `
         tr_mobile:String
         tr_email: String!
         tr_dob: Date
+        tr_pic:String
+        crs_id:Int
+        logo:String
         tr_verifyed:Boolean
         tr_password:String
         tr_linkedin:String
@@ -120,12 +114,6 @@ const adminQueryTypesAndInputs = `
         company:Company!
      }
      
-     type totalCount{
-       name:String
-       count:Int
-       link:String
-     }
-
      type userInfo{
       usr_id:Int!
       usr_code:String
@@ -358,10 +346,15 @@ const adminQueryTypesAndInputs = `
       subject:String!
      }
 
-     input updateAttendanceByIdDateInput {
-      crs_id:Int!
-      std_id:Int!
-      date:String!
+     input CompanyPaymentInput {
+      pay_id:Int
+      start_date:Date!
+      pay_amount:Int!
+      transaction:String!
+      package:Package!
+      package_type:PackageType!
+      users:Int!
+      company_id:Int!
      }
 
      type UserCourseAdmin {
@@ -398,18 +391,11 @@ const adminQueryTypesAndInputs = `
      }
 
      type StudentCourseRequest {
-      id:Int!
-      std_id: Int!
-      crsmain_id: Int!
-      crsmain_title: String!
-      crsmain_type: String!
-      crsmain_duration: Float!
+      serial:Int!
       createdAt: Date!
-      std_fname: String!
-      std_lname: String!
-      std_mname: String
-      std_email: String!
-      std_verifyed:Boolean!
+      std_crs_verirfy:Boolean!
+      course:Course
+      student:Student
      }
 
      type _count {
@@ -510,19 +496,45 @@ const adminQueryTypesAndInputs = `
       promoStudents: [PromoStudents]
      }
 
-     type StudentAttendanceAdmin {
-      std_id: Int!
-      std_fname: String!
-      std_mname: String
-      std_lname: String!
-      std_email: String!
-      total_atendance: Int!
-      today_atendance: Boolean!
-      crs_id: Int!
-      crs_name: String!
-      time: String!
-     }
+    type adminDashboard {
+      total_user:Int!
+      total_admins:Int!
+      total_student:Int!
+      total_trainer:Int!
+      total_active_user:Int!
+      total_active_student:Int!
+      total_active_trainer:Int!
+      total_active_admin:Int!
+      total_courses:Int!
+      total_company:Int
+      total_support:Int
+      total_video:Int 
+      total_files:Int
+      total_project:Int
+      total_test:Int
+      overall_attendance:Float
+      recent_course:[course_with_week]
+    }
 
+    type CompanyPayment {
+      pay_id: Int!
+      start_date: Date!
+      end_date: Date!
+      pay_amount: Int!
+      transaction: String!
+      users: Int!
+      company: Company!
+    }
+
+    type StudentPayment {
+      pay_id: Int!
+      payment_date: Date!
+      pay_amount: Int!
+      transaction: String!
+      pay_verified: Boolean!
+      course: Course!
+      student: Student!
+    }
 `
 
 const adminQuery = `
@@ -536,12 +548,11 @@ const adminQuery = `
     getTrainerDataForAdmin:[Trainer]
     getTrainerByIdForAdmin(tr_id:Int!):Trainer
 
-    getDataCountForAllTableInAdmin:[totalCount]
+    getAdminDashboard:adminDashboard!
 
     getAllUserInfo:[userInfo]
     getUserInfoById(usr_id:Int!):userInfo
 
-    getUserLog:[logInfo]
     getPaymentInfo:[PaymentInfo]
 
     getBlogs:[JmkBlog ]
@@ -582,8 +593,11 @@ const adminQuery = `
     getPropmo:[Promo]
     getPropmoById(serial:Int!): Promo
 
-    getAttendanceAdmin:[StudentAttendanceAdmin]
-    getAttendanceByIdAdmin(std_id:Int!,crs_id:Int!):StudentAttendanceRecod
+    getCompanyPayments: [CompanyPayment!]!
+    getCompanyPaymentById(pay_id: Int!): CompanyPayment
+
+    getStudentPayments: [StudentPayment!]!
+
 `
 
 const adminMutation = `
@@ -604,11 +618,7 @@ const adminMutation = `
     updateSelectedUser(data:updateUserInput):String!
     deleteUserById(usrId:Int!):String!
 
-    
-    updatePaymentStatus(pay_id:Int!): String
-
     updateContactInfo(data:contactInfoUpdate):String
-
 
     updateBlog(data:UpdateJmkBlogInput): String
     deleteBlog(blog_id: Int!): String
@@ -644,8 +654,10 @@ const adminMutation = `
 
     sendEmailByUser(data:MailSendInput!):String!
 
+    createAndUpdatePayment(data:CompanyPaymentInput):String!
+    deleteCompanyPayment(pay_id:Int!):String!
 
-    updateAttendanceByIdDate(data:updateAttendanceByIdDateInput!):String!
+    updatePaymentStatus(pay_id:Int!): String
 `
 
 const adminResolvers = {
@@ -781,14 +793,29 @@ const adminResolvers = {
       const company = await prisma.jmkcompany.findFirst({ where: { c_username: data?.username } });
       if (!company) throw new AuthenticationError('invalid user credentials');
       const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_email: data.usr_email, company_id: company.serial },
-        include: {
-          company: true,
+        where: {
+          usr_email: data.usr_email,
+          company_id: company.serial,
         },
-      })
-      if (!admin) throw new AuthenticationError('invalid admin credentials')
+        include: {
+          company: {
+            include: {
+              payments: {
+                where: {
+                  end_date: { gt: new Date() }
+                }
+              }
+            }
+          },
+        },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      if (!admin.company.c_verified) throw new AuthenticationError('Your company is not verify yet , contact our support team for more info');
+      if (admin.company.payments.length === 0) {
+        throw new Error('Your Company not verify or company payment expired , contact our support team for more info');
+      }
       const isMatch = data.usr_password == admin.usr_password
-      if (!isMatch) throw new AuthenticationError('invalid user credentials')
+      if (!isMatch) throw new AuthenticationError('invalid user credentials');
       const token = jwt.sign({ userId: admin.usr_id, role: 'admin', platform: 'external', c_username: admin?.company?.c_username, c_package_type: admin?.company?.c_username }, process.env.JWT_SECRET_KEY)
       return { token }
     }
@@ -824,8 +851,15 @@ const adminResolvers = {
     if (role === 'admin' && platform === 'external') {
       const admin = await prisma.jmkuserinfo.findFirst({
         where: { usr_id: userId },
+        include: { company: { include: { jmkstdinfo: true, jmktrinfo: true, jmkuserinfo: true, payments: { where: { end_date: { gt: new Date() } } } } } }
       });
       if (!admin) throw new AuthenticationError('invalid admin');
+      const totalUser = (admin.company.jmkstdinfo.length ?? 0) + (admin.company.jmkuserinfo.length ?? 0) + (admin.company.jmktrinfo.length ?? 0);
+
+      if (admin.company.payments[0].users <= totalUser) {
+        throw new Error('you have reached your user limit')
+      }
+
       const findStd = await prisma.jmkstdinfo.findFirst({ where: { std_email: data.std_email } });
       if (findStd) throw new Error('Student with this email already exist');
       const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id, crs_company_id: admin.company_id } });
@@ -906,9 +940,14 @@ const adminResolvers = {
     if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-      include: { company: true }
+      include: { company: { include: { jmkstdinfo: true, jmktrinfo: true, jmkuserinfo: true, payments: { where: { end_date: { gt: new Date() } } } } } }
     });
     if (!admin) throw new AuthenticationError('invalid admin');
+    const totalUser = (admin.company.jmkstdinfo.length ?? 0) + (admin.company.jmkuserinfo.length ?? 0) + (admin.company.jmktrinfo.length ?? 0);
+
+    if (admin.company.payments[0].users <= totalUser) {
+      throw new Error('you have reached your user limit')
+    }
     const checkEmail = await prisma.jmktrinfo.findFirst({
       where: { tr_email: data.tr_email },
     });
@@ -1017,9 +1056,16 @@ const adminResolvers = {
     if (!role === 'admin') throw new ForbiddenError('only admin have access  to create');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-      include: { company: true }
+      include: { company: { include: { jmkstdinfo: true, jmktrinfo: true, jmkuserinfo: true, payments: { where: { end_date: { gt: new Date() } } } } } }
     });
     if (!admin) throw new AuthenticationError('invalid admin');
+
+    if (platform === 'external') {
+      const totalUser = (admin.company.jmkstdinfo.length ?? 0) + (admin.company.jmkuserinfo.length ?? 0) + (admin.company.jmktrinfo.length ?? 0);
+      if (admin.company.payments[0].users <= totalUser) {
+        throw new Error('you have reached your user limit')
+      }
+    }
 
     let file
     if (data.usr_img_url) {
@@ -1118,34 +1164,36 @@ const adminResolvers = {
     return 'success'
   },
 
-
-  updatePaymentStatus: async (_, { pay_id }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
+  updatePaymentStatus: async (_, { pay_id }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'external') throw new AuthenticationError('only company admin can update user payment');
 
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-    })
-    if (!admin) throw new AuthenticationError('invalid admin')
+    });
+    if (!admin) throw new AuthenticationError('invalid admin');
 
-    const paymentdet = await prisma.jmktstdpayinfo.findFirst({
-      where: {
-        pay_id,
-      },
-    })
+    const paymentdet = await prisma.jmktstdpayinfo.findFirst({ where: { pay_id, student: { company_id: admin.company_id } } });
+    if (!paymentdet) throw new ApolloError('No such payement info exist');
 
-    if (!paymentdet) throw new ApolloError('No such payement info exist')
-    await prisma.jmktstdpayinfo.update({
-      data: {
-        pay_verified: !paymentdet.pay_verified,
-      },
-      where: {
-        pay_id,
-      },
+    const updatePayment = await prisma.jmktstdpayinfo.update({
+      where: { pay_id: paymentdet.pay_id },
+      data: { pay_verified: true }
+    });
+    if (!updatePayment) throw new AuthenticationError('invalid id');
+
+    const crs_recod = await prisma.jmkstdcrsinfo.findFirst({ where: { std_id: updatePayment.std_id, crs_id: updatePayment.crs_id } });
+    if (!crs_recod) throw new ApolloError(`if you get this error then contact our support team . and send them ${updatePayment.pay_id}`);
+
+    await prisma.jmkstdcrsinfo.update({
+      where: { serial: crs_recod.serial }, data: {
+        amt_paid: crs_recod.amt_paid + updatePayment.pay_amount,
+        amt_due: crs_recod.amt_due - updatePayment.pay_amount,
+      }
     })
 
     return 'success'
   },
-
 
   createAndUpdateFaq: async (_, { data }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token')
@@ -1213,11 +1261,19 @@ const adminResolvers = {
   },
 
   createAndUpdateWebDetails: async (_, { data }, { userId, role, platform }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
+    if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
     })
     if (!admin) throw new AuthenticationError('invalid admin');
+
+    if ((data.type === 'Jaamun' || data.type === 'Celsius') && platform === 'external') {
+      throw new ApolloError('first learn how systerm works and send main admin token for jaamun and celsius type access . dont go tree house always focus sometime on systerm.');
+    }
+
+    if (data.type === 'Company' && platform === 'internal') {
+      throw new ApolloError('first learn how systerm works and send company admin token for company type access . dont go tree house always focus sometime on systerm.');
+    }
 
     if (platform === 'internal' && data.type !== 'Company') {
       const webDetails = await prisma.jmk_web_details.findFirst({ where: { company_id: null, type: data.type } });
@@ -1666,58 +1722,80 @@ const adminResolvers = {
     }
   },
 
-  updateAttendanceByIdDate: async (_, { data }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    })
-    if (!admin) throw new AuthenticationError('invalid admin');
+  createAndUpdatePayment: async (_, { data }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'internal') throw new ForbiddenError('invalid admin token');
+    const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+    if (!admin) throw new ForbiddenError('invalid token');
 
-    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: data.crs_id } });
-    if (!crs) throw new Error('Course not found');
+    const company = await prisma.jmkcompany.findFirst({ where: { serial: data.company_id }, include: { payments: true } });
+    if (!company) throw new ApolloError('Invalid company id');
 
-    const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: data.std_id } });
-    if (!std) throw new Error('Student not found');
+    const calculateEndDate = (startDate, packageType) => {
+      const start = new Date(startDate);
 
-    const today = new Date(data.date);
-    console.log(today);
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
+      if (packageType === 'Yearly') {
+        start.setFullYear(start.getFullYear() + 1);
+      } else if (packageType === 'Monthly') {
+        start.setMonth(start.getMonth() + 1);
+      } else {
+        throw new Error('Invalid package type');
+      }
 
-    const attendance = await prisma.jmk_std_attendance.findFirst({
-      where: {
-        crs_id: data.crs_id,
-        std_id: data.std_id,
-        attendance: true,
-        created_at: {
-          gte: today,
-          lt: tomorrow,
+      return start.toISOString();
+    };
+
+    const currentDate = new Date();
+
+    if (data.pay_id) {
+      const findPayment = await prisma.jmktcompanypay.findFirst({ where: { pay_id: data.pay_id, company_id: data.company_id } });
+      if (!findPayment) throw new Error('Invalid pay_id or company_id');
+      await prisma.jmktcompanypay.update({
+        where: { pay_id: findPayment.pay_id },
+        data: {
+          start_date: data.start_date,
+          pay_amount: data.pay_amount,
+          transaction: data.transaction,
+          users: data.users,
+          end_date: calculateEndDate(data.start_date, data.package_type)
         }
+      });
+      await prisma.jmkcompany.update({ where: { serial: company.serial }, data: { c_package: data.package, c_package_type: data.package_type } }); return 'Updated payment recod';
+    }
+
+    const checkThisMonthPayment = company.payments.find(
+      (item) => new Date(item.end_date) > currentDate
+    );
+
+    if (checkThisMonthPayment) {
+      throw new ApolloError(
+        'Company already paid for this month. If you want to add more dates to this company, try updating the existing payment.'
+      );
+    }
+
+    await prisma.jmktcompanypay.create({
+      data: {
+        start_date: data.start_date,
+        pay_amount: data.pay_amount,
+        transaction: data.transaction,
+        users: data.users,
+        company_id: data.company_id,
+        end_date: calculateEndDate(data.start_date, data.package_type)
       }
     });
-    if (!attendance) {
-      await prisma.jmk_std_attendance.create({
-        data: {
-          std_id: data.std_id,
-          crs_id: data.crs_id,
-          attendance: true,
-          created_at: new Date(data.date)
-        }
-      })
-    } else {
-      await prisma.jmk_std_attendance.update({
-        where: {
-          serial: attendance.serial,
-        },
-        data: {
-          attendance: attendance.attendance ? false : true,
-        }
-      })
-    }
-    return 'Updated'
+    await prisma.jmkcompany.update({ where: { serial: company.serial }, data: { c_package: data.package, c_package_type: data.package_type } });
+    return 'Created payment recod';
   },
 
+  deleteCompanyPayment: async (_, { pay_id }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'internal') throw new ForbiddenError('invalid admin token');
+    const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+    if (!admin) throw new ForbiddenError('invalid token');
+    const payment = await prisma.jmktcompanypay.delete({ where: { pay_id } });
+    if (!payment) throw new ApolloError('someting went wrong');
+    return 'deleted'
+  },
 }
 
 const adminResolversQuery = {
@@ -1729,26 +1807,6 @@ const adminResolversQuery = {
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials');
     return admin;
-  },
-
-  getBlogs: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === 'admin') {
-      const blogs = await prisma.jmkblog.findMany({ orderBy: { created_at: 'desc' } });
-      return blogs;
-    }
-  },
-
-  getBlog: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === 'admin') {
-      const blog = await prisma.jmkblog.findFirst({
-        where: {
-          blog_id: args.blog_id
-        }
-      });
-      return blog;
-    }
   },
 
   getPayments: async (_, args, { userId, role }) => {
@@ -1843,15 +1901,15 @@ const adminResolversQuery = {
       let join_courses = []
       const join_courses_data = await prisma.jmktrcrsinfo.findMany({
         where: { tr_id: trainer.tr_id },
-        include: { 'jmkcrsinfo': 'crs_name' }
+        include: { course: true }
       });
 
       for (let index = 0; index < join_courses_data.length; index++) {
         join_courses.push({
           serial: join_courses_data[index].serial,
           tr_id: join_courses_data[index].tr_id,
-          crs_id: join_courses_data[index].jmkcrsinfo.crs_id,
-          crs_name: join_courses_data[index].jmkcrsinfo.crs_name
+          crs_id: join_courses_data[index].course.crs_id,
+          crs_name: join_courses_data[index].course.crs_name
         })
       }
 
@@ -1901,114 +1959,105 @@ const adminResolversQuery = {
     }
   },
 
-
-
-
-  getDataCountForAllTableInAdmin: async (_, args, { userId, role, platform }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
+  getAdminDashboard: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
     });
-
     if (!admin) throw new AuthenticationError('invalid admin credentials');
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const categories = await prisma.jmk_crs_categories.count();
-    const courses = await prisma.jmkcrsinfo.count({ where: { isDeleted: false } });
-    const students = await prisma.jmkstdinfo.count({ where: { std_verifyed: true } });
-    const trainers = await prisma.jmktrinfo.count({ where: { tr_verifyed: true } });
-    const users = await prisma.jmkuserinfo.count();
-    const partners = await prisma.jmk_partner_ui.count();
-    const services = await prisma.jmk_services.count();
-    const blogs = await prisma.jmkblog.count({ where: { status: true } });
+    let data = {};
+    if (platform === 'internal') {
+      const student = await prisma.jmkstdinfo.count();
+      const trainer = await prisma.jmktrinfo.count();
+      const total_admins = await prisma.jmkuserinfo.count();
+      const total_active_student = await prisma.jmkstdinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo } } });
+      const total_active_trainer = await prisma.jmktrinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo } } });
+      const total_active_admin = await prisma.jmkuserinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo } } });
+      data.total_admins = total_admins;
+      data.total_student = student;
+      data.total_trainer = trainer;
+      data.total_user = student + trainer + total_admins;
+      data.total_active_user = total_active_student + total_active_trainer + total_active_admin;
+      data.total_active_student = total_active_student;
+      data.total_active_trainer = total_active_trainer;
+      data.total_active_admin = total_active_admin;
+      data.total_company = await prisma.jmkcompany.count({ where: { c_verified: true } });
+      data.total_courses = await prisma.jmkcrsinfo.count();
+      data.total_support = await prisma.jmkcontact.count();
 
-    let tableCount = [];
+    } else {
+      const student = await prisma.jmkstdinfo.count({ where: { company_id: admin.company_id } });
+      const trainer = await prisma.jmktrinfo.count({ where: { company_id: admin.company_id } });
+      const total_admins = await prisma.jmkuserinfo.count({ where: { company_id: admin.company_id } });
+      const total_active_student = await prisma.jmkstdinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo } } });
+      const total_active_trainer = await prisma.jmktrinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo }, company_id: admin.company_id } });
+      const total_active_admin = await prisma.jmkuserinfo.count({ where: { lastSeen: { gte: fiveMinutesAgo }, company_id: admin.company_id } });
+      data.total_admins = total_admins;
+      data.total_student = student;
+      data.total_trainer = trainer;
+      data.total_user = student + trainer + total_admins;
+      data.total_active_user = total_active_student + total_active_trainer + total_active_admin;
+      data.total_active_student = total_active_student;
+      data.total_active_trainer = total_active_trainer;
+      data.total_active_admin = total_active_admin;
+      const courses = await prisma.jmkcrsinfo.findMany({
+        where: { crs_company_id: admin.company_id },
+        include: {
+          crs_week: {
+            include: {
+              jmk_week_content: true,
+            },
+          },
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
+      });
+      data.total_courses = courses.length;
 
-    const access = JSON.parse(admin.usr_access ?? '[]');
+      data.recent_course = []
+      data.total_video = 0;
+      data.total_files = 0;
+      data.total_project = 0;
+      data.total_test = 0;
+      let total_classes = 0;
 
-    if (access) {
-      const findDashboardAccess = access.find((item) => item.name === 'Dashboard');
-      if (findDashboardAccess.access?.[0].read) {
-
-        const findCoursesAccess = access.find((item) => item.name === 'Courses');
-        if (findCoursesAccess) {
-          const findCategoryAccess = findCoursesAccess.option.find((item) => item.name === 'Categories');
-          if (findCategoryAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Categories',
-              count: categories ?? 0,
-              link: '/categories',
-            })
+      for (let index = 0; index < courses.length; index++) {
+        const course = courses[index];
+        if (data.recent_course.length < 2) {
+          data.recent_course.push(course);
+        };
+        const total_course = Math.round(course.crs_duration * 30);
+        const start_date = new Date(course.crs_start_date);
+        const total_class = Math.floor((today - start_date) / (1000 * 60 * 60 * 24));
+        const actual_total_class = Math.min(total_class, total_course);
+        total_classes += actual_total_class;
+        for (let index = 0; index < course.crs_week.length; index++) {
+          const week = course.crs_week[index];
+          for (let index = 0; index < week.jmk_week_content.length; index++) {
+            const jmk_week_content = week.jmk_week_content[index];
+            if (jmk_week_content.type === 'Video') {
+              data.total_video += 1;
+            } else if (jmk_week_content.type === 'Project') {
+              data.total_project += 1;
+            } else if (jmk_week_content.type === 'Test') {
+              data.total_test += 1;
+            } else {
+              data.total_files += 1;
+            }
           }
-          const findRunningCourseAccess = findCoursesAccess.option.find((item) => item.name === 'Running Courses');
-          if (findRunningCourseAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Courses',
-              count: courses ?? 0,
-              link: '/courses',
-            })
-          }
-        }
-
-        const findStakeHoldersAccess = access.find((item) => item.name === 'StakeHolders');
-        if (findStakeHoldersAccess) {
-          const findAdminsAccess = findStakeHoldersAccess.option.find((item) => item.name === 'Admins');
-          if (findAdminsAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Admins',
-              count: users ?? 0,
-              link: '/users',
-            })
-          }
-          const findPartnersAccess = findStakeHoldersAccess.option.find((item) => item.name === 'Partners');
-          if (findPartnersAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Partners (UI)',
-              count: partners ?? 0,
-              link: '/partners',
-            })
-          }
-        }
-
-        const findRegistrationInfoAccess = access.find((item) => item.name === 'RegistrationInfo');
-        if (findRegistrationInfoAccess) {
-          const findStudentsAccess = findRegistrationInfoAccess.option.find((item) => item.name === 'Students');
-          if (findStudentsAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Students',
-              count: students ?? 0,
-              link: '/students',
-            })
-          }
-          const findTrainerAccess = findRegistrationInfoAccess.option.find((item) => item.name === 'Trainer');
-          if (findTrainerAccess.access?.[0].read) {
-            tableCount.push({
-              name: 'Trainers',
-              count: trainers ?? 0,
-              link: '/trainer',
-            })
-          }
-        }
-
-        const findServicesAccess = access.find((item) => item.name === 'Services');
-        if (findServicesAccess.access?.[0].read) {
-          tableCount.push({
-            name: 'Services',
-            count: services ?? 0,
-            link: '/services',
-          })
-        }
-
-        const findBlogAccess = access.find((item) => item.name === 'Blog');
-        if (findBlogAccess.access?.[0].read) {
-          tableCount.push({
-            name: 'Blogs',
-            count: blogs ?? 0,
-            link: '/blogs',
-          })
         }
       }
+
+      const total_attendance = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: admin.company_id } } });
+      data.overall_attendance = ((total_attendance / total_classes) * 100).toFixed(2);
     }
-    return tableCount
+
+    return data;
   },
 
   getAllUserInfo: async (_, args, { userId, role, platform }) => {
@@ -2038,28 +2087,6 @@ const adminResolversQuery = {
       include: { company: true }
     })
     return user
-  },
-
-  getUserLog: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    })
-    if (!admin) throw new AuthenticationError('invalid admin credentials')
-    const logs = await prisma.jmkloginfo.findMany({})
-    const logging = []
-    logs.map((log) => {
-      let monitor = log.log_desc.split(' ')
-      logging.push({
-        log_id: log.log_id,
-        ip: monitor[0],
-        user_id: monitor[1],
-        role: monitor[2],
-        method: monitor[3],
-        time: `${monitor[4]} ${monitor[5]} ${monitor[6]} ${monitor[7]} ${monitor[8]} ${monitor[9]} ${monitor[10]} ${monitor[11]}`,
-      })
-    })
-    return logging
   },
 
   getPaymentInfo: async (_, args, { userId, role }) => {
@@ -2149,39 +2176,34 @@ const adminResolversQuery = {
     return career
   },
 
-  getStudentCourseRequest: async (_, { serial }, { userId, role }) => {
+  getStudentCourseRequest: async (_, { serial }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token');
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    });
-    if (!admin) throw new AuthenticationError('invalid admin credentials');
-    const data = [];
-    const requestCourse = await prisma.jmkstdcrsinfo.findMany({ where: { crs_id: null }, take: 200, orderBy: { createdAt: 'desc' } });
-    for (let index = 0; index < requestCourse.length; index++) {
-      if (requestCourse[index].std_id && requestCourse[index].crsmain_id) {
-        const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: requestCourse[index].std_id } });
-        const crs = await prisma.jmkcrsmain.findFirst({ where: { crsmain_id: requestCourse[index].crsmain_id } });
-        if (std && crs) {
-          data.push({
-            id: requestCourse[index].serial,
-            std_id: std.std_id,
-            crsmain_id: crs.crsmain_id,
-            crs_name: std.crs_name,
-            std_fname: std.std_fname,
-            std_lname: std.std_lname,
-            std_mname: std.std_mname,
-            std_email: std.std_email,
-            std_verifyed: std.std_verifyed,
-            crsmain_title: crs.title,
-            crsmain_type: crs.label,
-            crsmain_duration: crs.duration,
-            createdAt: requestCourse[index].createdAt
-          })
-        }
-      }
+    if (platform === 'external' && role === 'admin') {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+      });
+      if (!admin) throw new AuthenticationError('invalid admin credentials');
+      const requestCourse = await prisma.jmkstdcrsinfo.findMany({
+        where: {
+          std_crs_verirfy: false,
+          course: { crs_company_id: admin.company_id },
+        },
+        take: 200,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          course: {
+            include: {
+              category: true,
+            },
+          },
+          student: true,
+        },
+      });
+      if (!requestCourse) throw new ApolloError('Data Not Found')
+      return requestCourse
+    } else {
+      throw new ForbiddenError('invalid access');
     }
-    if (!data) throw new ApolloError('Data Not Found')
-    return data
   },
 
   getCourseCategories: async (_, { args }, { userId, role, platform }) => {
@@ -2387,118 +2409,70 @@ const adminResolversQuery = {
     return { ...promo, promoStudents: students }
   },
 
-  getAttendanceAdmin: async (_, { serial }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token');
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    });
-    if (!admin) throw new AuthenticationError('invalid admin credentials');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    let attendanceData = [];
-    const students = await prisma.jmkstdcrsinfo.findMany({ where: { std_crs_verirfy: true } });
-    if (students?.[0]) {
-      for (let index = 0; index < students.length; index++) {
-        const element = students[index];
-        if (element && element.crs_id !== 59 && element.crs_id) {
-          const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: element.std_id } });
-          if (std?.crs_id) {
-            const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: std.crs_id } });
-            if (std) {
-              const attendance = await prisma.jmk_std_attendance.findFirst({
-                where: {
-                  crs_id: std.crs_id, std_id: element.std_id, created_at: {
-                    gte: today,
-                    lt: tomorrow,
-                  }
-                }
-              });
-              const attendanceCount = await prisma.jmk_std_attendance.count({ where: { crs_id: std.crs_id, std_id: element.std_id } });
-              attendanceData.push({
-                std_id: std.std_id,
-                std_fname: std.std_fname,
-                std_mname: std.std_mname,
-                std_lname: std.std_lname,
-                std_email: std.std_email,
-                total_atendance: attendanceCount,
-                today_atendance: attendance ? true : false,
-                crs_id: crs.crs_id,
-                crs_name: crs.crs_name,
-                time: crs.time
-              })
-            }
-          }
-        }
-      }
+  getBlogs: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const blogs = await prisma.jmkblog.findMany({ orderBy: { created_at: 'desc' } });
+      return blogs;
     }
-    return attendanceData
   },
 
-  getAttendanceByIdAdmin: async (_, { std_id, crs_id }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token');
-    const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_id: userId },
-    });
-    if (!admin) throw new AuthenticationError('invalid admin credentials');
-
-    const allAttendance = []
-
-    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id } });
-    if (!crs) throw new Error('Course not found');
-
-    const std = await prisma.jmkstdinfo.findFirst({ where: { std_id } });
-    if (!std) throw new Error('Student not found');
-
-    let totalClasses = Math.ceil((new Date() - new Date(crs.crs_nxt_st_date)) / (1000 * 60 * 60 * 24)) ?? 0;
-
-    if (new Date(crs.crs_nxt_st_date).getTime() > Date.now()) {
-      return []
-    }
-
-    totalClasses = (crs.crs_duration * 30) < totalClasses ? (crs.crs_duration * 30) : totalClasses;
-
-    const total_attendance = await prisma.jmk_std_attendance.count({ where: { crs_id: std.crs_id, std_id } }) ?? 0;
-
-    const startDate = new Date(crs.crs_nxt_st_date);
-    for (let index = 0; index < totalClasses; index++) {
-      const currentDate = new Date(startDate);
-      currentDate.setDate(startDate.getDate() + index);
-
-      const tomorrow = new Date(currentDate);
-      tomorrow.setDate(currentDate.getDate() + 1);
-      const attendance = await prisma.jmk_std_attendance.findFirst({
+  getBlog: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    if (role === 'admin') {
+      const blog = await prisma.jmkblog.findFirst({
         where: {
-          attendance: true,
-          crs_id: std.crs_id, std_id, created_at: {
-            gte: currentDate,
-            lt: tomorrow,
-          }
+          blog_id: args.blog_id
         }
       });
-
-      allAttendance.push({
-        serial: index,
-        attendance: attendance ? true : false,
-        created_at: currentDate,
-        std_id,
-      })
-    }
-
-    const total_duration = crs.crs_duration * 30 ?? 0;
-    const total_absent = totalClasses - total_attendance ?? 0;
-    return {
-      attendance: allAttendance,
-      total_duration,
-      total_absent,
-      total_attendance,
-      crs_id: crs.crs_id,
-      std_fname: std.std_fname,
-      std_lname: std.std_lname,
-      std_email: std.std_email,
+      return blog;
     }
   },
+
+  getCompanyPayments: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'internal') throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new ForbiddenError('invalid token');
+    const payments = await prisma.jmktcompanypay.findMany({ orderBy: { end_date: 'desc' }, include: { company: true } });
+    return payments;
+  },
+
+  getCompanyPaymentById: async (_, { pay_id }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'internal') throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new ForbiddenError('invalid token');
+    const payments = await prisma.jmktcompanypay.findFirst({ where: { pay_id }, include: { company: true } });
+    return payments;
+  },
+
+  getStudentPayments: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform !== 'external') throw new ForbiddenError('only company admin can get user payment');
+    if (role !== 'admin') throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new ForbiddenError('invalid token');
+    const payments = await prisma.jmktstdpayinfo.findMany({ where: { student: { company_id: admin.company_id } }, orderBy: { created_at: 'desc' }, include: { student: true, course: true } });
+    return payments;
+  },
+
+}
+
+const updateAdminActiveDate = async (userId) => {
+  await prisma.jmkuserinfo.update({
+    data: {
+      lastSeen: new Date()
+    }, where: {
+      usr_id: userId
+    }
+  })
 }
 
 export {
@@ -2507,4 +2481,5 @@ export {
   adminMutation,
   adminResolvers,
   adminResolversQuery,
+  updateAdminActiveDate
 }

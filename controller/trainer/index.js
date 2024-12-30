@@ -5,8 +5,6 @@ import {
 } from 'apollo-server-express'
 import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
-import { sendMail } from '../../utils/mailHandler.js'
-import emailVerificationHTML from '../../utils/EmailVerification.js'
 import { ROLES, getRandomItemsFromArray } from '../../utils/helper.js'
 import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 
@@ -20,6 +18,7 @@ const trainerQueryTypesAndInputs = `
     }
 
     input signinTrainerInput{
+        username:String!
         email: String!
         password: String!
     }
@@ -31,9 +30,6 @@ const trainerQueryTypesAndInputs = `
         tr_email: String
         tr_mobile: String
         tr_dob: String
-        tr_city: String
-        tr_country: String
-        tr_github: String
         tr_linkedin: String
      }
 
@@ -109,19 +105,7 @@ const trainerQueryTypesAndInputs = `
       }
       
      type Trainer {
-        tr_id: Int!
-        tr_fname: String!
-        tr_mname: String
-        tr_lname: String!
-        tr_email: String!
-        tr_mobile: String!
-        tr_city: String
-        tr_country: String
-        tr_dob: Date
-        tr_github: String
-        tr_pic:String
-        tr_linkedin: String
-        crs_id: String
+        course:Course
      }
 
      type TrainerStudent {
@@ -134,33 +118,13 @@ const trainerQueryTypesAndInputs = `
         crs_complete: Boolean
         crs_complete_date: Date
         std_mobile: String!
-        std_join_dt: Date
-        std_birth_dt: Date
-        std_add_house_no:String
-        std_add_street:String
-        std_add_city:String
-        std_add_district:String
-        std_add_ward_no:String
-        std_add_province:String
-        std_add_zone:String
-        std_country:String
      }
   
-     type TrainerDashboard {
-        students: Int
-        courses: Int
-        weeks: Int
-        videos: Int
-        files: Int
-        projects: Int
-        tests: Int
-     }
-
-     type sessionDetail{
+     type TrainerCourses{
       serial: Int
       tr_id:Int
       crs_id:Int
-      jmkcrsinfo:JmkCrsInfo
+      course:Course
     }
 
     type JmkCrsInfo {
@@ -223,41 +187,27 @@ const trainerQueryTypesAndInputs = `
       created_at:Date!
      }
 
-     type Attendance {
-      serial: Int!
-      attendance: Boolean!
-      created_at:Date!
-      std_id: Int!
+     type TrainerDashboard {
+        total_students: Int!
+        total_class:Int!
+        total_present:Int!
+        total_course: Int!
+        course_completion: Float!
+        class_attendance: Float!
+        total_video:Int! 
+        total_files:Int! 
+        total_project:Int! 
+        total_test:Int! 
+        course: Course!
+        courses: [course_with_week]
+        meetings:[Course]
      }
-
-     type StudentAttendanceRecod{
-      attendance:[Attendance]
-      total_duration:Int!
-      total_absent:Int!
-      total_attendance:Int!      
-      crs_id: Int!
-      std_fname: String!
-      std_mname: String
-      std_lname: String!
-      std_email: String!
-     }
-
-     type StudentAttendance {
-      std_id: Int!
-      std_fname: String!
-      std_mname: String
-      std_lname: String!
-      std_email: String!
-      total_atendance: Int!
-      today_atendance: Boolean!
-     }
-
 `
 
 const trainerQuery = `
     trainer:Trainer!
 
-    getAssignedSessions:[sessionDetail]
+    getAssignedCourses:[TrainerCourses]
 
     getTrainerDashboard:TrainerDashboard
 
@@ -286,11 +236,6 @@ const trainerQuery = `
 
     getPagesTrainer:[page]
     getPageTrainer(serial:Int!):page
-    
-    getAttendanceTrainer:[StudentAttendance]
-    getAttendanceByIdTrainer(std_id:Int!):StudentAttendanceRecod
-
-
 `
 
 const trainerMutation = `
@@ -321,18 +266,31 @@ const trainerMutation = `
 `
 
 const trainerResolvers = {
+  signinTrainer: async (_, { data }) => {
+    const company = await prisma.jmkcompany.findFirst({ where: { c_username: data.username }, include: { payments: { where: { end_date: { gt: new Date() } } } } });
+    if (!company) throw new AuthenticationError('invalid user credentials');
+    if (!company.c_verified) throw new AuthenticationError('Your company is not verify yet , contact our support team for more info');
+    if (company.payments.length === 0) throw new AuthenticationError('Your company package is expired, contact our support team for more info');
+    const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_email: data.email, company_id: company.serial } });
+    if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+    const isMatch = data.password == trainer.tr_password;
+    if (!isMatch) throw new AuthenticationError('invalid trainer credentials');
+    if (!trainer.tr_verifyed) throw new ApolloError('You are not permitted to log in');
+    const token = jwt.sign(
+      { userId: trainer.tr_id, role: ROLES[1], platform: 'external', c_username: company?.c_username, c_package_type: company?.c_username },
+      process.env.JWT_SECRET_KEY
+    )
+    return { token }
+  },
 
   activeSession: async (_, { data }, { userId }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
-    const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_id: userId },
-    })
+    if (!userId) throw new ForbiddenError('user need to login');
+
+    const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: userId } });
     if (!trainer) throw new AuthenticationError('invalid trainer')
 
     const checkCrsidAssign = await prisma.jmktrcrsinfo.findFirst({ where: { tr_id: trainer.tr_id, crs_id: data.crs_id } })
-
-    if (!checkCrsidAssign) throw ApolloError('Invalid request')
-
+    if (!checkCrsidAssign) throw new ApolloError('Invalid request')
 
     const updateSession = await prisma.jmktrinfo.update({
       data: {
@@ -342,23 +300,6 @@ const trainerResolvers = {
     })
     if (!updateSession) throw ApolloError('Unsuccessful to update session')
     return updateSession
-  },
-
-
-  signinTrainer: async (_, { data }) => {
-    const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_email: data.email },
-    })
-    if (!trainer) throw new AuthenticationError('invalid trainer credentials')
-    const isMatch = data.password == trainer.tr_password
-    if (!isMatch) throw new AuthenticationError('invalid trainer credentials')
-    if (!trainer.tr_verifyed)
-      throw new ApolloError('You are not permitted to log in')
-    const token = jwt.sign(
-      { userId: trainer.tr_id, role: ROLES[1] },
-      process.env.JWT_SECRET_KEY
-    )
-    return { token }
   },
 
   updateTrainer: async (_, { data }, { userId }) => {
@@ -1087,32 +1028,44 @@ const trainerResolversQuery = {
     return content
   },
 
-  getAssignedSessions: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
+  getAssignedCourses: async (_, args, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_id: userId },
-    })
-    if (!trainer) throw new AuthenticationError('invalid trainer')
-    const sessionDetails = await prisma.jmktrcrsinfo.findMany({
-      where: {
-        tr_id: trainer.tr_id,
-      },
-      include: {
-        jmkcrsinfo: true,
-      },
-    })
-
-    return sessionDetails
+    });
+    if (!trainer) throw new AuthenticationError('invalid trainer');
+    const courses = await prisma.jmktrcrsinfo.findMany({
+      where: { tr_id: trainer.tr_id },
+      include: { course: true },
+    });
+    if (!courses) throw new ApolloError('No Course Contact admin to assign one !');
+    return courses;
   },
 
   trainer: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login')
+    if (!userId) throw new ForbiddenError('user need to login');
     if (role === ROLES[1]) {
-      const user = await prisma.jmktrinfo.findFirst({
+      const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
-      })
-      if (!user) throw new AuthenticationError('invalid user credentials')
-      return user
+        include: { company: true, course: true }
+      });
+      let join_courses = []
+      const join_courses_data = await prisma.jmktrcrsinfo.findMany({
+        where: { tr_id: trainer.tr_id },
+        include: { 'course': 'crs_name' }
+      });
+
+      for (let index = 0; index < join_courses_data.length; index++) {
+        join_courses.push({
+          serial: join_courses_data[index].serial,
+          tr_id: join_courses_data[index].tr_id,
+          crs_id: join_courses_data[index].course.crs_id,
+          crs_name: join_courses_data[index].course.crs_name
+        })
+      }
+      if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      const logo = await prisma.jmk_web_details.findFirst({ where: { company_id: trainer.company_id } });
+      return { ...trainer, join_courses, logo: logo?.logo ?? null };
     }
     throw new ForbiddenError('Bad request !!')
   },
@@ -1122,27 +1075,93 @@ const trainerResolversQuery = {
     if (role === ROLES[1]) {
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
-      })
+        include: {
+          courses: {
+            include: {
+              course: {
+                include: { crs_week: true }
+              }
+            },
+            take: 2,
+            orderBy: { created_at: 'desc' },
+          },
+          course: {
+            include: {
+              crs_week: {
+                orderBy: { created_at: 'desc' },
+                include: {
+                  jmk_week_content: {
+                    orderBy: { date: 'desc' },
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
       if (!trainer) throw new AuthenticationError('invalid trainer credentials');
-      let videos = 0;
-      let files = 0;
-      let projects = 0;
-      let tests = 0;
-      const weeks = await prisma.jmk_tr_week.count({ where: { crs_id: trainer.crs_id } });
-      const currentWeeks = await prisma.jmk_tr_week.findMany({ where: { crs_id: trainer.crs_id } });
-      const courses = await prisma.jmktrcrsinfo.count({ where: { tr_id: userId, } });
-      const students = await prisma.jmkstdcrsinfo.count({ where: { crs_id: trainer.crs_id, } });
-      for (let index = 0; index < currentWeeks.length; index++) {
-        const videosCount = await prisma.jmk_week_content.count({ where: { type: 'Video', week_id: currentWeeks[index].week_id } });
-        const filesCount = await prisma.jmk_week_content.count({ where: { type: 'Note', week_id: currentWeeks[index].week_id } });
-        const projectsCount = await prisma.jmk_week_content.count({ where: { type: 'Project', week_id: currentWeeks[index].week_id } });
-        const testsCount = await prisma.jmk_week_content.count({ where: { type: 'Test', week_id: currentWeeks[index].week_id } });
-        videos += videosCount;
-        files += filesCount;
-        projects += projectsCount;
-        tests += testsCount;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      const total_present = await prisma.jmk_std_attendance.count({ where: { crs_id: trainer.crs_id, attendance: true } });
+      const total_students = await prisma.jmkstdcrsinfo.count({ where: { crs_id: trainer.crs_id, std_crs_verirfy: true } });
+      const total_course = Math.round(trainer.course.crs_duration * 30);
+      const start_date = new Date(trainer.course.crs_start_date);
+      const total_class = Math.floor((today - start_date) / (1000 * 60 * 60 * 24));
+      const actual_total_class = Math.min(total_class, total_course);
+      const course_completion = ((actual_total_class / total_course) * 100).toFixed(2);
+      const class_attendance = ((total_present / (actual_total_class * total_students)) * 100).toFixed(2);
+
+      const courses = trainer.courses.map(item => item.course);
+
+      let total_video = 0;
+      let total_files = 0;
+      let total_project = 0;
+      let total_test = 0;
+      const meetings = [];
+
+
+      for (let index = 0; index < trainer.courses.length; index++) {
+        const course = trainer.courses[index];
+        if (course.course.time) {
+          const now = new Date();
+          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+          const [startTimeString, endTimeString] = course.course.time.split(",") || [];
+
+          const [startHour, startMinute] = startTimeString.split(":").map(Number);
+          const [endHour, endMinute] = endTimeString.split(":").map(Number);
+
+          const startMinutes = startHour * 60 + startMinute;
+          let endMinutes = endHour * 60 + endMinute;
+
+          if (endMinutes < startMinutes) {
+            endMinutes += 24 * 60;
+          }
+          if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+            meetings.push(course.course)
+          }
+        }
       }
-      return { students, weeks, videos, files, projects, tests, courses }
+
+      for (let index = 0; index < trainer.course.crs_week.length; index++) {
+        const jmk_week_content = trainer.course.crs_week[index].jmk_week_content;
+        jmk_week_content.forEach(item => {
+          if (item.type === 'Video') {
+            total_video += 1;
+          } else if (item.type === 'Project') {
+            total_project += 1;
+          } else if (item.type === 'Test') {
+            total_test += 1;
+          } else {
+            total_files += 1;
+          }
+        });
+      }
+
+      return { total_students, total_present, meetings, total_course, total_class: actual_total_class, course: trainer.course, course_completion, class_attendance, courses, total_video, total_files, total_project, total_test }
     }
   },
 
@@ -1499,118 +1518,6 @@ const trainerResolversQuery = {
     if (!page) throw new ApolloError('Pages Not Found !');
 
     return page
-  },
-
-  getAttendanceTrainer: async (_, { serial }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login');
-    const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_id: userId },
-    });
-    if (!trainer) throw new AuthenticationError('invalid trainer');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    let attendanceData = [];
-    const students = await prisma.jmkstdcrsinfo.findMany({ where: { crs_id: trainer.crs_id, std_crs_verirfy: true } });
-    if (students?.[0]) {
-      for (let index = 0; index < students.length; index++) {
-        const element = students[index];
-        if (element) {
-          const std = await prisma.jmkstdinfo.findFirst({ where: { std_id: element.std_id } });
-          if (std) {
-            const attendance = await prisma.jmk_std_attendance.findFirst({
-              where: {
-                crs_id: trainer.crs_id,
-                std_id: element.std_id,
-                attendance: true,
-                created_at: {
-                  gte: today,
-                  lt: tomorrow,
-                }
-              }
-            });
-            const attendanceCount = await prisma.jmk_std_attendance.count({ where: { crs_id: trainer.crs_id, std_id: element.std_id } });
-            attendanceData.push({
-              std_id: std.std_id,
-              std_fname: std.std_fname,
-              std_mname: std.std_mname,
-              std_lname: std.std_lname,
-              std_email: std.std_email,
-              total_atendance: attendanceCount,
-              today_atendance: attendance ? true : false
-            })
-          }
-        }
-      }
-    }
-    return attendanceData
-  },
-
-  getAttendanceByIdTrainer: async (_, { std_id }, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('user need to login');
-    const trainer = await prisma.jmktrinfo.findFirst({
-      where: { tr_id: userId },
-    });
-    if (!trainer) throw new AuthenticationError('invalid trainer');
-
-    const allAttendance = []
-
-    const std = await prisma.jmkstdinfo.findFirst({ where: { std_id } });
-    if (!std) throw new Error('Student not found');
-
-    const crs = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: trainer.crs_id } });
-    if (!crs) throw new Error('Course not found');
-
-    let totalClasses = Math.ceil((new Date() - new Date(crs.crs_nxt_st_date)) / (1000 * 60 * 60 * 24)) ?? 0;
-
-    if (new Date(crs.crs_nxt_st_date).getTime() > Date.now()) {
-      return []
-    }
-
-    totalClasses = (crs.crs_duration * 30) < totalClasses ? (crs.crs_duration * 30) : totalClasses;
-
-    const total_attendance = await prisma.jmk_std_attendance.count({ where: { crs_id: trainer.crs_id, std_id } }) ?? 0;
-
-    const startDate = new Date(crs.crs_nxt_st_date);
-    for (let index = 0; index < totalClasses; index++) {
-      const currentDate = new Date(startDate);
-      currentDate.setDate(startDate.getDate() + index);
-
-      const tomorrow = new Date(currentDate);
-      tomorrow.setDate(currentDate.getDate() + 1);
-      const attendance = await prisma.jmk_std_attendance.findFirst({
-        where: {
-          attendance: true,
-          crs_id: trainer.crs_id,
-          std_id,
-          created_at: {
-            gte: currentDate,
-            lt: tomorrow,
-          }
-        }
-      });
-
-      allAttendance.push({
-        serial: index,
-        attendance: attendance ? true : false,
-        created_at: currentDate,
-        std_id,
-      })
-    }
-
-    const total_duration = crs.crs_duration * 30 ?? 0;
-    const total_absent = totalClasses - total_attendance ?? 0;
-    return {
-      attendance: allAttendance,
-      total_duration,
-      total_absent,
-      total_attendance,
-      crs_id: trainer.crs_id,
-      std_fname: std.std_fname,
-      std_lname: std.std_lname,
-      std_email: std.std_email,
-    }
   },
 }
 
