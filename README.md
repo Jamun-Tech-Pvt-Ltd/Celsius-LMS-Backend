@@ -21,7 +21,7 @@
 ## How to Deploy
 - Push your chamges to git 
 - Login AWS EC2 using ssh link and .key file
-- Goto student-dasbord git pull your changes 
+- Goto backend-server git pull your changes 
 - Remove currently runnning pm2 servers ( this step is only for test env ) ( pm2 list and pm2 delete ids ex: pm2 delete 1 2 3 )
 - Run npm run build ( npm i if any packages changes )
 - Run : npm run pm2
