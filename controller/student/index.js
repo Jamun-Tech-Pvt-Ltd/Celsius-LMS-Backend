@@ -123,6 +123,12 @@ const studentQueryTypesAndInputs = `
       comment:String!
     }
 
+    input student_todo_input {
+      serial: Int
+      title:String!
+      is_complete:Boolean
+    }      
+
      type Feedback {
         grv_id : ID!
         std_id: String!
@@ -431,6 +437,7 @@ const studentQueryTypesAndInputs = `
     totalAbsent:Int!
     totalClassDays:Int!
     crs_name:String!
+    is_current:Boolean
   }
   
   type AttendanceReport {
@@ -438,6 +445,7 @@ const studentQueryTypesAndInputs = `
     totalPresent:Int!
     totalAbsent:Int!
     totalClassDays:Int!
+    ovaral_attendance:Float
     courseAttendance:[CourseAttendanceReport!]
     ovaralAttendance:[Attendance]
   }
@@ -472,6 +480,17 @@ const studentQueryTypesAndInputs = `
     quiz_report:quiz_report
     meetings:[Course]
     activity:[Activity]
+    todos:[student_todo]
+  }
+  
+  type student_todo {
+    serial:Int!
+    std_id:Int!
+    crs_id:Int!
+    title:String!
+    is_complete:Boolean!
+    created_at:Date!
+    updated_at:Date!
   }
 
 `
@@ -545,6 +564,9 @@ const studentMutation = `
 
     createStdNote(data:createStdNoteInput):String!
     deleteStdNote(serial:Int!):String!
+
+    createAndUpdateTodo(data:student_todo_input):String!
+    deleteTodo(serial:Int!):String!
 
     isTypingMessage(isTyping:Boolean!, receiver_id:Int!):String!
 
@@ -1310,6 +1332,54 @@ const studentResolvers = {
     if (!checkNote) throw new AuthenticationError('invalid access');
     const note = await prisma.jmk_std_note.delete({ where: { serial } });
     if (!note) throw new ApolloError('invalid note id');
+    return 'deleted';
+  },
+
+  createAndUpdateTodo: async (_, { data }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    });
+    if (!user) throw new AuthenticationError('invalid user');
+
+    if (data.serial) {
+      const updatetodo = await prisma.jmk_std_todos.update({
+        data: {
+          title: data.title,
+          is_complete: data.is_complete,
+          updated_at: new Date()
+        },
+        where: {
+          serial: data.serial
+        }
+      });
+      if (!updatetodo) throw new ApolloError('Someting went wrong !');
+      return 'Updated !';
+    } else {
+      const createTodo = await prisma.jmk_std_todos.create({
+        data: {
+          crs_id: user.crs_id,
+          std_id: userId,
+          is_complete: data.is_complete ?? false,
+          title: data.title,
+        }
+      })
+
+      if (!createTodo) throw new ApolloError('Someting went wrong !');
+      return 'Created !';
+    }
+  },
+
+  deleteTodo: async (_, { serial }, { userId }) => {
+    if (!userId) throw new ForbiddenError('user need to login');
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    });
+    if (!user) throw new AuthenticationError('invalid user');
+    const checkTodo = await prisma.jmk_std_todos.findFirst({ where: { serial, crs_id: user.crs_id, std_id: user.std_id } });
+    if (!checkTodo) throw new AuthenticationError('invalid access');
+    const todo = await prisma.jmk_std_todos.delete({ where: { serial } });
+    if (!todo) throw new ApolloError('invalid note id');
     return 'deleted';
   },
 
@@ -2225,30 +2295,29 @@ const studentResolversQuery = {
     const attendanceRecords = await prisma.jmk_std_attendance.findMany({
       where: { std_id: userId, attendance: true },
     });
-
     user.courses.forEach((course) => {
       const { crs_duration, crs_start_date, crs_name } = course.course;
-      const plannedDays = crs_duration * 30;
+      const plannedDays = (crs_duration * 30) ?? 0;
       const courseStartDate = new Date(crs_start_date);
-
-      const daysInSession = Math.min(differenceInDays(today, courseStartDate) + 1, plannedDays);
-      if (daysInSession <= 0) return;
+      const total_class = Math.floor((today - courseStartDate) / (1000 * 60 * 60 * 24));
+      const actual_ovaral_class = Math.min(total_class, plannedDays);
 
       const presentDays = attendanceRecords.filter(
         (record) => record.crs_id === course.crs_id
       ).length;
 
-      const absentDays = daysInSession - presentDays;
+      const absentDays = actual_ovaral_class - presentDays;
 
       totalClass += plannedDays;
-      totalClassDays += daysInSession;
+      totalClassDays += actual_ovaral_class;
       totalPresent += presentDays;
       totalAbsent += absentDays;
 
       courseAttendance.push({
         crs_name,
+        is_current: course.crs_id === user.crs_id,
         totalClass: plannedDays,
-        totalClassDays: daysInSession,
+        totalClassDays: actual_ovaral_class,
         totalPresent: presentDays,
         totalAbsent: absentDays,
       });
@@ -2279,9 +2348,10 @@ const studentResolversQuery = {
       return attendance;
     });
 
-    return { totalClass, totalPresent, totalAbsent, totalClassDays, courseAttendance, ovaralAttendance };
-  },
+    const ovaral_attendance = ((attendanceRecords.length / totalClassDays) * 100).toFixed(2) ?? 0;
 
+    return { totalClass, totalPresent, totalAbsent, totalClassDays, courseAttendance, ovaralAttendance, ovaral_attendance };
+  },
 
   getStudentDashboardData: async (_, { arg }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('user need to login');
@@ -2300,7 +2370,10 @@ const studentResolversQuery = {
             }
           }
         },
-        courses: { include: { course: true } }
+        courses: {
+          where: { std_crs_verirfy: true },
+          include: { course: true }
+        }
       }
     });
     if (!student) throw new AuthenticationError('invalid user');
@@ -2312,12 +2385,12 @@ const studentResolversQuery = {
 
     // attandance
     const total_present = await prisma.jmk_std_attendance.count({ where: { std_id: userId, crs_id: student.crs_id, attendance: true } });
+    const ovaral_present = await prisma.jmk_std_attendance.count({ where: { std_id: userId, attendance: true } });
     const total_course = Math.round(student.course.crs_duration * 30);
     const start_date = new Date(student.course.crs_start_date);
     const total_class = Math.floor((today - start_date) / (1000 * 60 * 60 * 24));
     const actual_total_class = Math.min(total_class, total_course);
     const course_completion = ((actual_total_class / total_course) * 100).toFixed(2) ?? 0;
-    const class_attendance = ((total_present / actual_total_class) * 100).toFixed(2) ?? 0;
     const recent_class = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id, std_crs_verirfy: true }, include: { course: { include: { crs_week: true } } }, orderBy: { createdAt: 'desc' }, take: 2 });
     const activity = await prisma.jmk_std_track_data.findMany({ where: { user_id: student.std_id, user_type: 'Student' } });
 
@@ -2326,8 +2399,15 @@ const studentResolversQuery = {
     const meetings = [];
     const allQuiz = [];
 
+    let ovaralClass = 0;
+
     for (let index = 0; index < student.courses.length; index++) {
       const course = student.courses[index];
+      const start_date = new Date(course.course.crs_start_date);
+      const total_class = Math.floor((today - start_date) / (1000 * 60 * 60 * 24));
+      const total_course = Math.round(course.course.crs_duration * 30);
+      const actual_ovaral_class = Math.min(total_class, total_course);
+      ovaralClass += actual_ovaral_class;
       if (course.course.time) {
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -2347,6 +2427,9 @@ const studentResolversQuery = {
         }
       }
     }
+
+    const class_attendance = ((ovaral_present / ovaralClass) * 100).toFixed(2) ?? 0;
+
 
     for (let index = 0; index < student.course.crs_week.length; index++) {
       const jmk_week_content = student.course.crs_week[index].jmk_week_content;
@@ -2396,7 +2479,9 @@ const studentResolversQuery = {
       ? ((total_correct_answers / total_questions) * 100).toFixed(2)
       : '0.00';
 
-    return { total_course, total_class: actual_total_class, total_present, course_completion, activity, class_attendance, recent_class, resent_project, resent_lessons, meetings, quiz_report: { total_questions, total_correct_answers, total_grade: total_grade, total_time_spend } };
+    const todos = await prisma.jmk_std_todos.findMany({ where: { std_id: student.std_id, crs_id: student.crs_id } });
+
+    return { total_course, total_class: actual_total_class, total_present, course_completion, activity, class_attendance, todos, recent_class, resent_project, resent_lessons, meetings, quiz_report: { total_questions, total_correct_answers, total_grade: total_grade, total_time_spend } };
   }
 }
 
