@@ -437,6 +437,7 @@ const studentQueryTypesAndInputs = `
     totalAbsent:Int!
     totalClassDays:Int!
     crs_name:String!
+    is_current:Boolean
   }
   
   type AttendanceReport {
@@ -2314,6 +2315,7 @@ const studentResolversQuery = {
 
       courseAttendance.push({
         crs_name,
+        is_current: course.crs_id === user.crs_id,
         totalClass: plannedDays,
         totalClassDays: actual_ovaral_class,
         totalPresent: presentDays,
