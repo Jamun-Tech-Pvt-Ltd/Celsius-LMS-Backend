@@ -444,6 +444,7 @@ const studentQueryTypesAndInputs = `
     totalPresent:Int!
     totalAbsent:Int!
     totalClassDays:Int!
+    ovaral_attendance:Float
     courseAttendance:[CourseAttendanceReport!]
     ovaralAttendance:[Attendance]
   }
@@ -2293,30 +2294,28 @@ const studentResolversQuery = {
     const attendanceRecords = await prisma.jmk_std_attendance.findMany({
       where: { std_id: userId, attendance: true },
     });
-
     user.courses.forEach((course) => {
       const { crs_duration, crs_start_date, crs_name } = course.course;
-      const plannedDays = crs_duration * 30;
+      const plannedDays = (crs_duration * 30) ?? 0;
       const courseStartDate = new Date(crs_start_date);
-
-      const daysInSession = Math.min(differenceInDays(today, courseStartDate) + 1, plannedDays);
-      if (daysInSession <= 0) return;
+      const total_class = Math.floor((today - courseStartDate) / (1000 * 60 * 60 * 24));
+      const actual_ovaral_class = Math.min(total_class, plannedDays);
 
       const presentDays = attendanceRecords.filter(
         (record) => record.crs_id === course.crs_id
       ).length;
 
-      const absentDays = daysInSession - presentDays;
+      const absentDays = actual_ovaral_class - presentDays;
 
       totalClass += plannedDays;
-      totalClassDays += daysInSession;
+      totalClassDays += actual_ovaral_class;
       totalPresent += presentDays;
       totalAbsent += absentDays;
 
       courseAttendance.push({
         crs_name,
         totalClass: plannedDays,
-        totalClassDays: daysInSession,
+        totalClassDays: actual_ovaral_class,
         totalPresent: presentDays,
         totalAbsent: absentDays,
       });
@@ -2347,7 +2346,9 @@ const studentResolversQuery = {
       return attendance;
     });
 
-    return { totalClass, totalPresent, totalAbsent, totalClassDays, courseAttendance, ovaralAttendance };
+    const ovaral_attendance = ((attendanceRecords.length / totalClassDays) * 100).toFixed(2) ?? 0;
+
+    return { totalClass, totalPresent, totalAbsent, totalClassDays, courseAttendance, ovaralAttendance, ovaral_attendance };
   },
 
   getStudentDashboardData: async (_, { arg }, { userId, role }) => {
@@ -2367,7 +2368,10 @@ const studentResolversQuery = {
             }
           }
         },
-        courses: { include: { course: true } }
+        courses: {
+          where: { std_crs_verirfy: true },
+          include: { course: true }
+        }
       }
     });
     if (!student) throw new AuthenticationError('invalid user');
@@ -2379,12 +2383,12 @@ const studentResolversQuery = {
 
     // attandance
     const total_present = await prisma.jmk_std_attendance.count({ where: { std_id: userId, crs_id: student.crs_id, attendance: true } });
+    const ovaral_present = await prisma.jmk_std_attendance.count({ where: { std_id: userId, attendance: true } });
     const total_course = Math.round(student.course.crs_duration * 30);
     const start_date = new Date(student.course.crs_start_date);
     const total_class = Math.floor((today - start_date) / (1000 * 60 * 60 * 24));
     const actual_total_class = Math.min(total_class, total_course);
     const course_completion = ((actual_total_class / total_course) * 100).toFixed(2) ?? 0;
-    const class_attendance = ((total_present / actual_total_class) * 100).toFixed(2) ?? 0;
     const recent_class = await prisma.jmkstdcrsinfo.findMany({ where: { std_id: student.std_id, std_crs_verirfy: true }, include: { course: { include: { crs_week: true } } }, orderBy: { createdAt: 'desc' }, take: 2 });
     const activity = await prisma.jmk_std_track_data.findMany({ where: { user_id: student.std_id, user_type: 'Student' } });
 
@@ -2393,8 +2397,15 @@ const studentResolversQuery = {
     const meetings = [];
     const allQuiz = [];
 
+    let ovaralClass = 0;
+
     for (let index = 0; index < student.courses.length; index++) {
       const course = student.courses[index];
+      const start_date = new Date(course.course.crs_start_date);
+      const total_class = Math.floor((today - start_date) / (1000 * 60 * 60 * 24));
+      const total_course = Math.round(course.course.crs_duration * 30);
+      const actual_ovaral_class = Math.min(total_class, total_course);
+      ovaralClass += actual_ovaral_class;
       if (course.course.time) {
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -2414,6 +2425,9 @@ const studentResolversQuery = {
         }
       }
     }
+
+    const class_attendance = ((ovaral_present / ovaralClass) * 100).toFixed(2) ?? 0;
+
 
     for (let index = 0; index < student.course.crs_week.length; index++) {
       const jmk_week_content = student.course.crs_week[index].jmk_week_content;
