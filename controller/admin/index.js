@@ -63,6 +63,9 @@ const adminQueryTypesAndInputs = `
         usr_email: String!
         usr_role: String!
         logo:String
+        total_user:Int
+        total_user_limit:Int
+        expiry_date:Date
      }
 
      type studentreceipt{
@@ -1807,11 +1810,39 @@ const adminResolversQuery = {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
-      include: { company: true }
+      include: {
+        company: {
+          include: {
+            payments: {
+              where: {
+                end_date: { gt: new Date() }
+              }
+            }
+          }
+        },
+      },
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials');
+    let total_user = 0;
+    let total_user_limit = 0;
+    let expiry_date = null;
+    if (admin?.company?.serial) {
+      const admins = await prisma.jmkuserinfo.count({ where: { company_id: admin.company.serial } });
+      const students = await prisma.jmktrinfo.count({ where: { company_id: admin.company.serial } });
+      const trainer = await prisma.jmkstdinfo.count({ where: { company_id: admin.company.serial } });
+      if (admin.company.payments?.[0]) {
+        const payment = admin.company.payments?.[0];
+        total_user_limit = payment.users;
+        expiry_date = payment.expiry_date;
+      } else {
+        const payment = await prisma.jmktcompanypay.findFirst({ where: { company_id: admin?.company?.serial }, orderBy: { created_at: 'desc' } });
+        total_user_limit = payment.users;
+        expiry_date = payment.expiry_date;
+      }
+      total_user = (admins ?? 0) + (students ?? 0) + (trainer ?? 0);
+    }
     const logo = await prisma.jmk_web_details.findFirst({ where: { company_id: admin.company_id } });
-    return ({ ...admin, logo: logo?.logo ?? null });
+    return ({ ...admin, total_user, total_user_limit, expiry_date, logo: logo?.logo ?? null });
   },
 
   getPayments: async (_, args, { userId, role }) => {
@@ -2060,8 +2091,8 @@ const adminResolversQuery = {
 
       const total_attendance = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: admin.company_id } } });
       data.overall_attendance = isNaN(total_attendance / total_classes)
-      ? 0
-      : ((total_attendance / total_classes) * 100).toFixed(2);
+        ? 0
+        : ((total_attendance / total_classes) * 100).toFixed(2);
     }
 
     return data;
