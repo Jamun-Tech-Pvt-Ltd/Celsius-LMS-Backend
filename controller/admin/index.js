@@ -115,6 +115,7 @@ const adminQueryTypesAndInputs = `
         tr_linkedin:String
         join_courses: [trainer_join_courses]
         company:Company!
+        createdAt:Date
      }
      
      type userInfo{
