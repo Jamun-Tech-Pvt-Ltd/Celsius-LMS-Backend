@@ -72,7 +72,10 @@ const saaSRequsteConfirmEmail = (c_name, c_email, c_username, c_password) => `
 
         <ul class="list" style="list-style: none;">
           <li>
-            <strong>Your Admin Url:</strong> ${c_username}.admin.jaamun.com
+            <strong>Your Admin Url:</strong> ${c_username}.admin.celsisuslms.com
+          </li>
+            <li>
+            <strong>User:</strong> ${c_username}
           </li>
           <li>
             <strong>Admin user id:</strong> ${c_email}
@@ -81,10 +84,10 @@ const saaSRequsteConfirmEmail = (c_name, c_email, c_username, c_password) => `
             <strong>Admin Password:</strong> ${c_password}
           </li>
           <li>
-            <strong>Student Pannel Url:</strong> ${c_username}.student.jaamun.com
+            <strong>Student Pannel Url:</strong> ${c_username}.student.celsisuslms.com
           </li>
           <li>
-            <strong>Trainer Pannel Url:</strong> ${c_username}.trainer.jaamun.com
+            <strong>Trainer Pannel Url:</strong> ${c_username}.trainer.celsisuslms.com
           </li>
         </ul>
 
