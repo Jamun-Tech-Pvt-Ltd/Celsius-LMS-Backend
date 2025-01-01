@@ -18,20 +18,8 @@ const saaSRequsteConfirmEmail = (c_name, c_email, c_username, c_password) => `
         position: relative;
       "
     >
-      <img
-        src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/email_teamplate/topVector.png"
-        alt="vector"
-         style='width:200px; height:200px;'
-      />
-      <img
-        src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/email_teamplate/rightLine.png"
 
-        alt="vector"
-        class="right__line"
- style="width: 156px; position: absolute; right: 0%"
-      />
-
-      <div class="content" style="width: 470px; margin: 0 auto; display: flex; align-items: center; flex-direction: column;">
+      <div class="content" style="width: 470px; margin: 98px auto 0 auto; display: flex; align-items: center; flex-direction: column;">
         <img
           src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/email_teamplate/logo.png"
           alt="logo"
@@ -72,20 +60,6 @@ const saaSRequsteConfirmEmail = (c_name, c_email, c_username, c_password) => `
           <p>Jaamun Team</p>
         </div>
       </div>
-
-      <img
-        src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/email_teamplate/leftLine.png"
-        alt="vector"
-        class="left__line"
- style="width: 100px; position: absolute; bottom: 0; left: 0"
-      />
-
-      <img
-        src="https://jmkcrsmn.s3.us-east-2.amazonaws.com/email_teamplate/vector_1.png"
-        alt=""
-        class="btn__vector"
-style="position: absolute; width: 290px; right: 0; bottom: -5rem"
-      />
     </div>
   </body>
 </html>
