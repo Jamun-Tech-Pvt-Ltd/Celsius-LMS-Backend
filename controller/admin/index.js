@@ -2058,7 +2058,7 @@ const adminResolversQuery = {
       }
 
       const total_attendance = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: admin.company_id } } });
-      data.overall_attendance = ((total_attendance / total_classes) * 100).toFixed(2);
+      data.overall_attendance = (((total_attendance ?? 0) / total_classes) * 100).toFixed(2);
     }
 
     return data;
