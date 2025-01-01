@@ -37,208 +37,198 @@ function generatePasswordFromUsername(username) {
 
 const user_access = [
   {
-    name: 'Dashboard',
-    access: [{
-      read: true,
-    }]
-  },
-  {
-    name: 'Courses',
-    option: [
+    name: "Dashboard",
+    access: [
       {
-        name: 'Categories',
-        access: [{
-          create: true,
-          read: true,
-          update: true,
-          delete: true,
-        }]
-      },
-      {
-        name: 'Dynamic Courses',
-        access: [{
-          create: true,
-          read: true,
-          update: true,
-          delete: true,
-        }]
-      },
-      {
-        name: 'Running Courses',
-        access: [{
-          create: true,
-          read: true,
-          update: true,
-          delete: true,
-        }]
+        read: true,
       },
     ],
   },
   {
-    name: 'StakeHolders',
+    name: "Courses",
     option: [
       {
-        name: 'Admins',
-        access: [{
-          create: true,
-          read: true,
-          update: true,
-          delete: true,
-        }]
+        name: "Categories",
+        access: [
+          {
+            create: true,
+            read: true,
+            update: true,
+            delete: true,
+          },
+        ],
       },
       {
-        name: 'Partners',
-        access: [{
-          create: true,
-          read: true,
-          update: true,
-          delete: true,
-        }]
+        name: "Courses",
+        access: [
+          {
+            create: true,
+            read: true,
+            update: true,
+            delete: true,
+          },
+        ],
+      },
+      {
+        name: "Course Request",
+        access: [
+          {
+            create: true,
+            read: true,
+            update: true,
+            delete: true,
+          },
+        ],
       },
     ],
   },
   {
-    name: 'RegistrationInfo',
+    name: "StakeHolders",
     option: [
       {
-        name: 'Students',
-        access: [{
-          create: true,
-          read: true,
-          update: true,
-        }]
+        name: "Admins",
+        access: [
+          {
+            create: true,
+            read: true,
+            update: true,
+            delete: true,
+          },
+        ],
+      },
+
+      {
+        name: "Trainer",
+        access: [
+          {
+            create: true,
+            read: true,
+            update: true,
+          },
+        ],
       },
       {
-        name: 'Course Request',
-        access: [{
-          read: true,
-          update: true,
-        }]
-      },
-      {
-        name: 'Trainer',
-        access: [{
-          create: true,
-          read: true,
-          update: true,
-        }]
-      },
-      {
-        name: 'Partnership Request',
-        access: [{
-          read: true,
-        }]
-      },
-      {
-        name: 'Job Request',
-        access: [{
-          read: true,
-        }]
-      },
-      {
-        name: 'Contact Request',
-        access: [{
-          read: true,
-        }]
+        name: "Student",
+        access: [
+          {
+            create: true,
+            read: true,
+            update: true,
+            delete: true,
+          },
+        ],
       },
     ],
   },
   {
-    name: 'Promo Code',
-    access: [{
-      create: true,
-      read: true,
-      update: true,
-      delete: true,
-    }]
-  },
-  {
-    name: 'Testimonials',
-    access: [{
-      create: true,
-      read: true,
-      update: true,
-      delete: true,
-    }]
-  },
-  {
-    name: 'Services',
-    access: [{
-      create: true,
-      read: true,
-      update: true,
-      delete: true,
-    }]
-  },
-  {
-    name: 'Payments',
-    access: [{
-      read: true,
-    }]
-  },
-  {
-    name: 'Attendance',
-    access: [{
-      read: true,
-    }]
-  },
-  {
-    name: 'Settings',
-    option: [
+    name: "Promo Code",
+    access: [
       {
-        name: 'Website Info',
-        access: [{
-          update: true,
-        }]
-      },
-      {
-        name: 'Website Advertisment Model',
-        access: [{
-          update: true,
-        }]
-      },
-      {
-        name: 'Send Mail',
-        access: [{
-          create: true,
-        }]
+        create: true,
+        read: true,
+        update: true,
+        delete: true,
       },
     ],
   },
   {
-    name: 'Blog',
-    access: [{
-      create: true,
-      read: true,
-      update: true,
-      delete: true,
-    }]
+    name: "Partners",
+    access: [
+      {
+        create: true,
+        read: true,
+        update: true,
+        delete: true,
+      },
+    ],
+  },
+
+  {
+    name: "Subscription",
+    access: [
+      {
+        create: true,
+        read: true,
+        update: true,
+        delete: true,
+      },
+    ],
+  },
+
+  {
+    name: "Payments",
+    access: [
+      {
+        create: true,
+        read: true,
+        update: true,
+        delete: true,
+      },
+    ],
   },
   {
-    name: 'Faqs',
-    access: [{
-      create: true,
-      read: true,
-      update: true,
-      delete: true,
-    }]
+    name: "Attendance",
+    access: [
+      {
+        read: true,
+      },
+    ],
   },
   {
-    name: 'Career',
-    access: [{
-      create: true,
-      read: true,
-      update: true,
-      delete: true,
-    }]
+    name: "Settings",
+    option: [
+      {
+        name: "Website Info",
+        access: [
+          {
+            update: true,
+          },
+        ],
+      },
+      {
+        name: "Send Mail",
+        access: [
+          {
+            create: true,
+          },
+        ],
+      },
+    ],
   },
   {
-    name: 'Privacy Policy',
-    access: [{
-      update: true,
-    }]
+    name: "Faqs",
+    access: [
+      {
+        create: true,
+        read: true,
+        update: true,
+        delete: true,
+      },
+    ],
   },
-]
+  {
+    name: "Profile",
+    access: [
+      {
+        create: true,
+        read: true,
+        update: true,
+        delete: true,
+      },
+    ],
+  },
+  {
+    name: "Support",
+    access: [
+      {
+        create: true,
+        read: true,
+        update: true,
+        delete: true,
+      },
+    ],
+  },
+];
 
 const DefaultUserAccess = JSON.stringify(user_access)
 
