@@ -2372,7 +2372,7 @@ const studentResolversQuery = {
         },
         courses: {
           where: { std_crs_verirfy: true },
-          include: { course: true }
+          include: { course: { include: { crs_week: { include: { jmk_week_content: true } } } } }
         }
       }
     });
@@ -2408,7 +2408,7 @@ const studentResolversQuery = {
       const total_course = Math.round(course.course.crs_duration * 30);
       const actual_ovaral_class = Math.min(total_class, total_course);
       ovaralClass += actual_ovaral_class;
-      if (course.course.time) {
+      if (course?.course?.time) {
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
         const [startTimeString, endTimeString] = course.course.time.split(",") || [];
@@ -2425,11 +2425,18 @@ const studentResolversQuery = {
         if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
           meetings.push(course.course)
         }
+        for (let index = 0; index < course.course.crs_week.length; index++) {
+          const jmk_week_content = course.course.crs_week[index].jmk_week_content;
+          jmk_week_content.forEach(item => {
+            if (item.type === 'Test') {
+              allQuiz.push(item)
+            }
+          })
+        }
       }
     }
 
     const class_attendance = ((ovaral_present / ovaralClass) * 100).toFixed(2) ?? 0;
-
 
     for (let index = 0; index < student.course.crs_week.length; index++) {
       const jmk_week_content = student.course.crs_week[index].jmk_week_content;
@@ -2438,8 +2445,6 @@ const studentResolversQuery = {
           resent_lessons.push(item);
         } else if (item.type === 'Project' && resent_project.length < 2) {
           resent_project.push(item);
-        } else if (item.type === 'Test') {
-          allQuiz.push(item)
         }
       });
     }
@@ -2450,10 +2455,11 @@ const studentResolversQuery = {
 
     for (let index = 0; index < allQuiz.length; index++) {
       const week = allQuiz[index];
+      const totalQuestion = await prisma.jmk_test_set.count({ where: { content_id: week.content_id } });
+      total_questions += totalQuestion;
       const history = await prisma.jmk_std_test_result.findFirst({ where: { content_id: week.content_id, std_id: userId }, orderBy: { created_at: 'desc' } });
 
       if (history) {
-        total_questions += parseInt(history.score.split('/')[1] !== 'undefined' ? history.score.split('/')[1] : 1);
         total_correct_answers += parseInt(history.score.split('/')[0] ?? 0);
 
         const monthKey = new Date(history.created_at).toISOString().slice(0, 7);
