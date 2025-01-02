@@ -1833,11 +1833,11 @@ const adminResolversQuery = {
       if (admin.company.payments?.[0]) {
         const payment = admin.company.payments?.[0];
         total_user_limit = payment.users;
-        expiry_date = payment.expiry_date;
+        expiry_date = payment.end_date;
       } else {
         const payment = await prisma.jmktcompanypay.findFirst({ where: { company_id: admin?.company?.serial }, orderBy: { created_at: 'desc' } });
         total_user_limit = payment.users;
-        expiry_date = payment.expiry_date;
+        expiry_date = payment.end_date;
       }
       total_user = (admins ?? 0) + (students ?? 0) + (trainer ?? 0);
     }
