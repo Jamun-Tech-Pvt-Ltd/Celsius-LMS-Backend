@@ -238,6 +238,7 @@ const adminQueryTypesAndInputs = `
       usr_email:String
       usr_password:String
       usr_role:String
+      usr_access:String
       usr_img_url:Upload
      }
 
