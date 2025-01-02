@@ -1642,7 +1642,7 @@ const adminResolvers = {
     return "success"
   },
 
-  deletePartnerById: async (_, { serial }, { userId, role }) => {
+  deletePromoById: async (_, { serial }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('invalid token')
     const admin = await prisma.jmkuserinfo.findFirst({
       where: { usr_id: userId },
