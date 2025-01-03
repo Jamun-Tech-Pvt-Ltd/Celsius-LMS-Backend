@@ -594,7 +594,7 @@ const adminQuery = `
     getCompanyPaymentById(pay_id: Int!): CompanyPayment
 
     getStudentPayments: [StudentPayment!]!
-
+    
 `
 
 const adminMutation = `
@@ -792,6 +792,7 @@ const adminResolvers = {
       const admin = await prisma.jmkuserinfo.findFirst({
         where: {
           usr_email: data.usr_email,
+          usr_password: data.usr_password,
           company_id: company.serial,
         },
         include: {
@@ -811,20 +812,16 @@ const adminResolvers = {
       if (admin.company.payments.length === 0) {
         throw new Error('Your Company not verify or company payment expired , contact our support team for more info');
       }
-      const isMatch = data.usr_password == admin.usr_password
-      if (!isMatch) throw new AuthenticationError('invalid user credentials');
       const token = jwt.sign({ userId: admin.usr_id, role: 'admin', platform: 'external', c_username: admin?.company?.c_username, c_package_type: admin?.company?.c_username }, process.env.JWT_SECRET_KEY)
       return { token }
     }
     const admin = await prisma.jmkuserinfo.findFirst({
-      where: { usr_email: data.usr_email },
+      where: { usr_email: data.usr_email, usr_password: data.usr_password, company_id: null },
       include: {
         company: true,
       },
     })
     if (!admin) throw new AuthenticationError('invalid admin credentials')
-    const isMatch = data.usr_password == admin.usr_password
-    if (!isMatch) throw new AuthenticationError('invalid user credentials')
     const token = jwt.sign({ userId: admin.usr_id, role: 'admin', platform: 'internal' }, process.env.JWT_SECRET_KEY)
     return { token }
   },
@@ -1056,6 +1053,10 @@ const adminResolvers = {
       include: { company: { include: { jmkstdinfo: true, jmktrinfo: true, jmkuserinfo: true, payments: { where: { end_date: { gt: new Date() } } } } } }
     });
     if (!admin) throw new AuthenticationError('invalid admin');
+
+    const checkEsixingEmail = await prisma.jmkuserinfo.findFirst({ where: { usr_email: data.usr_email } });
+
+    if (checkEsixingEmail) throw new ApolloError('This email is already taken');
 
     if (platform === 'external') {
       const totalUser = (admin.company.jmkstdinfo.length ?? 0) + (admin.company.jmkuserinfo.length ?? 0) + (admin.company.jmktrinfo.length ?? 0);

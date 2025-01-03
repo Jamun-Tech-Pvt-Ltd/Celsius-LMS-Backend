@@ -12,6 +12,13 @@ const commonQueryTypesAndInputs = `
     token: String!
   }
 
+  enum invalid_company_access_type {
+    Payment
+    Unverified
+    Notfound
+    Success
+  }
+
   enum Package {
     Basic
     Pro
@@ -66,10 +73,6 @@ const commonQueryTypesAndInputs = `
     lavel: String
     meetLink: String
     isDeleted: Boolean
-  }
-
-  input deleteCourseInput {
-    crs_id: Int!
   }
 
   input ticket_input {
@@ -265,12 +268,14 @@ const commonQuery = `
 
     getTickets:[Ticket]
     getTicket(serial:Int!):Ticket
+
+    checkValidCompany(username:String!):invalid_company_access_type
 `
 
 const commonMutation = `
     createCourse(data:createAndUpdateCourseInput!):String!
     updateCourse(data:createAndUpdateCourseInput!):String!
-    deleteCourse(data:deleteCourseInput):String
+    deleteCourse(crs_id: Int!):String!
 
     deleteNotification(serial:Int!):String!
     deleteAllNotification:String!
@@ -342,31 +347,19 @@ const commonResolvers = {
   },
 
   deleteCourse: async (_, { data }, { userId, role, platform }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === 'admin') {
-      if (platform === 'external') {
-        const admin = await prisma.jmkuserinfo.findFirst({
-          where: { usr_id: userId },
-          include: { company: true }
-        })
-        if (!admin) throw new AuthenticationError('invalid admin')
-        const course = await prisma.jmkcrsinfo.update({
-          where: { crs_id: data.crs_id, crs_company_id: admin.company_id },
-          data: { isDeleted: true }
-        })
-        if (!course) throw new ApolloError('something went wrong !')
-        return 'success'
-      }
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role === 'admin' && platform === 'external') {
       const admin = await prisma.jmkuserinfo.findFirst({
         where: { usr_id: userId },
+        include: { company: true }
       })
-      if (!admin) throw new AuthenticationError('invalid admin')
+      if (!admin) throw new AuthenticationError('invalid admin');
       const course = await prisma.jmkcrsinfo.update({
-        where: { crs_id: data.crs_id },
+        where: { crs_id: data.crs_id, crs_company_id: admin.company_id },
         data: { isDeleted: true }
-      })
-      if (!course) throw new ApolloError('something went wrong !')
-      return 'success'
+      });
+      if (!course) throw new ApolloError('Course not found !');
+      return 'success';
     }
     throw new AuthenticationError('invalid access')
   },
@@ -1143,6 +1136,14 @@ const commonResolversQuery = {
       return await prisma.jmk_ticket.findFirst({ where: { serial, user_type: 'Student', user_id: userId } });
     }
     throw new ForbiddenError('invalid token');
+  },
+
+  checkValidCompany: async (_, { username }, { }) => {    
+    const comp = await prisma.jmkcompany.findFirst({ where: { c_username: username }, include: { payments: { where: { end_date: { gt: new Date() } } } } });
+    if (!comp) return "Notfound";
+    if (!comp.c_verified) return "Unverified";
+    if (comp.payments.length === 0) return "Payment";
+    return "Success";
   },
 }
 
