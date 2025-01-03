@@ -346,7 +346,7 @@ const commonResolvers = {
     throw new AuthenticationError('invalid access')
   },
 
-  deleteCourse: async (_, { data }, { userId, role, platform }) => {
+  deleteCourse: async (_, { crs_id }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token');
     if (role === 'admin' && platform === 'external') {
       const admin = await prisma.jmkuserinfo.findFirst({
@@ -354,11 +354,12 @@ const commonResolvers = {
         include: { company: true }
       })
       if (!admin) throw new AuthenticationError('invalid admin');
-      const course = await prisma.jmkcrsinfo.update({
-        where: { crs_id: data.crs_id, crs_company_id: admin.company_id },
+      const findCourse = await await prisma.jmkcrsinfo.findFirst({ where: { crs_id, crs_company_id: admin.company_id } })
+      if (!findCourse) throw new ApolloError('Course not found !');
+      await prisma.jmkcrsinfo.update({
+        where: { crs_id },
         data: { isDeleted: true }
       });
-      if (!course) throw new ApolloError('Course not found !');
       return 'success';
     }
     throw new AuthenticationError('invalid access')
@@ -1138,7 +1139,7 @@ const commonResolversQuery = {
     throw new ForbiddenError('invalid token');
   },
 
-  checkValidCompany: async (_, { username }, { }) => {    
+  checkValidCompany: async (_, { username }, { }) => {
     const comp = await prisma.jmkcompany.findFirst({ where: { c_username: username }, include: { payments: { where: { end_date: { gt: new Date() } } } } });
     if (!comp) return "Notfound";
     if (!comp.c_verified) return "Unverified";
