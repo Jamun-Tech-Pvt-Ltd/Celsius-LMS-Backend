@@ -63,6 +63,7 @@ const adminQueryTypesAndInputs = `
         usr_email: String!
         usr_role: String!
         usr_password:String
+        usr_access:String
         logo:String
         total_user:Int
         total_user_limit:Int
