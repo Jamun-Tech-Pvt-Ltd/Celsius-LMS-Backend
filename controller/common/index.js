@@ -865,7 +865,7 @@ const commonResolversQuery = {
       const total_present = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: admin.company_id } } });
 
       let total_classes = 0;
-      const total_course = await prisma.jmkcrsinfo.findMany({ where: { crs_company_id: admin.company_id } });
+      const total_course = await prisma.jmkcrsinfo.findMany({ where: { crs_company_id: admin.company_id, isDeleted: false } });
       for (let index = 0; index < total_course.length; index++) {
         const course = total_course[index];
         const startDate = new Date(course.crs_start_date);
@@ -901,7 +901,7 @@ const commonResolversQuery = {
       if (!trainer) throw new AuthenticationError('invalid trainer credentials');
       const total_student = await prisma.jmkstdcrsinfo.count({ where: { student: { company_id: trainer.company_id }, crs_id: trainer.crs_id } });
       const total_present = await prisma.jmk_std_attendance.count({ where: { attendance: true, student: { company_id: trainer.company_id }, crs_id: trainer.crs_id } });
-      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_company_id: trainer.company_id, crs_id: trainer.crs_id } });
+      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_company_id: trainer.company_id, crs_id: trainer.crs_id, isDeleted: false } });
       const startDate = new Date(course.crs_start_date);
       const total_classes = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
 
@@ -962,7 +962,7 @@ const commonResolversQuery = {
         where: { usr_id: userId },
       });
       if (!admin) throw new AuthenticationError('invalid admin credentials');
-      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id, crs_company_id: admin.company_id } });
+      const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id, crs_company_id: admin.company_id, isDeleted: false } });
       const student = await prisma.jmkstdinfo.findFirst({ where: { std_id, company_id: admin.company_id } });
       const attendanceData = await prisma.jmk_std_attendance.findMany({ where: { std_id, crs_id, attendance: true } });
       const startDate = new Date(course.crs_start_date);
