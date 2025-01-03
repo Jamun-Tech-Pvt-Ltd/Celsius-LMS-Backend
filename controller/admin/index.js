@@ -66,6 +66,8 @@ const adminQueryTypesAndInputs = `
         total_user:Int
         total_user_limit:Int
         expiry_date:Date
+        company_id:Int
+        company:Company
      }
 
      type studentreceipt{
@@ -136,20 +138,6 @@ const adminQueryTypesAndInputs = `
       company:Company
      }
 
-
-     type AdminType{
-      usr_id:Int!
-      usr_email:String
-      usr_role: String
-      usr_fname:String
-      usr_mname:String
-      usr_lname:String
-      usr_img_url:String
-      usr_password:String
-      usr_access:String
-      company_id:Int
-      company:Company
-     }
      type PaymentInfo{
       pay_id: Int!
       payment_date: Date!
@@ -548,7 +536,6 @@ const adminQueryTypesAndInputs = `
 const adminQuery = `
     admin:Admin!
 
-    getAdminById: AdminType
     getstudentForAdmin:[AdminStudent]
     getstudentByIdForAdmin(std_id:Int!):AdminStudent
     getstudentCourseByIdForAdmin(serial:Int!):UserCourseAdmin
@@ -1980,20 +1967,6 @@ const adminResolversQuery = {
       }
     }
     throw new AuthenticationError('invalid access');
-  },
-
-  getAdminById: async (_, args, { userId, role }) => {
-    if (!userId) throw new ForbiddenError('invalid token')
-    if (role === 'admin') {
-      const admin = await prisma.jmkuserinfo.findFirst({
-        where: { usr_id: userId },
-        include: {
-          company: true
-        }
-      })
-      if (!admin) throw new AuthenticationError('invalid admin credentials')
-      return admin
-    }
   },
 
   getAdminDashboard: async (_, args, { userId, role, platform }) => {
