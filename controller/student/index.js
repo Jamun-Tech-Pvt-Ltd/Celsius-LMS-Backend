@@ -170,6 +170,7 @@ const studentQueryTypesAndInputs = `
      type ActiveUserCourse {
         serial : Int!
         crs_id: Int!
+        std_crs_verirfy:Boolean!
         crs_complete: Boolean!
         crs_complete_date:Date
         discount: Int
