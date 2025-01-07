@@ -2436,7 +2436,7 @@ const studentResolversQuery = {
       }
     }
 
-    const class_attendance = ((ovaral_present / ovaralClass) * 100).toFixed(2) ?? 0;
+    const class_attendance = student.courses.length > 0 ? (((ovaral_present) / ovaralClass) * 100).toFixed(2) ?? 0 : 0;
 
     for (let index = 0; index < student.course.crs_week.length; index++) {
       const jmk_week_content = student.course.crs_week[index].jmk_week_content;
@@ -2485,7 +2485,7 @@ const studentResolversQuery = {
       ? ((total_correct_answers / total_questions) * 100).toFixed(2)
       : '0.00';
 
-    const todos = await prisma.jmk_std_todos.findMany({ where: { std_id: student.std_id, crs_id: student.crs_id } });
+    const todos = await prisma.jmk_std_todos.findMany({ where: { std_id: student.std_id, crs_id: student.crs_id }, orderBy: { created_at: 'desc' } });
 
     return { total_course, total_class: actual_total_class, total_present, course_completion, activity, class_attendance, todos, recent_class, resent_project, resent_lessons, meetings, quiz_report: { total_questions, total_correct_answers, total_grade: total_grade, total_time_spend } };
   }
