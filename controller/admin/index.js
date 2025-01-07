@@ -903,8 +903,8 @@ const adminResolvers = {
       const find = await prisma.jmkstdcrsinfo.findFirst({ where: { serial: data.serial }, include: { course: true, student: true } });
       if (find.course.crs_company_id !== admin.company_id) throw new ForbiddenError('You dont have access to update course');
       const checkIfstudentCourseVerify = await prisma.jmkstdcrsinfo.findFirst({ where: { std_id: find.student.std_id, crs_id: find.student.crs_id, std_crs_verirfy: true } });
-      if (!checkIfstudentCourseVerify) {
-        data.crs_id = find.crs_id;
+      if (!checkIfstudentCourseVerify && data.std_crs_verirfy) {
+        await prisma.jmkstdinfo.update({ where: { std_id: find.std_id }, data: { crs_id: find.crs_id } });
       }
       const update = await prisma.jmkstdcrsinfo.update({
         data: { ...data },
