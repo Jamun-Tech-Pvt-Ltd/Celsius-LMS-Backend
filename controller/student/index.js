@@ -880,18 +880,20 @@ const studentResolvers = {
     });
 
     const trainer = await prisma.jmktrcrsinfo.findFirst({ where: { crs_id: user.crs_id } });
-    await prisma.jmk_notifications.create({
-      data: {
-        user_id: trainer.tr_id,
-        label1: `${user.std_fname}`,
-        label2: question.ques_title,
-        user_type: "Trainer",
-        category: 'discussion_panel_new',
-        message: `just posted a question `,
-        link: `/discussionPanel/${question.ques_id}`,
-        is_read: false,
-      }
-    });
+    if (trainer.tr_id) {
+      await prisma.jmk_notifications.create({
+        data: {
+          user_id: trainer.tr_id,
+          label1: `${user.std_fname}`,
+          label2: question.ques_title,
+          user_type: "Trainer",
+          category: 'discussion_panel_new',
+          message: `just posted a question `,
+          link: `/discussionPanel/${question.ques_id}`,
+          is_read: false,
+        }
+      });
+    }
 
     if (!question) throw new ApolloError('Someting went wrong !')
 
