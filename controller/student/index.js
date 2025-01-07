@@ -2091,6 +2091,8 @@ const studentResolversQuery = {
     })
     if (!user) throw new AuthenticationError('invalid user')
     let questions = [];
+    const checkVerify = await prisma.jmkstdcrsinfo.findFirst({ where: { std_id: user.std_id, crs_id: user.crs_id, std_crs_verirfy: true } });
+    if (!checkVerify) return questions;
     const questionsData = await prisma.jmk_std_ques.findMany({ where: { instance_id: user.crs_id } })
     for (let index = 0; index < questionsData.length; index++) {
       let totalUpvote = 0;
@@ -2114,6 +2116,8 @@ const studentResolversQuery = {
     })
     if (!user) throw new AuthenticationError('invalid user')
     let questions = [];
+    const checkVerify = await prisma.jmkstdcrsinfo.findFirst({ where: { std_id: user.std_id, crs_id: user.crs_id, std_crs_verirfy: true } });
+    if (!checkVerify) return questions;
     const questionsData = await prisma.jmk_std_ques.findMany({ where: { instance_id: user.crs_id } })
     for (let index = 0; index < questionsData.length; index++) {
       let totalUpvote = 0;
