@@ -899,14 +899,18 @@ const adminResolvers = {
         where: { usr_id: userId },
       })
       if (!admin) throw new AuthenticationError('invalid admin');
-      if (!role) throw new ForbiddenError('You dont have access to create course');
-      const find = await prisma.jmkstdcrsinfo.findFirst({ where: { serial: data.serial }, include: { course: true } });
+      if (!role) throw new ForbiddenError('You dont have access to update student');
+      const find = await prisma.jmkstdcrsinfo.findFirst({ where: { serial: data.serial }, include: { course: true, student: true } });
       if (find.course.crs_company_id !== admin.company_id) throw new ForbiddenError('You dont have access to update course');
-      const student = await prisma.jmkstdcrsinfo.update({
+      const checkIfstudentCourseVerify = await prisma.jmkstdcrsinfo.findFirst({ where: { std_id: find.student.std_id, crs_id: find.student.crs_id, std_crs_verirfy: true } });
+      if (!checkIfstudentCourseVerify) {
+        data.crs_id = find.crs_id;
+      }
+      const update = await prisma.jmkstdcrsinfo.update({
         data: { ...data },
         where: { serial: data.serial },
       });
-      if (!student) throw new AuthenticationError('Error');
+      if (!update) throw new AuthenticationError('Error');
       return 'success';
     }
     throw new AuthenticationError('Invalid access');
