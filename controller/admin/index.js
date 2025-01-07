@@ -864,6 +864,7 @@ const adminResolvers = {
         data: {
           crs_id: data.crs_id,
           std_id: student.std_id,
+          std_crs_verirfy: true,
         },
       })
       if (!student) throw new AuthenticationError('Error');
