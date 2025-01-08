@@ -1178,7 +1178,7 @@ const trainerResolversQuery = {
       });
       if (!course) throw new AuthenticationError('invalid trainer');
       const studentList = await prisma.jmkstdcrsinfo.findMany({
-        where: { crs_id: course.crs_id },
+        where: { crs_id: course.crs_id, std_crs_verirfy: true },
       });
       if (!studentList) throw new ApolloError('No data');
       let students = [];
