@@ -705,10 +705,17 @@ model jmk_ticket {
   status      jmk_ticket_status_type @default(Pending)
   user_id     Int
   title       String
-  img         String?
-  img_key     String?
   description String
   created_at  DateTime               @default(now())
+  img         jmk_ticket_image[]
+}
+
+model jmk_ticket_image {
+  serial    Int        @id @default(autoincrement())
+  ticket_id Int
+  url       String
+  key       String
+  ticket    jmk_ticket @relation(fields: [ticket_id], references: [serial], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model jmk_company_package_req {
