@@ -242,6 +242,7 @@ const commonQueryTypesAndInputs = `
     img:String
     user_type: jmk_user_enum_type
     status: jmk_ticket_status_type
+    created_at:Date!
     trainer: Trainer
     student: Student
     admin:Admin
