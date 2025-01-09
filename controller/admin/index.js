@@ -355,6 +355,14 @@ const adminQueryTypesAndInputs = `
       company_id:Int!
      }
 
+     input createPackageReqInput {
+      serial:Int
+      users:Int!
+      storage:Int!
+      package:Package!
+      package_type:PackageType!
+     }
+
      type UserCourseAdmin {
       std_id:Int!
       serial:Int!
@@ -533,6 +541,17 @@ const adminQueryTypesAndInputs = `
       course: Course!
       student: Student!
     }
+
+    type packageUpdateReq {
+      serial: Int!
+      users: Int!
+      storage: Int!
+      package:Package!
+      package_type:PackageType!
+      status: Package_Request_Status!
+      created_at: Date!
+      company: Company!
+    }
 `
 
 const adminQuery = `
@@ -594,6 +613,8 @@ const adminQuery = `
     getCompanyPaymentById(pay_id: Int!): CompanyPayment
 
     getStudentPayments: [StudentPayment!]!
+
+    getPackageUpdateReq: [packageUpdateReq]
     
 `
 
@@ -653,6 +674,10 @@ const adminMutation = `
 
     createAndUpdatePayment(data:CompanyPaymentInput):String!
     deleteCompanyPayment(pay_id:Int!):String!
+
+    createPackageReq(data:createPackageReqInput):String!
+    updatePackageReq(serial:Int!,status:Package_Request_Status!):String
+    deletePackageReq(serial:Int!):String!
 
     updatePaymentStatus(pay_id:Int!): String
 `
@@ -1799,6 +1824,75 @@ const adminResolvers = {
     if (!payment) throw new ApolloError('someting went wrong');
     return 'deleted'
   },
+
+  createPackageReq: async (_, { data }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform === 'internal') {
+      throw new ApolloError('super admin cant not create');
+    }
+
+    if (platform === 'external') {
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      if (!admin) throw new ForbiddenError('invalid token');
+      if (data.serial) {
+        const req = await prisma.jmk_company_package_req.findFirst({ where: { serial: data.serial, company_id: admin.company_id } });
+        if (!req) throw new ApolloError('invalid id');
+        if (req.status !== 'Pending') throw new ApolloError('You can only update status pending request.');
+        const update = await prisma.jmk_company_package_req.update({ where: { serial: req.serial }, data: { ...data } });
+        if (!update) throw new ApolloError('Update fail try again.');
+        return "Updated";
+      } else {
+        const req = await prisma.jmk_company_package_req.findFirst({ where: { company_id: admin.company_id, status: 'Pending' } });
+        if (req) throw new ApolloError("Your previous request is not review yet, you can only send req after previous request resolved.");
+        const create = await prisma.jmk_company_package_req.create({ data: { ...data, company_id: admin.company_id } });
+        if (!create) throw new ApolloError('Update fail try again.');
+        return "Created";
+      }
+    }
+
+    throw new AuthenticationError('Invalid token');
+  },
+
+  updatePackageReq: async (_, { serial, status }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform === 'external') {
+      throw new ApolloError('you can not update status');
+    }
+
+    if (platform === 'internal') {
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      if (!admin) throw new ForbiddenError('invalid token');
+      const req = await prisma.jmk_company_package_req.findFirst({ where: { serial } });
+      if (!req) throw new ApolloError('invalid id');
+      const update = await prisma.jmk_company_package_req.update({ where: { serial: req.serial }, data: { status } });
+      if (!update) throw new ApolloError('Update fail try again.');
+      return "Updated";
+    }
+
+    throw new AuthenticationError('Invalid token');
+  },
+
+  deletePackageReq: async (_, { serial }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+    if (!admin) throw new ForbiddenError('invalid token');
+    if (platform === 'internal') {
+      const req = await prisma.jmk_company_package_req.findFirst({ where: { serial } });
+      if (req.status !== 'Pending') throw new ApolloError("Only status pending data can be deleted");
+      const reqDelete = await prisma.jmk_company_package_req.delete({ where: { serial } });
+      if (!reqDelete) throw new ApolloError('someting went wrong, try again');
+      return 'deleted'
+    }
+    if (platform === 'external') {
+      const req = await prisma.jmk_company_package_req.findFirst({ where: { serial, company_id: admin.company_id } });
+      if (req.status !== 'Pending') throw new ApolloError("Only status pending data can be deleted");
+      const reqDelete = await prisma.jmk_company_package_req.delete({ where: { serial } });
+      if (!reqDelete) throw new ApolloError('someting went wrong, try again');
+      return 'deleted'
+    }
+    throw new AuthenticationError('Invalid token');
+  },
+
 }
 
 const adminResolversQuery = {
@@ -2483,6 +2577,23 @@ const adminResolversQuery = {
     return payments;
   },
 
+  getPackageUpdateReq: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role !== 'admin') throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new ForbiddenError('invalid token');
+    if (platform === 'internal') {
+      const req = await prisma.jmk_company_package_req.findMany({ orderBy: { created_at: 'desc' }, include: { company: true } });
+      return req;
+    }
+    if (platform === 'external') {
+      const req = await prisma.jmk_company_package_req.findMany({ where: { company_id: admin.company_id }, orderBy: { created_at: 'desc' }, include: { company: true } });
+      return req;
+    }
+    throw new AuthenticationError('Invalid token');
+  },
 }
 
 const updateAdminActiveDate = async (userId) => {

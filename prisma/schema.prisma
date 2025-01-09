@@ -726,7 +726,6 @@ model jmk_company_package_req {
   package      jmk_company_package_type
   package_type jmk_company_package_type_type
   status       jmk_company_package_req_type  @default(Pending)
-  description  String
   created_at   DateTime                      @default(now())
   company      jmkcompany                    @relation(fields: [company_id], references: [serial])
 }
