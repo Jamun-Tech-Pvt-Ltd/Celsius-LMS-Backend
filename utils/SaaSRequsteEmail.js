@@ -29,7 +29,7 @@ const saaSRequsteEmail = (c_name, c_email, c_package, c_package_type) => `
                           <td align="center" style="padding: 10px 20px; color: #555555; line-height: 1.6;">
                               <p>
                                   <strong style="font-weight: 700;">Dear ${c_name},</strong> <br>
-                                  You have successfully requested a new SaaS service from testuser. Our team will review your request, and an admin will need to approve it before proceeding. We will get back to you shortly with further details.
+                                  You have successfully requested a new SaaS service from  ${c_name}. Our team will review your request, and an admin will need to approve it before proceeding. We will get back to you shortly with further details.
                               </p>
                           </td>
                       </tr>
