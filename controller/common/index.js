@@ -1080,7 +1080,7 @@ const commonResolversQuery = {
     if (role === 'admin' && platform === 'internal') {
       const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, company_id: null } });
       if (!admin) throw new AuthenticationError('invalid admin credentials');
-      const data = await prisma.jmk_ticket.findMany({ where: { user_type: 'Admin' }, include: { img: true } });
+      const data = await prisma.jmk_ticket.findMany({ where: { user_type: 'Admin' }, include: { img: true }, orderBy: { created_at: 'desc' } });
       const withUser = data.map(async (item) => {
         if (item.user_type === 'Admin') {
           const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: item.user_id }, include: { company: true } });
@@ -1093,7 +1093,7 @@ const commonResolversQuery = {
     if (role === 'admin' && platform === 'external') {
       const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
       if (!admin) throw new AuthenticationError('invalid admin credentials');
-      const data = await prisma.jmk_ticket.findMany({ where: { OR: [{ user_type: 'Trainer' }, { user_type: 'Student' }, { user_type: 'Admin', user_id: userId }] }, include: { img: true } });
+      const data = await prisma.jmk_ticket.findMany({ where: { OR: [{ user_type: 'Trainer' }, { user_type: 'Student' }, { user_type: 'Admin', user_id: userId }] }, include: { img: true }, orderBy: { created_at: 'desc' } });
       const withUser = data.map(async (item) => {
         if (item.user_type === 'Student') {
           const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: item.user_id, company_id: admin.company_id } });
@@ -1110,13 +1110,13 @@ const commonResolversQuery = {
     if (role === 'trainer' && platform === 'external') {
       const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: userId } });
       if (!trainer) throw new AuthenticationError('invalid admin credentials');
-      const data = await prisma.jmk_ticket.findMany({ where: { user_type: 'Trainer', user_id: userId }, include: { img: true } });
+      const data = await prisma.jmk_ticket.findMany({ where: { user_type: 'Trainer', user_id: userId }, include: { img: true }, orderBy: { created_at: 'desc' } });
       return data;
     }
     if (role === 'student' && platform === 'external') {
       const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: userId } });
       if (!student) throw new AuthenticationError('invalid admin credentials');
-      const data = await prisma.jmk_ticket.findMany({ where: { user_id: student.std_id, user_type: 'Student' }, include: { img: true } });
+      const data = await prisma.jmk_ticket.findMany({ where: { user_id: student.std_id, user_type: 'Student' }, include: { img: true }, orderBy: { created_at: 'desc' } });
       return data;
     }
   },
