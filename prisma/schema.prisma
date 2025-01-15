@@ -353,6 +353,7 @@ model jmkcompany {
   jmkfaq                  jmkfaq[]
   payments                jmktcompanypay[]
   jmk_company_package_req jmk_company_package_req[]
+  jmk_com_cer_layout      jmk_com_cer_layout[]
 }
 
 model jmkcrsupcom {
@@ -740,6 +741,22 @@ model jmk_std_todos {
   updated_at  DateTime   @default(now())
   student     jmkstdinfo @relation(fields: [std_id], references: [std_id])
   course      jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
+}
+
+model jmk_com_cer_layout {
+  serial         Int        @id @default(autoincrement())
+  company_id     Int
+  c_name         String
+  content        String
+  logo_url       String
+  logo_key       String
+  background_url String
+  background_key String
+  signature_url  String
+  signature_key  String
+  created_at     DateTime   @default(now())
+  updated_at     DateTime   @default(now())
+  company        jmkcompany @relation(fields: [company_id], references: [serial])
 }
 
 enum jmk_std_ques_severity_level_enum {

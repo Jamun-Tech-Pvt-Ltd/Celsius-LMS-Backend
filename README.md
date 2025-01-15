@@ -30,3 +30,30 @@
 ## aws and mailgun 
 - AWS Buket name : jmkcrsmn ( use : userImages , corse videos , email template images , course PDF )
 - mailgun : handle formsubmit mails
+
+
+
+# SSL Certificate Management with Certbot
+
+## Renew Certificate
+To renew the SSL certificate for all domains, use the following command:
+
+```bash
+sudo certbot renew --dry-run
+```
+## Command Used for Certbot SSL Certificate
+```bash
+sudo certbot certonly \
+  --dns-cloudflare \
+  --dns-cloudflare-credentials /etc/letsencrypt/cloudflare.ini \
+  -d celsisuslms.com \
+  -d '*.admin.celsisuslms.com' \
+  -d '*.student.celsisuslms.com' \
+  -d '*.trainer.celsisuslms.com' \
+  -d admin.jaamun.com \
+  -d jaamun.com \
+  -d server.jaamun.com \
+  -d www.celsisuslms.com \
+  -d www.jaamun.com \
+  -d www.jobsupport.us
+  ````
