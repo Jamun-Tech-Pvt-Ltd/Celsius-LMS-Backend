@@ -363,6 +363,14 @@ const adminQueryTypesAndInputs = `
       package_type:PackageType!
      }
 
+    input CertLayoutInput {
+      c_name: String!
+      content: String!
+      logo: Upload
+      background: Upload
+      signature: Upload
+    }
+
      type UserCourseAdmin {
       std_id:Int!
       serial:Int!
@@ -678,6 +686,8 @@ const adminMutation = `
     createPackageReq(data:createPackageReqInput):String!
     updatePackageReq(serial:Int!,status:Package_Request_Status!):String
     deletePackageReq(serial:Int!):String!
+
+    createOrUpdateCertLayout(data:CertLayoutInput):String!
 
     updatePaymentStatus(pay_id:Int!): String
 `
@@ -1890,6 +1900,86 @@ const adminResolvers = {
       if (!reqDelete) throw new ApolloError('someting went wrong, try again');
       return 'deleted'
     }
+    throw new AuthenticationError('Invalid token');
+  },
+
+  createOrUpdateCertLayout: async (_, { data }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('Invalid token');
+    if (platform === 'internal') {
+      throw new ApolloError('Super admin cannot create or update certificate layouts');
+    }
+
+    if (platform === 'external') {
+      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+      if (!admin) throw new ForbiddenError('Invalid token');
+
+      const existingCertLayout = await prisma.jmk_com_cer_layout.findFirst({
+        where: { company_id: admin.company_id },
+      });
+
+      if (existingCertLayout.serial) {
+        if (data.logo) {
+          await deleteImgToAWS(existingCertLayout.logo_key);
+          const uploadedLogo = await uploadImgToAWS(data.logo, 'cert_logo/');
+          data.logo_url = uploadedLogo.data.Location;
+          data.logo_key = uploadedLogo.data.key;
+          delete data.logo;
+        }
+        if (data.background) {
+          await deleteImgToAWS(existingCertLayout.background_key);
+          const uploadedBackground = await uploadImgToAWS(data.background, 'cert_background/');
+          data.background_url = uploadedBackground.data.Location;
+          data.background_key = uploadedBackground.data.key;
+          delete data.background;
+        }
+        if (data.signature) {
+          await deleteImgToAWS(existingCertLayout.signature_key);
+          const uploadedSignature = await uploadImgToAWS(data.signature, 'cert_signature/');
+          data.signature_url = uploadedSignature.data.Location;
+          data.signature_key = uploadedSignature.data.key;
+          delete data.signature;
+        }
+
+        const updatedCertLayout = await prisma.jmk_com_cer_layout.update({
+          where: { serial: existingCertLayout.serial },
+          data: {
+            ...data,
+          },
+        });
+
+        if (!updatedCertLayout) throw new ApolloError('Update failed. Try again.');
+        return 'Certificate layout updated successfully';
+      } else {
+        if (!data.logo) throw new ApolloError('Logo is required');
+        if (!data.background) throw new ApolloError('Background is required');
+        if (!data.signature) throw new ApolloError('Signature is required');
+
+        const uploadLogo = await uploadImgToAWS(data.logo, 'cert_logo/');
+        const uploadBackground = await uploadImgToAWS(data.background, 'cert_background/');
+        const uploadSignature = await uploadImgToAWS(data.signature, 'cert_signature/');
+
+        data.logo_url = uploadLogo.data.Location;
+        data.background_url = uploadBackground.data.Location;
+        data.signature_url = uploadSignature.data.Location;
+        data.logo_key = uploadLogo.data.key;
+        data.background_key = uploadBackground.data.key;
+        data.signature_key = uploadSignature.data.key;
+        delete data.logo;
+        delete data.background;
+        delete data.signature;
+
+        const createdCertLayout = await prisma.jmk_com_cer_layout.create({
+          data: {
+            ...data,
+            company_id: admin.company_id,
+          },
+        });
+
+        if (!createdCertLayout) throw new ApolloError('Creation failed. Try again.');
+        return 'Certificate layout created successfully';
+      }
+    }
+
     throw new AuthenticationError('Invalid token');
   },
 

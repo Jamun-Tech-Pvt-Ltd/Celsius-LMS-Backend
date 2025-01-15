@@ -253,6 +253,17 @@ const commonQueryTypesAndInputs = `
     url:String!
     key:String!
   }
+
+  type CertLayout {
+    serial: Int!
+    company_id: Int!
+    c_name: String!
+    content: String!
+    logo_url: String!
+    background_url: String!
+    signature_url: String!
+    created_at: Date!
+  }
 `
 
 const commonQuery = `
@@ -274,6 +285,8 @@ const commonQuery = `
 
     getTickets:[Ticket]
     getTicket(serial:Int!):Ticket
+
+    getCertLayout:CertLayout
 
     checkValidCompany(username:String!):invalid_company_access_type
 `
@@ -1165,6 +1178,31 @@ const commonResolversQuery = {
     if (!comp.c_verified) return "Unverified";
     if (comp.payments.length === 0) return "Payment";
     return "Success";
+  },
+
+  getCertLayout: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('Invalid token');
+
+    if (platform === 'external') {
+      let user, companyId;
+      if (role === 'admin') {
+        user = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+        if (!user) throw new AuthenticationError('Invalid admin credentials');
+        companyId = user.company_id;
+      } else if (role === 'student') {
+        user = await prisma.jmkstdinfo.findFirst({ where: { std_id: userId } });
+        if (!user) throw new AuthenticationError('Invalid student credentials');
+        companyId = user.company_id;
+      } else {
+        throw new ForbiddenError('Invalid role');
+      }
+
+      const cert = await prisma.jmk_com_cer_layout.findFirst({ where: { company_id: companyId } });
+      if (!cert) throw new ApolloError('No layout created');
+      return cert;
+    }
+
+    throw new ForbiddenError('Invalid token');
   },
 }
 
