@@ -396,6 +396,7 @@ model jmktcompanypay {
   pay_amount  Int
   transaction String     @db.VarChar(100)
   users       Int
+  storage     Int        @default(100)
   company_id  Int
   company     jmkcompany @relation(fields: [company_id], references: [serial])
   created_at  DateTime   @default(now())

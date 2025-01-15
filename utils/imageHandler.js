@@ -20,29 +20,46 @@ const s3Uploader = new AWSS3Uploader({
   destinationBucketName: process.env.BUCKET
 });
 
-
-
 const uploadImgToAWS = async (file, folder) => {
   const { createReadStream, filename, mimetype, encoding } = await file;
+
+  const stream = createReadStream();
+  const chunks = [];
+
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  const fileBuffer = Buffer.concat(chunks);
+  const fileSizeInBytes = fileBuffer.byteLength;
+  const fileSizeInGB = fileSizeInBytes / (1024 ** 3);
+
   const upload = {
     Bucket: process.env.BUCKET,
     ACL: 'public-read',
     ContentDisposition: 'inline',
     Key: `${folder}${Date.now()}${filename}`,
-    Body: createReadStream()
+    Body: fileBuffer
   };
 
-  const data = await new Promise((resolve) => {
+  const data = await new Promise((resolve, reject) => {
     s3Uploader.s3.upload(upload, (err, data) => {
       if (err) {
-        throw new Error('There was an error uploading your file: ', err);
+        reject(new Error('There was an error uploading your file: ', err));
       } else {
         resolve(data);
       }
     });
   });
-  return ({ data, filename, mimetype, encoding })
-}
+
+  return ({
+    data,
+    filename,
+    mimetype,
+    encoding,
+    fileSizeInBytes,
+    fileSizeInGB: fileSizeInGB.toFixed(2)
+  });
+};
 
 const deleteImgToAWS = async (key) => {
   const upload = {
