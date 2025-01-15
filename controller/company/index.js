@@ -27,7 +27,7 @@ const companyQueryTypesAndInputs = `
       pay_amount: Int!
       transaction: String!
       users: Int!
-      storage: Int!
+      storage: Float!
       company: Company!
     }
 

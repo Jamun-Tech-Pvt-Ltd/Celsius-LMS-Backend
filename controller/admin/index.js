@@ -352,7 +352,7 @@ const adminQueryTypesAndInputs = `
       package:Package!
       package_type:PackageType!
       users:Int!
-      storage:Int!
+      storage:Float!
       company_id:Int!
      }
 

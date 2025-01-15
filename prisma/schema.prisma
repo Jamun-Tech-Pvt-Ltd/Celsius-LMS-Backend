@@ -344,7 +344,7 @@ model jmkcompany {
   c_address               String?
   c_taxid                 String?
   created_at              DateTime?                     @default(now())
-  c_storage               Int                           @default(0)
+  c_storage               Float                           @default(0)
   jmkuserinfo             jmkuserinfo[]
   jmkcrsinfo              jmkcrsinfo[]
   jmk_crs_categories      jmk_crs_categories[]
