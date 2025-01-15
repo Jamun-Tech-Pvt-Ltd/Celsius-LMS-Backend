@@ -17,6 +17,7 @@ const companyQueryTypesAndInputs = `
         c_bussiness_type:String!
         created_at:Date!
         c_verified:Boolean
+        c_storage: Float!
         payments:[CompanyPayment]
     }
 

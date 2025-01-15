@@ -57,7 +57,7 @@ const uploadImgToAWS = async (file, folder) => {
     mimetype,
     encoding,
     fileSizeInBytes,
-    fileSizeInGB: fileSizeInGB.toFixed(2)
+    fileSizeInGB: fileSizeInGB.toFixed(3)
   });
 };
 
