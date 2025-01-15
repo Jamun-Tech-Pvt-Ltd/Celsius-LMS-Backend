@@ -17,8 +17,21 @@ const companyQueryTypesAndInputs = `
         c_bussiness_type:String!
         created_at:Date!
         c_verified:Boolean
+        c_storage: Float!
+        payments:[CompanyPayment]
     }
-     
+
+    type CompanyPayment {
+      pay_id: Int!
+      start_date: Date!
+      end_date: Date!
+      pay_amount: Int!
+      transaction: String!
+      users: Int!
+      storage: Float!
+      company: Company!
+    }
+
      input signupCompanyInput{
         c_name: String!
         c_email: String!
@@ -71,7 +84,7 @@ const companyResolvers = {
             const companyUpate = await prisma.jmkcompany.update({
                 data: { ...data, },
                 where: { serial: data.serial }
-            });            
+            });
             if (companyUpate.c_verified) {
                 const admin = await prisma.jmkuserinfo.findFirst({ where: { company_id: companyUpate.serial } });
                 if (!admin) {
@@ -111,7 +124,7 @@ const companyResolversQuery = {
     getCompany: async (_, { serial }, { userId, role }) => {
         if (!userId) throw new AuthenticationError("invalid token");
         if (role === 'admin') {
-            const company = await prisma.jmkcompany.findFirst({ where: { serial } });
+            const company = await prisma.jmkcompany.findFirst({ where: { serial }, include: { payments: true } });
             if (!company) throw new AuthenticationError("invalid");
             return company;
         }

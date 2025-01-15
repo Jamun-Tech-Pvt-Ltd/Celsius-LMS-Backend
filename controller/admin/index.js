@@ -352,6 +352,7 @@ const adminQueryTypesAndInputs = `
       package:Package!
       package_type:PackageType!
       users:Int!
+      storage:Float!
       company_id:Int!
      }
 
@@ -530,15 +531,6 @@ const adminQueryTypesAndInputs = `
       recent_course:[course_with_week]
     }
 
-    type CompanyPayment {
-      pay_id: Int!
-      start_date: Date!
-      end_date: Date!
-      pay_amount: Int!
-      transaction: String!
-      users: Int!
-      company: Company!
-    }
 
     type StudentPayment {
       pay_id: Int!
@@ -1795,6 +1787,7 @@ const adminResolvers = {
           pay_amount: data.pay_amount,
           transaction: data.transaction,
           users: data.users,
+          storage: data.storage,
           end_date: calculateEndDate(data.start_date, data.package_type)
         }
       });
@@ -1818,6 +1811,7 @@ const adminResolvers = {
         transaction: data.transaction,
         users: data.users,
         company_id: data.company_id,
+        storage: data.storage,
         end_date: calculateEndDate(data.start_date, data.package_type)
       }
     });
@@ -1982,7 +1976,6 @@ const adminResolvers = {
 
     throw new AuthenticationError('Invalid token');
   },
-
 }
 
 const adminResolversQuery = {
