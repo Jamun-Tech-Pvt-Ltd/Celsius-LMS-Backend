@@ -1110,11 +1110,15 @@ const commonResolversQuery = {
       const withUser = data.map(async (item) => {
         if (item.user_type === 'Student') {
           const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: item.user_id, company_id: admin.company_id } });
-          return { ...item, student }
+          if (student) {
+            return { ...item, student }
+          }
         }
         if (item.user_type === 'Trainer') {
           const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: item.user_id, company_id: admin.company_id } });
-          return { ...item, trainer }
+          if (trainer) {
+            return { ...item, trainer }
+          }
         }
         return item
       })
