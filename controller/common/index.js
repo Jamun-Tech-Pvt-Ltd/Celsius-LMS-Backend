@@ -1107,21 +1107,22 @@ const commonResolversQuery = {
       const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
       if (!admin) throw new AuthenticationError('invalid admin credentials');
       const data = await prisma.jmk_ticket.findMany({ where: { OR: [{ user_type: 'Trainer' }, { user_type: 'Student' }, { user_type: 'Admin', user_id: userId }] }, include: { img: true }, orderBy: { created_at: 'desc' } });
-      const withUser = data.map(async (item) => {
+      const withUser = [];
+      for (const item of data) {
         if (item.user_type === 'Student') {
           const student = await prisma.jmkstdinfo.findFirst({ where: { std_id: item.user_id, company_id: admin.company_id } });
           if (student) {
-            return { ...item, student }
+            withUser.push({ ...item, student });
           }
-        }
-        if (item.user_type === 'Trainer') {
+        } else if (item.user_type === 'Trainer') {
           const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: item.user_id, company_id: admin.company_id } });
           if (trainer) {
-            return { ...item, trainer }
+            withUser.push({ ...item, trainer });
           }
+        } else {
+          withUser.push({ ...item, company: admin.company });
         }
-        return item
-      })
+      }
       return withUser;
     }
     if (role === 'trainer' && platform === 'external') {
