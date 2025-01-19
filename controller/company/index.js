@@ -35,7 +35,7 @@ const companyQueryTypesAndInputs = `
      input signupCompanyInput{
         c_name: String!
         c_email: String!
-        c_username:String!
+        c_username:String! 
         c_country: String!
         c_package:Package!
         c_package_type:PackageType!

@@ -470,6 +470,7 @@ const trainerResolvers = {
           if (!file.data) throw new ApolloError("Something went wrong!");
           data['video_url'] = file?.data?.Location ?? null;
           data['video_url_key'] = file?.data?.Key ?? '';
+          data['file_size'] = parseFloat(file.fileSizeInGB);
           await prisma.jmkcompany.update({
             where: { serial: trainer.company_id },
             data: {
