@@ -481,6 +481,7 @@ const adminQueryTypesAndInputs = `
 
     type contactReq {
       serial:Int!
+      csubject: String!
       cfname: String!
       clname: String!
       cmobile: String!
