@@ -139,7 +139,15 @@ const companyResolversQuery = {
     getCompany: async (_, { serial }, { userId, role }) => {
         if (!userId) throw new AuthenticationError("invalid token");
         if (role === 'admin') {
-            const company = await prisma.jmkcompany.findFirst({ where: { serial }, include: { payments: true } });
+            const company = await prisma.jmkcompany.findFirst({
+                where: { serial }, include: {
+                    payments: {
+                        where: {
+                            end_date: { gt: new Date() }
+                        }
+                    }
+                }
+            });
             if (!company) throw new AuthenticationError("invalid");
             company.totalAdmins = await prisma.jmkuserinfo.count({ where: { company_id: company.serial } });
             company.totalTrainer = await prisma.jmktrinfo.count({ where: { company_id: company.serial } });
