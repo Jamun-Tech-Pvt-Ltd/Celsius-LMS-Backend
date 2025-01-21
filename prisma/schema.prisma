@@ -79,6 +79,7 @@ model jmk_week_content {
   type          jmk_content_type
   week_id       Int
   video_url     String?          @db.VarChar(1000)
+  file_size     Float?           @default(0)
   project_url   String?          @db.VarChar(1000)
   date          DateTime         @default(now())
   video_url_key String?          @db.VarChar(1000)
@@ -166,9 +167,9 @@ model jmkstdinfo {
 model jmkcontact {
   serial   Int       @id @default(autoincrement())
   cmobile  String?   @db.VarChar(15)
-  cemail   String?   @db.VarChar(30)
-  csubject String?   @db.VarChar(50)
-  cmessage String?   @db.VarChar(200)
+  cemail   String?   @db.VarChar(80)
+  csubject String?   @db.VarChar(500)
+  cmessage String?   @db.VarChar(2000)
   cfname   String?   @db.VarChar(200)
   clname   String?   @db.VarChar(200)
   cdate    DateTime? @default(dbgenerated("(curdate())")) @db.Date
@@ -344,7 +345,7 @@ model jmkcompany {
   c_address               String?
   c_taxid                 String?
   created_at              DateTime?                     @default(now())
-  c_storage               Float                           @default(0)
+  c_storage               Float                         @default(0)
   jmkuserinfo             jmkuserinfo[]
   jmkcrsinfo              jmkcrsinfo[]
   jmk_crs_categories      jmk_crs_categories[]

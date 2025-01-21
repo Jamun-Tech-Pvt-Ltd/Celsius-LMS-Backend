@@ -456,9 +456,26 @@ const trainerResolvers = {
 
       const trainer = await prisma.jmktrinfo.findFirst({
         where: { tr_id: userId },
-      })
+        include: {
+          company: {
+            include: {
+              payments: {
+                where: {
+                  end_date: { gt: new Date() }
+                }
+              }
+            }
+          }
+        }
+      });
 
       if (!trainer) throw new AuthenticationError('invalid trainer credentials');
+      const usedStorage = trainer.company?.c_storage || 0;
+      const purchasedStorage = trainer.company?.payments?.[0]?.storage || 0;
+
+      if (usedStorage >= purchasedStorage) {
+        throw new Error('Storage is full. Please upgrade your plan.');
+      }
 
       if (data.type === 'Video' || data.type === 'Note') {
         if (!data.video_url && data.project_url) {
@@ -470,6 +487,7 @@ const trainerResolvers = {
           if (!file.data) throw new ApolloError("Something went wrong!");
           data['video_url'] = file?.data?.Location ?? null;
           data['video_url_key'] = file?.data?.Key ?? '';
+          data['file_size'] = parseFloat(file.fileSizeInGB);
           await prisma.jmkcompany.update({
             where: { serial: trainer.company_id },
             data: {

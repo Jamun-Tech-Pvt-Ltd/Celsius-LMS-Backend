@@ -3,7 +3,7 @@ import prisma from '../../database.js'
 import { sendMail } from '../../utils/mailHandler.js'
 import saaSRequsteEmailHTML from '../../utils/SaaSRequsteEmail.js'
 import saaSRequsteConfirmEmailHTML from '../../utils/SaaSRequsteConfirmEmail.js'
-import { DefaultUserAccess, generatePasswordFromUsername, ROLES } from '../../utils/helper.js'
+import { DefaultUserAccess, generatePasswordFromUsername } from '../../utils/helper.js'
 
 const companyQueryTypesAndInputs = `
     type Company {
@@ -19,23 +19,38 @@ const companyQueryTypesAndInputs = `
         c_verified:Boolean
         c_storage: Float!
         payments:[CompanyPayment]
+        totalAdmins:Int
+        totalTrainer:Int
+        totalStudents:Int
+        totalCourses:Int
+        files:[companyFiles]
+    }
+
+ 
+   type companyFiles {
+        content_id: Int!
+        title: String!
+        type: String!
+        video_url: String
+        file_size: Float
+        project_url: String
     }
 
     type CompanyPayment {
-      pay_id: Int!
-      start_date: Date!
-      end_date: Date!
-      pay_amount: Int!
-      transaction: String!
-      users: Int!
-      storage: Float!
-      company: Company!
+        pay_id: Int!
+        start_date: Date!
+        end_date: Date!
+        pay_amount: Int!
+        transaction: String!
+        users: Int!
+        storage: Float!
+        company: Company!
     }
 
      input signupCompanyInput{
         c_name: String!
         c_email: String!
-        c_username:String!
+        c_username:String! 
         c_country: String!
         c_package:Package!
         c_package_type:PackageType!
@@ -125,6 +140,34 @@ const companyResolversQuery = {
         if (!userId) throw new AuthenticationError("invalid token");
         if (role === 'admin') {
             const company = await prisma.jmkcompany.findFirst({ where: { serial }, include: { payments: true } });
+            company.totalAdmins = await prisma.jmkuserinfo.count({ where: { company_id: company.serial } });
+            company.totalTrainer = await prisma.jmktrinfo.count({ where: { company_id: company.serial } });
+            company.totalStudents = await prisma.jmkstdinfo.count({ where: { company_id: company.serial } });
+            const courses = await prisma.jmkcrsinfo.findMany({
+                where: { crs_company_id: company.serial },
+                include: {
+                    crs_week: {
+                        include: {
+                            jmk_week_content: {
+                                where: {
+                                    OR: [
+                                        { type: 'Note', video_url_key: { not: null } },
+                                        { type: 'Video', video_url_key: { not: null } },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+            company.totalCourses = courses?.length ?? 0;
+            company.files = [];
+            for (let index = 0; index < courses.length; index++) {
+                const course = courses[index];
+                for (let index = 0; index < course.crs_week.length; index++) {
+                    company.files = company.files.concat(course.crs_week[index].jmk_week_content);
+                }
+            }
             if (!company) throw new AuthenticationError("invalid");
             return company;
         }

@@ -481,6 +481,7 @@ const adminQueryTypesAndInputs = `
 
     type contactReq {
       serial:Int!
+      csubject: String!
       cfname: String!
       clname: String!
       cmobile: String!
@@ -1911,7 +1912,7 @@ const adminResolvers = {
         where: { company_id: admin.company_id },
       });
 
-      if (existingCertLayout.serial) {
+      if (existingCertLayout?.serial) {
         if (data.logo) {
           await deleteImgToAWS(existingCertLayout.logo_key);
           const uploadedLogo = await uploadImgToAWS(data.logo, 'cert_logo/');
