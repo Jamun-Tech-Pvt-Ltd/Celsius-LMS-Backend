@@ -140,6 +140,7 @@ const companyResolversQuery = {
         if (!userId) throw new AuthenticationError("invalid token");
         if (role === 'admin') {
             const company = await prisma.jmkcompany.findFirst({ where: { serial }, include: { payments: true } });
+            if (!company) throw new AuthenticationError("invalid");
             company.totalAdmins = await prisma.jmkuserinfo.count({ where: { company_id: company.serial } });
             company.totalTrainer = await prisma.jmktrinfo.count({ where: { company_id: company.serial } });
             company.totalStudents = await prisma.jmkstdinfo.count({ where: { company_id: company.serial } });
@@ -168,7 +169,6 @@ const companyResolversQuery = {
                     company.files = company.files.concat(course.crs_week[index].jmk_week_content);
                 }
             }
-            if (!company) throw new AuthenticationError("invalid");
             return company;
         }
         throw new AuthenticationError("invalid acccess");
