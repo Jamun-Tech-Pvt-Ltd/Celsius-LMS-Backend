@@ -9,8 +9,8 @@ datasource db {
 
 model jmkcrsmain {
   crsmain_id        Int      @id @default(autoincrement())
-  crsmain_img_url   String?  @db.VarChar(255)
-  crsmain_img_key   String?  @db.VarChar(1000)
+  crsmain_img_url   String?  @db.LongText
+  crsmain_img_key   String?  @db.LongText
   cramain_seo_desc  String   @db.VarChar(100)
   cramain_seo_title String   @db.VarChar(50)
   created_at        DateTime @default(now())
@@ -39,8 +39,8 @@ model jmkcrsinfo {
   crs_rate_us        Int
   crs_ins            String               @db.VarChar(200)
   crs_start_date     DateTime?            @default(now())
-  crs_image          String?              @db.VarChar(1000)
-  crs_image_key      String?              @db.VarChar(1000)
+  crs_image          String?              @db.LongText
+  crs_image_key      String?              @db.LongText
   lavel              String?              @db.VarChar(200)
   time               String               @db.VarChar(200)
   isDeleted          Boolean              @default(false)
@@ -78,11 +78,11 @@ model jmk_week_content {
   description   String           @db.VarChar(1000)
   type          jmk_content_type
   week_id       Int
-  video_url     String?          @db.VarChar(1000)
+  video_url     String?          @db.LongText
   file_size     Float?           @default(0)
-  project_url   String?          @db.VarChar(1000)
+  project_url   String?          @db.LongText
   date          DateTime         @default(now())
-  video_url_key String?          @db.VarChar(1000)
+  video_url_key String?          @db.LongText
   duration      String?          @db.VarChar(100)
   share_date    String?          @db.VarChar(100)
   level         String?          @db.VarChar(100)
@@ -144,8 +144,8 @@ model jmkstdinfo {
   std_mobile            String                  @db.VarChar(15)
   std_birth_dt          DateTime?               @db.Date
   std_password          String                  @db.VarChar(16)
-  std_pic               String?                 @db.VarChar(200)
-  std_pic_key           String?                 @db.VarChar(100)
+  std_pic               String?                 @db.LongText
+  std_pic_key           String?                 @db.LongText
   std_verifyed          Boolean                 @default(false)
   lastSeen              DateTime                @default(now())
   created_at            DateTime                @default(now())
@@ -188,8 +188,8 @@ model jmktrinfo {
   tr_password String         @db.VarChar(16)
   tr_linkedin String?        @db.VarChar(200)
   crs_id      Int?
-  tr_pic      String?        @db.VarChar(500)
-  tr_pic_key  String?        @db.VarChar(500)
+  tr_pic      String?        @db.LongText
+  tr_pic_key  String?        @db.LongText
   lastSeen    DateTime       @default(now())
   createdAt   DateTime       @default(now())
   company_id  Int
@@ -221,8 +221,8 @@ model jmkjobReq {
   linkedin   String         @db.VarChar(200)
   role       String         @db.VarChar(50)
   remark     String?        @db.VarChar(1000)
-  resume_key String         @db.VarChar(200)
-  resume     String         @db.VarChar(200)
+  resume_key String         @db.LongText
+  resume     String         @db.LongText
   career_id  Int
   createdAt  DateTime       @default(now())
   career     jmk_web_career @relation(fields: [career_id], references: [serial])
@@ -320,8 +320,8 @@ model jmkuserinfo {
   usr_fname    String?     @db.VarChar(50)
   usr_mname    String?     @db.VarChar(50)
   usr_lname    String?     @db.VarChar(50)
-  usr_img_url  String?     @db.VarChar(2000)
-  usr_img_key  String?     @db.VarChar(1000)
+  usr_img_url  String?     @db.LongText
+  usr_img_key  String?     @db.LongText
   created_at   DateTime?   @default(now())
   lastSeen     DateTime    @default(now())
   usr_access   String?     @db.LongText
@@ -382,10 +382,10 @@ model jmk_testimonial {
   usr_company          String?  @db.VarChar(200)
   type                 String   @default("celsius") @db.VarChar(200)
   usr_star             Int?
-  usr_img              String   @db.VarChar(500)
-  usr_img_key          String   @db.VarChar(500)
-  usr_company_logo     String?  @db.VarChar(500)
-  usr_company_logo_key String?  @db.VarChar(500)
+  usr_img              String   @db.LongText
+  usr_img_key          String   @db.LongText
+  usr_company_logo     String?  @db.LongText
+  usr_company_logo_key String?  @db.LongText
   created_at           DateTime @default(now())
   testimonial          String   @db.LongText
 }
@@ -437,10 +437,10 @@ model jmkblog {
   blog_heading           String
   blog_short_description String   @db.LongText
   blog_description       String   @db.LongText
-  blog_image             String?  @db.VarChar(1000)
-  blog_image_key         String?  @db.VarChar(1000)
-  blog_logo              String?  @db.VarChar(1000)
-  blog_logo_key          String?  @db.VarChar(1000)
+  blog_image             String?  @db.LongText
+  blog_image_key         String?  @db.LongText
+  blog_logo              String?  @db.LongText
+  blog_logo_key          String?  @db.LongText
   blog_meta_title        String
   blog_meta_description  String
   blog_meta_keyword      String
@@ -469,8 +469,8 @@ model jmk_std_ques {
   created_at       DateTime?                        @default(now())
   updated_at       DateTime?                        @default(now())
   ques_title       String                           @db.VarChar(500)
-  ques_image       String?
-  ques_image_key   String?
+  ques_image       String?                          @db.LongText
+  ques_image_key   String?                          @db.LongText
 }
 
 model jmk_ques_ans {
@@ -511,7 +511,7 @@ model jmk_chats {
   sender_id   Int
   user_type   jmk_ques_ans_user_type_enum
   created_at  DateTime                    @default(now())
-  message     String                      @db.VarChar(1000)
+  message     String                      @db.LongText
   isSeen      Boolean                     @default(false)
   chat_type   jmk_chat_type_enum          @default(Text)
 }
@@ -521,7 +521,7 @@ model jmk_group_chats {
   sender_id   Int
   user_type   jmk_ques_ans_user_type_enum
   created_at  DateTime                    @default(now())
-  message     String                      @db.VarChar(1000)
+  message     String                      @db.LongText
   isSeen      Boolean                     @default(false)
   chat_type   jmk_chat_type_enum          @default(Text)
   receiver_id Int
@@ -548,16 +548,16 @@ model jmk_web_details {
   phone           String
   phone1          String
   email           String
-  logo            String?
-  logo_key        String?
+  logo            String?                   @db.LongText
+  logo_key        String?                   @db.LongText
   tertiary_color  String?
   primary_color   String?
   secondary_color String?
   description     String?                   @db.LongText
   location        String?
   type            jmk_web_details_type_enum
-  qr              String?
-  qr_key          String?
+  qr              String?                   @db.LongText
+  qr_key          String?                   @db.LongText
   bank_name       String?
   company_name    String?
   company_account String?
@@ -568,8 +568,8 @@ model jmk_web_details {
 model jmk_web_modal {
   serial  Int     @id @default(autoincrement())
   status  Boolean
-  img     String
-  img_key String
+  img     String  @db.LongText
+  img_key String  @db.LongText
 }
 
 model jmk_web_career {
@@ -591,8 +591,8 @@ model jmk_crs_categories {
   serial      Int          @id @default(autoincrement())
   title       String
   description String       @db.LongText
-  icon        String
-  icon_key    String
+  icon        String       @db.LongText
+  icon_key    String       @db.LongText
   company_id  Int
   company     jmkcompany   @relation(fields: [company_id], references: [serial])
   created_at  DateTime     @default(now())
@@ -605,8 +605,8 @@ model jmk_services {
   description       String   @db.LongText
   long_description  String   @db.LongText
   short_description String   @db.LongText
-  icon              String
-  icon_key          String
+  icon              String   @db.LongText
+  icon_key          String   @db.LongText
   created_at        DateTime @default(now())
   seo_description   String?
   seo_title         String?
@@ -622,8 +622,8 @@ model jmk_policy {
 model jmk_partner_ui {
   serial     Int      @id @default(autoincrement())
   title      String   @db.VarChar(1000)
-  icon       String
-  icon_key   String
+  icon       String   @db.LongText
+  icon_key   String   @db.LongText
   created_at DateTime @default(now())
 }
 
@@ -655,10 +655,10 @@ model jmk_promo_code {
 model jmk_crs_blog {
   serial            Int                     @id @default(autoincrement())
   title             String                  @unique
-  short_description String
+  short_description String                  @db.LongText
   long_description  String                  @db.LongText
-  img               String
-  img_key           String
+  img               String                  @db.LongText
+  img_key           String                  @db.LongText
   crs_id            Int
   tr_id             Int
   created_at        DateTime                @default(now())
@@ -749,13 +749,13 @@ model jmk_com_cer_layout {
   serial         Int        @id @default(autoincrement())
   company_id     Int
   c_name         String
-  content        String
-  logo_url       String
-  logo_key       String
-  background_url String
-  background_key String
-  signature_url  String
-  signature_key  String
+  content        String     @db.LongText
+  logo_url       String     @db.LongText
+  logo_key       String     @db.LongText
+  background_url String     @db.LongText
+  background_key String     @db.LongText
+  signature_url  String     @db.LongText
+  signature_key  String     @db.LongText
   created_at     DateTime   @default(now())
   updated_at     DateTime   @default(now())
   company        jmkcompany @relation(fields: [company_id], references: [serial])

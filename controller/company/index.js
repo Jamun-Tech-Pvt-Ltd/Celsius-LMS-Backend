@@ -81,8 +81,17 @@ const companyMutation = `
 
 const companyResolvers = {
     signupCompany: async (_, { data }) => {
-        const company = await prisma.jmkcompany.findFirst({ where: { c_email: data.c_email, c_username: data.c_username } })
-        if (company) throw new AuthenticationError("company already exist with that email and username")
+        const company = await prisma.jmkcompany.findFirst({
+            where: {
+                OR: [
+                    { c_email: data.c_email },
+                    { c_username: data.c_username },
+                    { c_name: data.c_name },
+                    { c_phone: data.c_phone },
+                ],
+            },
+        });
+        if (company) throw new AuthenticationError("Company already exist with that email | username | company name | phone number");
         const newCompany = await prisma.jmkcompany.create({
             data: { ...data }
         });
@@ -113,7 +122,7 @@ const companyResolvers = {
                             usr_access: DefaultUserAccess
                         }
                     });
-                    await sendMail(companyUpate.c_email, 'Successfully Comany Account Verifyed', saaSRequsteConfirmEmailHTML(companyUpate.c_name, companyUpate.c_email, companyUpate.c_username, newAdmin.usr_password));
+                    await sendMail(companyUpate.c_email, 'Successfully Company Account Verifyed', saaSRequsteConfirmEmailHTML(companyUpate.c_name, companyUpate.c_email, companyUpate.c_username, newAdmin.usr_password));
                 }
             }
             if (!companyUpate) throw new AuthenticationError("Invalid !!")
