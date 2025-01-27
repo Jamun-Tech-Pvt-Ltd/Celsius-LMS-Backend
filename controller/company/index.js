@@ -122,7 +122,7 @@ const companyResolvers = {
                             usr_access: DefaultUserAccess
                         }
                     });
-                    await sendMail(companyUpate.c_email, 'Successfully Comany Account Verifyed', saaSRequsteConfirmEmailHTML(companyUpate.c_name, companyUpate.c_email, companyUpate.c_username, newAdmin.usr_password));
+                    await sendMail(companyUpate.c_email, 'Successfully Company Account Verifyed', saaSRequsteConfirmEmailHTML(companyUpate.c_name, companyUpate.c_email, companyUpate.c_username, newAdmin.usr_password));
                 }
             }
             if (!companyUpate) throw new AuthenticationError("Invalid !!")

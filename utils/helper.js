@@ -223,8 +223,25 @@ const user_access = [
       {
         create: true,
         read: true,
+      },
+    ],
+  },
+  {
+    name: "Update Request",
+    access: [
+      {
+        create: true,
+        read: true,
         update: true,
         delete: true,
+      },
+    ],
+  },
+  {
+    name: "Certificate",
+    access: [
+      {
+        create: true,
       },
     ],
   },
