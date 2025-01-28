@@ -103,6 +103,12 @@ const trainerQueryTypesAndInputs = `
         long_description:String!
         img:Upload
       }
+
+      input updateStudentCourseFromTrainerInput {
+        std_id: Int!
+\       crs_complete: Boolean!
+        crs_complete_date: Date!
+      }
       
      type Trainer {
         course:Course
@@ -262,6 +268,8 @@ const trainerMutation = `
 
     createAndUpdatePage(data:createAndUpdatePageInput):String!
     deletePage(serial:Int!):String!
+
+    updateStudentCourseFromTrainer(data:updateStudentCourseFromTrainerInput):String!
 
 `
 
@@ -927,6 +935,22 @@ const trainerResolvers = {
     }
   },
 
+  updateStudentCourseFromTrainer: async (_, { data }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token')
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    });
+    if (!trainer) throw new AuthenticationError('invalid admin');
+    if (!role) throw new ForbiddenError('You dont have access to update student');
+    const find = await prisma.jmkstdcrsinfo.findFirst({ where: { student: { company_id: trainer.company_id }, crs_id: trainer.crs_id, std_id: data.std_id } });
+    if (!find) throw new ForbiddenError('You dont have access to update course');
+    const update = await prisma.jmkstdcrsinfo.update({
+      data: { crs_complete: data.crs_complete, crs_complete_date: data.crs_complete_date },
+      where: { serial: find.serial },
+    });
+    if (!update) throw new AuthenticationError('Error');
+    return 'success';
+  },
 }
 
 const trainerResolversQuery = {
