@@ -109,7 +109,7 @@ const trainerQueryTypesAndInputs = `
 \       crs_complete: Boolean!
         crs_complete_date: Date!
       }
-      
+
      type Trainer {
         course:Course
      }
@@ -242,6 +242,8 @@ const trainerQuery = `
 
     getPagesTrainer:[page]
     getPageTrainer(serial:Int!):page
+
+    getTrainerAttendance:[Attendance]
 `
 
 const trainerMutation = `
@@ -270,6 +272,8 @@ const trainerMutation = `
     deletePage(serial:Int!):String!
 
     updateStudentCourseFromTrainer(data:updateStudentCourseFromTrainerInput):String!
+
+    addTrainerAttendance:String!
 
 `
 
@@ -951,6 +955,27 @@ const trainerResolvers = {
     if (!update) throw new AuthenticationError('Error');
     return 'success';
   },
+
+  addTrainerAttendance: async (_, { }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('Invalid Token');
+    if (role !== ROLES[1]) throw new AuthenticationError('invalid access');
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+    });
+    if (!trainer) throw new ForbiddenError('Invalid Token');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const oldData = await prisma.jmk_tr_attendance.findFirst({ where: { crs_id: trainer.crs_id, tr_id: trainer.tr_id, created_at: { gte: today } } });
+    if (oldData) throw new ApolloError('Already attendance today');
+    await prisma.jmk_tr_attendance.create({
+      data: {
+        crs_id: trainer.crs_id,
+        tr_id: trainer.tr_id,
+        attendance: true
+      }
+    });
+    return 'success'
+  },
 }
 
 const trainerResolversQuery = {
@@ -1569,6 +1594,60 @@ const trainerResolversQuery = {
 
     return page
   },
+
+  getTrainerAttendance: async (_, __, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('Invalid Token');
+    if (role !== ROLES[1]) throw new AuthenticationError('Invalid Access');
+
+    const trainer = await prisma.jmktrinfo.findFirst({
+      where: { tr_id: userId },
+      include: { course: true },
+    });
+    if (!trainer) throw new ForbiddenError('Trainer not found');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const startDate = new Date(trainer.course.crs_start_date);
+    startDate.setHours(0, 0, 0, 0);
+
+    // Calculate course duration in days and course end date
+    const totalCourseDays = trainer.course.crs_duration * 30;
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + totalCourseDays);
+
+    // Ensure the total classes don't go beyond today or the course end date
+    const totalClasses = Math.min(
+      Math.ceil((Math.min(today, endDate) - startDate) / (1000 * 60 * 60 * 24)) + 1,
+      totalCourseDays
+    );
+
+    // Fetch attendance data
+    const attendanceData = await prisma.jmk_tr_attendance.findMany({
+      where: { crs_id: trainer.course.crs_id, tr_id: trainer.tr_id },
+    });
+
+    // Create attendance array for all valid days
+    const attendance = Array.from({ length: totalClasses }, (_, index) => {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + index);
+      return {
+        attendance: false,
+        created_at: date,
+      };
+    });
+
+    // Map attendance data into the array
+    attendanceData.forEach(record => {
+      const recordDate = new Date(record.created_at);
+      const dayIndex = Math.floor((recordDate - startDate) / (1000 * 60 * 60 * 24));
+      if (dayIndex >= 0 && dayIndex < totalClasses) {
+        attendance[dayIndex].attendance = true;
+      }
+    });
+
+    return attendance.reverse();
+  }
 }
 
 const updateTrainerActiveDate = async (userId) => {
