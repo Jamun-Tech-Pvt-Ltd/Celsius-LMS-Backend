@@ -46,17 +46,14 @@ sudo certbot renew --dry-run
 sudo certbot certonly \
   --dns-cloudflare \
   --dns-cloudflare-credentials /etc/letsencrypt/cloudflare.ini \
-  -d celsisuslms.com \
-  -d '*.admin.celsisuslms.com' \
-  -d '*.student.celsisuslms.com' \
-  -.comd '*.trainer.celsisuslms' \
   -d '*.admin.celsiuslms.com' \
   -d '*.student.celsiuslms.com' \
   -d '*.trainer.celsiuslms.com' \
   -d admin.jaamun.com \
   -d jaamun.com \
   -d server.jaamun.com \
-  -d www.celsisuslms.com \
+  -d www.celsiuslms.com \
+  -d celsiuslms.com \
   -d www.jaamun.com \
   -d www.jobsupport.us
   ````
