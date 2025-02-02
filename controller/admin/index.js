@@ -6,7 +6,7 @@ import {
 import prisma from '../../database.js'
 import jwt from 'jsonwebtoken'
 import { uploadImgToAWS, deleteImgToAWS } from '../../utils/imageHandler.js'
-import { ROLES } from '../../utils/helper.js'
+import { startOfDay, endOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
 import { sendMail } from '../../utils/mailHandler.js'
 
 const adminQueryTypesAndInputs = `
@@ -121,6 +121,7 @@ const adminQueryTypesAndInputs = `
         tr_password:String
         tr_linkedin:String
         join_courses: [trainer_join_courses]
+        jmk_tr_attendance: [Attendance]
         company:Company!
         createdAt:Date
      }
@@ -553,6 +554,12 @@ const adminQueryTypesAndInputs = `
       created_at: Date!
       company: Company!
     }
+
+    type TrainerAttendanceFromAdmin {
+      trainer:Trainer
+      course: Course
+      today_attendance:Boolean!
+    }
 `
 
 const adminQuery = `
@@ -616,6 +623,9 @@ const adminQuery = `
     getStudentPayments: [StudentPayment!]!
 
     getPackageUpdateReq: [packageUpdateReq]
+
+    getTrainerAttendanceFromAdmin:[TrainerAttendanceFromAdmin]
+    getTrainerAttendanceFromAdminById(tr_id:Int!,crs_id:Int!):TrainerAttendanceFromAdmin
     
 `
 
@@ -2678,6 +2688,81 @@ const adminResolversQuery = {
     }
     throw new AuthenticationError('Invalid token');
   },
+
+  getTrainerAttendanceFromAdmin: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role !== 'admin') throw new ForbiddenError('invalid token');
+    if (platform !== 'external') throw new ForbiddenError('invalid token');
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new ForbiddenError('invalid token');
+    const todayStart = startOfDay(new Date());
+    const todayEnd = endOfDay(new Date());
+
+    const trainers = await prisma.jmktrcrsinfo.findMany({
+      where: { trainer: { company_id: admin.company_id } },
+      include: {
+        trainer: { include: { jmk_tr_attendance: { orderBy: { created_at: 'desc' } } } },
+        course: true
+      },
+    });
+
+    const trainersWithTodayAttendance = trainers.map(trainer => ({
+      ...trainer,
+      today_attendance: trainer.trainer.jmk_tr_attendance.some(att =>
+        att.created_at >= todayStart && att.created_at <= todayEnd
+      ),
+    }));
+
+    return trainersWithTodayAttendance;
+  },
+
+  getTrainerAttendanceFromAdminById: async (_, args, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (role !== 'admin') throw new ForbiddenError('invalid token');
+    if (platform !== 'external') throw new ForbiddenError('invalid token');
+
+    const admin = await prisma.jmkuserinfo.findFirst({
+      where: { usr_id: userId },
+    });
+    if (!admin) throw new ForbiddenError('invalid token');
+
+    const attendance = await prisma.jmktrcrsinfo.findFirst({
+      where: { tr_id: args.tr_id, crs_id: args.crs_id, trainer: { company_id: admin.company_id } },
+      include: {
+        trainer: { include: { jmk_tr_attendance: { orderBy: { created_at: 'desc' } } } },
+        course: true,
+      },
+    });
+
+    if (!attendance) return null;
+
+    const today = new Date();
+    const courseStartDate = attendance.course.crs_start_date;
+    if (!courseStartDate) throw new Error('Course start date not found');
+
+    const allDates = eachDayOfInterval({ start: courseStartDate, end: today });
+
+    const recordedDates = attendance.trainer.jmk_tr_attendance.map(att => new Date(att.created_at));
+
+    const updatedAttendance = allDates.map(date => {
+      const isPresent = recordedDates.some(attDate => isSameDay(attDate, date));
+      return {
+        attendance: isPresent,
+        created_at: date,
+      };
+    });
+
+    return {
+      ...attendance,
+      trainer: {
+        ...attendance.trainer,
+        jmk_tr_attendance: updatedAttendance,
+      },
+    };
+  },
+
 }
 
 const updateAdminActiveDate = async (userId) => {
