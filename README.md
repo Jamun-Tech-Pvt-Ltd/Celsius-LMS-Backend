@@ -49,7 +49,10 @@ sudo certbot certonly \
   -d celsisuslms.com \
   -d '*.admin.celsisuslms.com' \
   -d '*.student.celsisuslms.com' \
-  -d '*.trainer.celsisuslms.com' \
+  -.comd '*.trainer.celsisuslms' \
+  -d '*.admin.celsiuslms.com' \
+  -d '*.student.celsiuslms.com' \
+  -d '*.trainer.celsiuslms.com' \
   -d admin.jaamun.com \
   -d jaamun.com \
   -d server.jaamun.com \
