@@ -1091,16 +1091,30 @@ const commonResolversQuery = {
   getTickets: async (_, { args }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('invalid token');
     if (role === 'admin' && platform === 'internal') {
-      const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId, company_id: null } });
-      if (!admin) throw new AuthenticationError('invalid admin credentials');
-      const data = await prisma.jmk_ticket.findMany({ where: { user_type: 'Admin' }, include: { img: true }, orderBy: { created_at: 'desc' } });
-      const withUser = data.map(async (item) => {
+      const admin = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId, company_id: null },
+      });
+      if (!admin) throw new AuthenticationError('Invalid admin credentials');
+
+      const data = await prisma.jmk_ticket.findMany({
+        where: { user_type: 'Admin' },
+        include: { img: true },
+        orderBy: { created_at: 'desc' },
+      });
+
+      const withUser = [];
+      for (const item of data) {
         if (item.user_type === 'Admin') {
-          const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: item.user_id }, include: { company: true } });
-          return { ...item, admin, company: admin.company }
+          const admin = await prisma.jmkuserinfo.findFirst({
+            where: { usr_id: item.user_id },
+            include: { company: true },
+          });
+          if (admin?.company_id) {
+            withUser.push({ ...item, admin, company: admin.company });
+          }
         }
-        return item
-      })
+      }
+
       return withUser;
     }
     if (role === 'admin' && platform === 'external') {

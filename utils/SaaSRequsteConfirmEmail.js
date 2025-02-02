@@ -37,12 +37,12 @@ const saaSRequsteConfirmEmail = (c_name, c_email, c_username, c_password) => `
                       <tr>
                           <td align="center" style="padding: 10px;">
                               <table style="width: 100%; text-align: left; font-size: 14px; line-height: 1.6;">
-                                  <tr><td><strong>Your Admin Url:</strong> ${c_username}.admin.celsisuslms.com</td></tr>
+                                  <tr><td><strong>Your Admin Url:</strong> ${c_username}.admin.celsiuslms.com</td></tr>
                                   <tr><td><strong>Your Company Username:</strong> ${c_username}</td></tr>
                                   <tr><td><strong>Admin user id:</strong> ${c_email}</td></tr>
                                   <tr><td><strong>Admin Password:</strong> ${c_password}</td></tr>
-                                  <tr><td><strong>Student Pannel Url:</strong> ${c_username}.student.celsisuslms.com</td></tr>
-                                  <tr><td><strong>Trainer Pannel Url:</strong> ${c_username}.trainer.celsisuslms.com</td></tr>
+                                  <tr><td><strong>Student Pannel Url:</strong> ${c_username}.student.celsiuslms.com</td></tr>
+                                  <tr><td><strong>Trainer Pannel Url:</strong> ${c_username}.trainer.celsiuslms.com</td></tr>
                               </table>
                           </td>
                       </tr>
