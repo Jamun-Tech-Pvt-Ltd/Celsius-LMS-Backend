@@ -41,6 +41,7 @@ model jmkcrsinfo {
   crs_start_date     DateTime?            @default(now())
   crs_image          String?              @db.LongText
   crs_image_key      String?              @db.LongText
+  crs_syllabus       String?              @db.LongText
   lavel              String?              @db.VarChar(200)
   time               String               @db.VarChar(200)
   isDeleted          Boolean              @default(false)

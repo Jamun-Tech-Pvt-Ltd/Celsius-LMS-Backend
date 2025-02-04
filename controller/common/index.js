@@ -92,6 +92,7 @@ const commonQueryTypesAndInputs = `
     crs_ins: String!
     crs_start_date: Date
     crs_image: String
+    crs_syllabus:String
     time: String
     lavel: String
     meetLink: String
@@ -307,6 +308,8 @@ const commonMutation = `
     updateAttendance(date:Date!,std_id:Int!,crs_id:Int):String!
 
     userActiveTime:String!
+
+    addCourseSyllabus(crs_id:Int,crs_syllabus:String!):String!
 `
 
 
@@ -673,6 +676,32 @@ const commonResolvers = {
     if (!ticket) throw new ApolloError('someting went wrong');
     throw new AuthenticationError('internal admin cannot create ticket');
   },
+
+  addCourseSyllabus: async (_, { crs_id, crs_syllabus }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('invalid token');
+    if (platform === 'external') {
+      if (role === 'admin') {
+        if (!crs_id) throw new ForbiddenError('Admin need to provide crs_id');
+        const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+        if (!admin) throw new ForbiddenError('invalid token');
+        const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id, crs_company_id: admin.company_id } });
+        if (!course) throw new ForbiddenError('invalid access');
+        await prisma.jmkcrsinfo.update({ where: { crs_id }, data: { crs_syllabus } });
+        return 'success'
+      }
+      if (role === 'trainer') {
+        if (crs_id) throw new ForbiddenError('Trainer Doesnt need to provide crs_id');
+        const trainer = await prisma.jmktrinfo.findFirst({ where: { tr_id: userId } });
+        if (!trainer) throw new ForbiddenError('invalid token');
+        const course = await prisma.jmkcrsinfo.findFirst({ where: { crs_id: trainer.crs_id, crs_company_id: trainer.company_id } });
+        if (!course) throw new ForbiddenError('invalid access');
+        await prisma.jmkcrsinfo.update({ where: { crs_id: course.crs_id }, data: { crs_syllabus } });
+        return 'success'
+      }
+    }
+
+    throw new AuthenticationError('invalid access');
+  }
 }
 
 const commonResolversQuery = {
@@ -1223,6 +1252,7 @@ const commonResolversQuery = {
 
     throw new ForbiddenError('Invalid token');
   },
+
 }
 
 export {
