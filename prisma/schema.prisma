@@ -61,6 +61,7 @@ model jmkcrsinfo {
   jmktstdpayinfo     jmktstdpayinfo[]
   jmk_std_todos      jmk_std_todos[]
   jmk_tr_attendance  jmk_tr_attendance[]
+  jmk_ai_chats       jmk_ai_chats[]
 }
 
 model jmk_tr_week {
@@ -162,6 +163,7 @@ model jmkstdinfo {
   jmk_std_note          jmk_std_note[]
   jmktstdpayinfo        jmktstdpayinfo[]
   jmk_std_todos         jmk_std_todos[]
+  jmk_ai_chats          jmk_ai_chats[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
 }
@@ -775,6 +777,18 @@ model jmk_com_cer_layout {
   created_at     DateTime   @default(now())
   updated_at     DateTime   @default(now())
   company        jmkcompany @relation(fields: [company_id], references: [serial])
+}
+
+model jmk_ai_chats {
+  id        String   @id @default(uuid())
+  std_id    Int
+  crs_id    Int
+  role      String
+  message   String
+  createdAt DateTime @default(now())
+
+  course  jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
+  student jmkstdinfo @relation(fields: [std_id], references: [std_id])
 }
 
 enum jmk_std_ques_severity_level_enum {

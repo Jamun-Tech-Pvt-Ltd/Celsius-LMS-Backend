@@ -10,9 +10,10 @@ import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 import { sendMail } from '../../utils/mailHandler.js'
 import forgotPasswordHTML from '../../utils/forgotPassword.js'
 import QuestionInformTemplate from '../../utils/QuestionInformEmail.js'
-
 import { PubSub } from 'graphql-subscriptions'
-import { differenceInDays } from 'date-fns'
+import OpenAI from "openai";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const pubsub = new PubSub()
 
@@ -128,6 +129,10 @@ const studentQueryTypesAndInputs = `
       title:String!
       is_complete:Boolean
     }      
+
+    input chat_with_ai_input {
+      message:String!
+    }  
 
      type Feedback {
         grv_id : ID!
@@ -583,6 +588,9 @@ const studentMutation = `
 
     submitAttendance:String!
     takeAttendance:String!
+
+    chatWithAi(data:chat_with_ai_input!):String!
+
     
 `
 
@@ -1709,6 +1717,53 @@ const studentResolvers = {
 
     return 'success';
   },
+
+  chatWithAi: async (_, { data }, { userId, role }) => {
+    if (!userId) throw new ForbiddenError('Invalid Token');
+    if (role !== ROLES[0]) throw new AuthenticationError('Invalid access');
+
+    const user = await prisma.jmkstdinfo.findFirst({
+      where: { std_id: userId },
+    });
+    if (!user) throw new AuthenticationError('Invalid user');
+
+    // Fetch last 10 messages for context
+    const history = await prisma.jmk_ai_chats.findMany({
+      where: { std_id: userId, crs_id: user.crs_id },
+      orderBy: { createdAt: "asc" },
+      take: 10,
+    });
+
+    // Format messages for OpenAI
+    const messages = history.map((msg) => ({
+      role: msg.role.toLowerCase(), // "student" -> "user", "ai" -> "assistant"
+      content: msg.message,
+    }));
+
+    messages.push({ role: "user", content: data.message });
+
+    // Call OpenAI API
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages,
+    });
+
+    const aiReply = response.choices[0].message.content;
+
+    // Save student message
+    await prisma.jmk_ai_chats.create({
+      data: { crs_id: user.crs_id, std_id: user.std_id, role: "Student", message: data.message },
+    });
+
+    // Save AI response
+    await prisma.jmk_ai_chats.create({
+      data: { crs_id: user.crs_id, std_id: user.std_id, role: "AI", message: aiReply },
+    });
+
+    return aiReply;
+  },
+
+
 }
 
 const studentResolversQuery = {
