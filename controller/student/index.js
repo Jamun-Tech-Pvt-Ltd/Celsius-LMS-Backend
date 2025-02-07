@@ -1721,43 +1721,62 @@ const studentResolvers = {
   chatWithAi: async (_, { data }, { userId, role }) => {
     if (!userId) throw new ForbiddenError('Invalid Token');
     if (role !== ROLES[0]) throw new AuthenticationError('Invalid access');
-
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
+      include: {
+        course: {
+          include: {
+            crs_week: true,
+            jmk_std_todos: true,
+          },
+        },
+      },
     });
     if (!user) throw new AuthenticationError('Invalid user');
 
-    // Fetch last 10 messages for context
     const history = await prisma.jmk_ai_chats.findMany({
       where: { std_id: userId, crs_id: user.crs_id },
       orderBy: { createdAt: "asc" },
       take: 10,
     });
 
-    // Format messages for OpenAI
-    const messages = history.map((msg) => ({
-      role: msg.role.toLowerCase(), // "student" -> "user", "ai" -> "assistant"
-      content: msg.message,
-    }));
+    const systemMessage = {
+      role: "system",
+      content: `You are an AI tutor assisting ${user.std_fname} ${user.std_mname ?? ""} ${user.std_lname}. 
+    
+      - Enrolled in: ${user.course.crs_name} 
+      - Course Duration: ${user.course.crs_duration} weeks 
+      - Start Date: ${user.course.crs_start_date?.toISOString().split("T")[0] || "N/A"}
+      - Current Week Topic: ${user.course.crs_week?.[0]?.week_topic || "N/A"}
+      - Syllabus Summary: ${user.course.crs_syllabus?.slice(0, 100) || "N/A"}...
+      - Upcoming Tasks: ${user.course.jmk_std_todos.map(todo => todo.task).join(", ") || "None"}
+    
+      Adjust responses based on their progress, preferred learning method, and upcoming tasks. 
+      Focus on reinforcing weak topics while keeping the guidance engaging and motivating.`,
+    };
 
-    messages.push({ role: "user", content: data.message });
+    const messages = [
+      systemMessage,
+      ...history.map((msg) => ({
+        role: msg.role.toLowerCase() === "student" ? "user" : "assistant",
+        content: msg.message,
+      })),
+      { role: "user", content: data.message },
+    ];
 
-    // Call OpenAI API
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-3.5-turbo-16k",
       messages,
     });
 
     const aiReply = response.choices[0].message.content;
 
-    // Save student message
-    await prisma.jmk_ai_chats.create({
-      data: { crs_id: user.crs_id, std_id: user.std_id, role: "Student", message: data.message },
-    });
-
-    // Save AI response
-    await prisma.jmk_ai_chats.create({
-      data: { crs_id: user.crs_id, std_id: user.std_id, role: "AI", message: aiReply },
+    // Save student & AI messages in DB
+    await prisma.jmk_ai_chats.createMany({
+      data: [
+        { crs_id: user.crs_id, std_id: user.std_id, role: "Student", message: data.message },
+        { crs_id: user.crs_id, std_id: user.std_id, role: "AI", message: aiReply },
+      ],
     });
 
     return aiReply;
