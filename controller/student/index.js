@@ -1718,47 +1718,89 @@ const studentResolvers = {
     return 'success';
   },
 
-  chatWithAi: async (_, { data }, { userId, role }) => {
+  chatWithAi: async (_, { data }, { userId, role, platform }) => {
     if (!userId) throw new ForbiddenError('Invalid Token');
-    if (role !== ROLES[0]) throw new AuthenticationError('Invalid access');
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: userId },
-      include: {
-        course: {
-          include: {
-            crs_week: true,
-            jmk_std_todos: true,
+
+    let user, systemMessage, history;
+
+    if (role === ROLES[0]) {
+      user = await prisma.jmkstdinfo.findFirst({
+        where: { std_id: userId },
+        include: {
+          course: {
+            include: {
+              crs_week: true,
+              jmk_std_todos: true,
+            },
           },
+          company: true,
         },
-      },
-    });
-    if (!user) throw new AuthenticationError('Invalid user');
+      });
+      if (!user) throw new AuthenticationError('Invalid student');
 
-    const history = await prisma.jmk_ai_chats.findMany({
-      where: { std_id: userId, crs_id: user.crs_id },
-      orderBy: { createdAt: "asc" },
-      take: 10,
-    });
+      history = await prisma.jmk_ai_chats.findMany({
+        where: { user_id: userId, crs_id: role === 'admin' ? null : user.course.crs_id },
+        orderBy: { createdAt: "asc" },
+        take: 10,
+      });
 
-    const systemMessage = {
-      role: "system",
-      content: `You are an AI tutor assisting ${user.std_fname} ${user.std_mname ?? ""} ${user.std_lname}. 
-    
-      - Enrolled in: ${user.course.crs_name} 
-      - Course Duration: ${user.course.crs_duration} weeks 
-      - Start Date: ${user.course.crs_start_date?.toISOString().split("T")[0] || "N/A"}
-      - Current Week Topic: ${user.course.crs_week?.[0]?.week_topic || "N/A"}
-      - Syllabus Summary: ${user.course.crs_syllabus?.slice(0, 100) || "N/A"}...
-      - Upcoming Tasks: ${user.course.jmk_std_todos.map(todo => todo.task).join(", ") || "None"}
-    
-      Adjust responses based on their progress, preferred learning method, and upcoming tasks. 
-      Focus on reinforcing weak topics while keeping the guidance engaging and motivating.`,
-    };
+      systemMessage = {
+        role: "system",
+        content: `You are an AI tutor assisting ${user.std_fname} ${user.std_mname ?? ""} ${user.std_lname}. 
+          
+        - Company: ${user.company.c_name}  
+        - Enrolled in: ${user.course.crs_name}  
+        - Course Duration: ${user.course.crs_duration} weeks  
+        - Start Date: ${user.course.crs_start_date?.toISOString().split("T")[0] || "N/A"}  
+        - Current Week Topic: ${user.course.crs_week?.[0]?.week_topic || "N/A"}  
+        - Syllabus Summary: ${user.course.crs_syllabus?.slice(0, 100) || "N/A"}...  
+        - Upcoming Tasks: ${user.course.jmk_std_todos.map(todo => todo.task).join(", ") || "None"}  
+          
+        Adjust responses based on their progress, preferred learning method, and upcoming tasks.  
+        Focus on reinforcing weak topics while keeping the guidance engaging and motivating.`,
+      };
+
+    } else if (role === ROLES[1]) {
+      user = await prisma.jmktrinfo.findFirst({
+        where: { tr_id: userId },
+        include: {
+          course: true,
+          company: true,
+        },
+      });
+      if (!user) throw new AuthenticationError('Invalid trainer');
+
+      systemMessage = {
+        role: "system",
+        content: `You are an AI assistant supporting trainer ${user.tr_fname} ${user.tr_mname ?? ""} ${user.tr_lname}.  
+        
+        - Company: ${user.company.c_name}  
+        - Assigned Course: ${user.course.crs_name || "None"}  
+        - Provide AI support for course materials, student queries, and engagement strategies.`,
+      };
+
+    } else if (role === 'admin' && platform === 'external') {
+      user = await prisma.jmkuserinfo.findFirst({
+        where: { usr_id: userId },
+        include: { company: true },
+      });
+      if (!user) throw new AuthenticationError('Invalid admin');
+
+      systemMessage = {
+        role: "system",
+        content: `You are an AI business assistant helping ${user.company.c_name}.  
+        
+        - Provide insights on hiring trends, training impact, and business development strategies.`,
+      };
+
+    } else {
+      throw new ForbiddenError('Invalid Role');
+    }
 
     const messages = [
       systemMessage,
-      ...history.map((msg) => ({
-        role: msg.role.toLowerCase() === "student" ? "user" : "assistant",
+      ...(history || []).map(msg => ({
+        role: msg.role.toLowerCase() !== "AI" ? "user" : "assistant",
         content: msg.message,
       })),
       { role: "user", content: data.message },
@@ -1771,17 +1813,16 @@ const studentResolvers = {
 
     const aiReply = response.choices[0].message.content;
 
-    // Save student & AI messages in DB
     await prisma.jmk_ai_chats.createMany({
       data: [
-        { crs_id: user.crs_id, std_id: user.std_id, role: "Student", message: data.message },
-        { crs_id: user.crs_id, std_id: user.std_id, role: "AI", message: aiReply },
+        { crs_id: user.course?.crs_id || null, user_id: user.std_id || user.tr_id || user.usr_id, role, message: data.message },
+        { crs_id: user.course?.crs_id || null, user_id: user.std_id || user.tr_id || user.usr_id, role: "AI", message: aiReply },
       ],
     });
 
+
     return aiReply;
   },
-
 
 }
 
