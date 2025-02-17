@@ -1809,7 +1809,7 @@ const studentResolvers = {
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo-16k",
       messages,
-  });
+    });
 
     const aiReply = response.choices[0].message.content;
 
