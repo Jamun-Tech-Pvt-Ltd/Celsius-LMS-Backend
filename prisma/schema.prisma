@@ -163,7 +163,6 @@ model jmkstdinfo {
   jmk_std_note          jmk_std_note[]
   jmktstdpayinfo        jmktstdpayinfo[]
   jmk_std_todos         jmk_std_todos[]
-  jmk_ai_chats          jmk_ai_chats[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
 }
@@ -781,14 +780,13 @@ model jmk_com_cer_layout {
 
 model jmk_ai_chats {
   id        String   @id @default(uuid())
-  std_id    Int
-  crs_id    Int
+  user_id   Int
+  crs_id    Int?
   role      String
   message   String
   createdAt DateTime @default(now())
 
-  course  jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
-  student jmkstdinfo @relation(fields: [std_id], references: [std_id])
+  course  jmkcrsinfo? @relation(fields: [crs_id], references: [crs_id])
 }
 
 enum jmk_std_ques_severity_level_enum {
