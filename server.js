@@ -17,13 +17,15 @@ import { ROLES } from './utils/helper.js';
 import { updateStdActiveDate } from './controller/student/index.js';
 import { updateTrainerActiveDate } from './controller/trainer/index.js';
 import { updateAdminActiveDate } from './controller/admin/index.js';
+import { rateLimitDirective } from 'graphql-rate-limit-directive';
+const { rateLimitDirectiveTransformer } = rateLimitDirective();
 
 new PrismaClient();
 
 const port = process.env.PORT || 8080;
 
 const cors = {
-  origin: '*',
+  origin: ['https://jaamun.com', 'https://celsiuslms.com', 'https://*.celsiuslms.com', 'https://*.jaamun.com', 'http://43.204.184.252'],
   credentials: true,
 };
 
@@ -59,10 +61,12 @@ async function startServer() {
   app.use(express.json());
   app.use(graphqlUploadExpress());
 
-  const schema = makeExecutableSchema({
+  let schema = makeExecutableSchema({
     typeDefs,
     resolvers,
   });
+
+  schema = rateLimitDirectiveTransformer(schema);
 
   const httpServer = createServer(app);
 
@@ -73,6 +77,8 @@ async function startServer() {
     csrfPrevention: false,
     cache: 'bounded',
     plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
+    introspection: false,
+    playground: false,
   });
 
   await server.start();

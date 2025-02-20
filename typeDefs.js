@@ -5,6 +5,8 @@ import { adminMutation, adminQuery, adminQueryTypesAndInputs } from './controlle
 import { studentMutation, studentQuery, studentQueryTypesAndInputs } from './controller/student/index.js';
 import { commonMutation, commonQuery, commonQueryTypesAndInputs } from './controller/common/index.js';
 import { jamuntekMutation, jamuntekQuery, jamuntekQueryTypesAndInputs } from './controller/jamuntek/index.js';
+import { rateLimitDirective } from 'graphql-rate-limit-directive';
+const { rateLimitDirectiveTypeDefs } = rateLimitDirective();
 
 
 const typeDefs = gql`
@@ -18,8 +20,9 @@ const typeDefs = gql`
    ${commonQueryTypesAndInputs}
    ${jamuntekQueryTypesAndInputs}
 
+   ${rateLimitDirectiveTypeDefs}
 
-   type Query {
+   type Query @rateLimit(limit: 5, duration: 20) {
       ${adminQuery}
       ${companyQuery}
       ${trainerQuery}
@@ -28,7 +31,7 @@ const typeDefs = gql`
       ${jamuntekQuery}
    }
 
-   type Mutation {
+   type Mutation @rateLimit(limit: 5, duration: 20){
       ${adminMutation}
       ${companyMutation}
       ${trainerMutation}
