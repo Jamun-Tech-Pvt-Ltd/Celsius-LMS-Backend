@@ -25,7 +25,7 @@ new PrismaClient();
 const port = process.env.PORT || 8080;
 
 const cors = {
-  origin: '*',
+  origin: ['https://jaamun.com', 'https://celsiuslms.com', 'https://*.celsiuslms.com', 'https://*.jaamun.com', 'http://43.204.184.252'],
   credentials: true,
 };
 
@@ -76,7 +76,7 @@ async function startServer() {
     cors,
     csrfPrevention: false,
     cache: 'bounded',
-    plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
+    // plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
     introspection: false,
     playground: false,
   });
