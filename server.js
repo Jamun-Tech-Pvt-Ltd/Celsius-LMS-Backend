@@ -25,7 +25,7 @@ new PrismaClient();
 const port = process.env.PORT || 8080;
 
 const cors = {
-  origin: ['https://jaamun.com', 'https://celsiuslms.com', 'https://*.celsiuslms.com', 'https://*.jaamun.com', 'http://43.204.184.252'],
+  origin: '*',
   credentials: true,
 };
 
