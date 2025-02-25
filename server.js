@@ -76,9 +76,9 @@ async function startServer() {
     cors,
     csrfPrevention: false,
     cache: 'bounded',
-    // plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
-    introspection: false,
-    playground: false,
+    plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
+    introspection: true,
+    playground: true,
   });
 
   await server.start();

@@ -91,6 +91,7 @@ const jamuntekQueryTypesAndInputs = `
 
 const jamuntekQuery = `
    getAllCareerPage: [CareerPage!]!
+   getAllCareerPageById(serial:Int!): CareerPage
    getServicByTitle(title:String!):Service
 
 `
@@ -272,6 +273,12 @@ const jamuntekResolvers = {
 const jamuntekResolversQuery = {
   getAllCareerPage: async (_, { args }, { userId, role }) => {
     const careers = await prisma.jmk_web_career.findMany({ where: { status: true } });
+    if (!careers) throw new ApolloError('Data Not Found')
+    return careers
+  },
+
+  getAllCareerPageById: async (_, { serial }, { userId, role }) => {
+    const careers = await prisma.jmk_web_career.findFirst({ where: { serial } });
     if (!careers) throw new ApolloError('Data Not Found')
     return careers
   },
