@@ -1689,7 +1689,10 @@ const studentResolvers = {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const oldData = await prisma.jmk_std_attendance.findFirst({ where: { crs_id: user.crs_id, std_id: user.std_id, created_at: { gte: today } } });
-    if (oldData) throw new ApolloError('Already attendance today');
+    if (oldData) {
+      throw new ApolloError('You have already taken attendance today.');
+    }
+    
     await prisma.jmk_std_attendance.create({
       data: {
         crs_id: user.crs_id,
@@ -1700,22 +1703,28 @@ const studentResolvers = {
     return 'success'
   },
 
-  takeAttendance: async (_, { }, { userId, role }) => {
+  takeAttendance: async (_, __, { userId, role }) => {
     if (!userId) throw new ForbiddenError('Invalid Token');
-    if (role !== ROLES[1]) throw new AuthenticationError('invalid access');
+    if (role !== ROLES[1]) throw new AuthenticationError('Invalid access');
+
     const trainer = await prisma.jmktrinfo.findFirst({
       where: { tr_id: userId },
     });
 
-    const students = await prisma.jmkstdinfo.findMany({ where: { company_id: trainer.company_id, crs_id: trainer.crs_id } });
+    const students = await prisma.jmkstdinfo.findMany({
+      where: { company_id: trainer.company_id, crs_id: trainer.crs_id },
+    });
+
     if (!students.length) throw new Error('No students found');
 
     students.forEach(student => {
       const receiverChannel = `attendance_channel_${student.std_id}_${student.crs_id}_${student.company_id}`;
-      pubsub.publish(receiverChannel, { askAttendance: `trainer is taking attendance` });
+      pubsub.publish(receiverChannel, {
+        askAttendance: `Trainer is taking attendance for course ${student.crs_id}`,
+      });
     });
 
-    return 'success';
+    return 'Success';
   },
 
   chatWithAi: async (_, { data }, { userId, role, platform }) => {
@@ -2641,10 +2650,9 @@ const subscription = {
     askAttendance: {
       subscribe: (_, { receiver_id, crs_id, company_id }) => {
         const receiverChannel = `attendance_channel_${receiver_id}_${crs_id}_${company_id}`;
-        console.log(receiverChannel);
-
+        console.log(`Subscribed to channel: ${receiverChannel}`);
         return pubsub.asyncIterator(receiverChannel);
-      }
+      },
     },
   }
 }

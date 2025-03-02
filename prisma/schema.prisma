@@ -41,27 +41,30 @@ model jmkcrsinfo {
   crs_start_date     DateTime?            @default(now())
   crs_image          String?              @db.LongText
   crs_image_key      String?              @db.LongText
-  crs_syllabus       String?              @db.LongText
   lavel              String?              @db.VarChar(200)
   time               String               @db.VarChar(200)
   isDeleted          Boolean              @default(false)
   meetLink           String?              @db.VarChar(1000)
   created_at         DateTime             @default(now())
   crs_company_id     Int                  @default(1)
-  category           jmk_crs_categories   @relation(fields: [crs_category_id], references: [serial])
-  company            jmkcompany           @relation(fields: [crs_company_id], references: [serial])
-  crs_week           jmk_tr_week[]
+  crs_syllabus       String?              @db.LongText
+  jmk_ai_chats       jmk_ai_chats[]
   jmk_std_attendance jmk_std_attendance[]
-  jmkcrstest         jmkcrstest[]
-  jmkstdinfo         jmkstdinfo[]
-  jmktrcrsinfo       jmktrcrsinfo[]
-  jmkstdcrsinfo      jmkstdcrsinfo[]
   jmk_std_note       jmk_std_note[]
-  jmktrinfo          jmktrinfo[]
-  jmktstdpayinfo     jmktstdpayinfo[]
   jmk_std_todos      jmk_std_todos[]
   jmk_tr_attendance  jmk_tr_attendance[]
-  jmk_ai_chats       jmk_ai_chats[]
+  crs_week           jmk_tr_week[]
+  category           jmk_crs_categories   @relation(fields: [crs_category_id], references: [serial])
+  company            jmkcompany           @relation(fields: [crs_company_id], references: [serial])
+  jmkcrstest         jmkcrstest[]
+  jmkstdcrsinfo      jmkstdcrsinfo[]
+  jmkstdinfo         jmkstdinfo[]
+  jmktrcrsinfo       jmktrcrsinfo[]
+  jmktrinfo          jmktrinfo[]
+  jmktstdpayinfo     jmktstdpayinfo[]
+
+  @@index([crs_category_id], map: "jmkcrsinfo_crs_category_id_fkey")
+  @@index([crs_company_id], map: "jmkcrsinfo_crs_company_id_fkey")
 }
 
 model jmk_tr_week {
@@ -70,9 +73,11 @@ model jmk_tr_week {
   title            String             @db.VarChar(100)
   description      String             @db.VarChar(1000)
   created_at       DateTime           @default(now())
-  jmk_week_content jmk_week_content[]
-  jmkcrsinfo       jmkcrsinfo?        @relation(fields: [crs_id], references: [crs_id])
   jmkcrsinfoCrs_id Int?
+  jmkcrsinfo       jmkcrsinfo         @relation(fields: [crs_id], references: [crs_id])
+  jmk_week_content jmk_week_content[]
+
+  @@index([crs_id], map: "jmk_tr_week_crs_id_fkey")
 }
 
 model jmk_week_content {
@@ -82,13 +87,13 @@ model jmk_week_content {
   type          jmk_content_type
   week_id       Int
   video_url     String?          @db.LongText
-  file_size     Float?           @default(0)
   project_url   String?          @db.LongText
   date          DateTime         @default(now())
   video_url_key String?          @db.LongText
   duration      String?          @db.VarChar(100)
   share_date    String?          @db.VarChar(100)
   level         String?          @db.VarChar(100)
+  file_size     Float?           @default(0)
   jmk_tr_week   jmk_tr_week      @relation(fields: [week_id], references: [week_id])
 
   @@index([week_id], map: "jmk_week_content_week_id_fkey")
@@ -126,16 +131,18 @@ model jmk_std_test_ans {
 }
 
 model jmk_std_note {
-  serial     Int      @id @default(autoincrement())
+  serial     Int        @id @default(autoincrement())
   crs_id     Int
   std_id     Int
   title      String
-  note       String   @db.LongText
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now())
+  note       String     @db.LongText
+  created_at DateTime   @default(now())
+  updated_at DateTime   @default(now())
+  course     jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
+  student    jmkstdinfo @relation(fields: [std_id], references: [std_id])
 
-  student jmkstdinfo @relation(fields: [std_id], references: [std_id])
-  course  jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
+  @@index([crs_id], map: "jmk_std_note_crs_id_fkey")
+  @@index([std_id], map: "jmk_std_note_std_id_fkey")
 }
 
 model jmkstdinfo {
@@ -155,16 +162,17 @@ model jmkstdinfo {
   updated_at            DateTime                @default(now())
   company_id            Int
   crs_id                Int
-  company               jmkcompany              @relation(fields: [company_id], references: [serial])
-  course                jmkcrsinfo              @relation(fields: [crs_id], references: [crs_id], onDelete: Cascade, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
   jmk_crs_blog_comments jmk_crs_blog_comments[]
   jmk_std_attendance    jmk_std_attendance[]
-  courses               jmkstdcrsinfo[]
   jmk_std_note          jmk_std_note[]
-  jmktstdpayinfo        jmktstdpayinfo[]
   jmk_std_todos         jmk_std_todos[]
+  courses               jmkstdcrsinfo[]
+  course                jmkcrsinfo              @relation(fields: [crs_id], references: [crs_id], onDelete: Cascade, onUpdate: NoAction, map: "jmkcrsinfo_crs_id_fk")
+  company               jmkcompany              @relation(fields: [company_id], references: [serial])
+  jmktstdpayinfo        jmktstdpayinfo[]
 
   @@index([crs_id], map: "jmkcrsinfo_crs_id_fk")
+  @@index([company_id], map: "jmkstdinfo_company_id_fkey")
 }
 
 model jmkcontact {
@@ -196,11 +204,14 @@ model jmktrinfo {
   lastSeen          DateTime            @default(now())
   createdAt         DateTime            @default(now())
   company_id        Int
+  blogs             jmk_crs_blog[]
+  jmk_tr_attendance jmk_tr_attendance[]
+  courses           jmktrcrsinfo[]
   company           jmkcompany          @relation(fields: [company_id], references: [serial])
   course            jmkcrsinfo?         @relation(fields: [crs_id], references: [crs_id])
-  blogs             jmk_crs_blog[]
-  courses           jmktrcrsinfo[]
-  jmk_tr_attendance jmk_tr_attendance[]
+
+  @@index([company_id], map: "jmktrinfo_company_id_fkey")
+  @@index([crs_id], map: "jmktrinfo_crs_id_fkey")
 }
 
 model jmkpartnerReq {
@@ -250,11 +261,13 @@ model jmkstdcrsinfo {
   time              String?
   ref_id            String?
   promo_code        String?
-  student           jmkstdinfo      @relation(fields: [std_id], references: [std_id])
-  promo             jmk_promo_code? @relation(fields: [promo_code], references: [code], onDelete: Cascade)
   course            jmkcrsinfo      @relation(fields: [crs_id], references: [crs_id])
+  promo             jmk_promo_code? @relation(fields: [promo_code], references: [code], onDelete: Cascade)
+  student           jmkstdinfo      @relation(fields: [std_id], references: [std_id])
 
   @@index([promo_code], map: "jmkstdcrsinfo_promo_code_fkey")
+  @@index([crs_id], map: "jmkstdcrsinfo_crs_id_fkey")
+  @@index([std_id], map: "jmkstdcrsinfo_std_id_fkey")
 }
 
 model jmkcontactb {
@@ -296,9 +309,9 @@ model jmktrcrsinfo {
   serial     Int        @id @default(autoincrement())
   tr_id      Int
   crs_id     Int
+  created_at DateTime   @default(now())
   course     jmkcrsinfo @relation(fields: [crs_id], references: [crs_id], onDelete: NoAction, onUpdate: NoAction)
   trainer    jmktrinfo  @relation(fields: [tr_id], references: [tr_id], onDelete: NoAction, onUpdate: NoAction)
-  created_at DateTime   @default(now())
 
   @@index([crs_id], map: "jmktrcrsinfo_crs_id_fkey")
   @@index([tr_id], map: "jmktrcrsinfo_tr_id_fkey")
@@ -327,9 +340,9 @@ model jmkuserinfo {
   usr_img_url  String?     @db.LongText
   usr_img_key  String?     @db.LongText
   created_at   DateTime?   @default(now())
-  lastSeen     DateTime    @default(now())
   usr_access   String?     @db.LongText
   company_id   Int?
+  lastSeen     DateTime    @default(now())
   company      jmkcompany? @relation(fields: [company_id], references: [serial])
 
   @@index([company_id], map: "jmkuserinfo_company_id_fkey")
@@ -350,15 +363,15 @@ model jmkcompany {
   c_taxid                 String?
   created_at              DateTime?                     @default(now())
   c_storage               Float                         @default(0)
-  jmkuserinfo             jmkuserinfo[]
-  jmkcrsinfo              jmkcrsinfo[]
-  jmk_crs_categories      jmk_crs_categories[]
-  jmktrinfo               jmktrinfo[]
-  jmkstdinfo              jmkstdinfo[]
-  jmkfaq                  jmkfaq[]
-  payments                jmktcompanypay[]
-  jmk_company_package_req jmk_company_package_req[]
   jmk_com_cer_layout      jmk_com_cer_layout[]
+  jmk_company_package_req jmk_company_package_req[]
+  jmk_crs_categories      jmk_crs_categories[]
+  jmkcrsinfo              jmkcrsinfo[]
+  jmkfaq                  jmkfaq[]
+  jmkstdinfo              jmkstdinfo[]
+  payments                jmktcompanypay[]
+  jmktrinfo               jmktrinfo[]
+  jmkuserinfo             jmkuserinfo[]
 }
 
 model jmkcrsupcom {
@@ -375,8 +388,10 @@ model jmkfaq {
   answer     String       @db.VarChar(2000)
   created_at DateTime     @default(now())
   company_id Int?
-  company    jmkcompany?  @relation(fields: [company_id], references: [serial])
   type       jmk_faq_type
+  company    jmkcompany?  @relation(fields: [company_id], references: [serial])
+
+  @@index([company_id], map: "jmkfaq_company_id_fkey")
 }
 
 model jmk_testimonial {
@@ -401,23 +416,28 @@ model jmktcompanypay {
   pay_amount  Int
   transaction String     @db.VarChar(100)
   users       Int
-  storage     Int        @default(100)
   company_id  Int
-  company     jmkcompany @relation(fields: [company_id], references: [serial])
   created_at  DateTime   @default(now())
+  storage     Int        @default(100)
+  company     jmkcompany @relation(fields: [company_id], references: [serial])
+
+  @@index([company_id], map: "jmktcompanypay_company_id_fkey")
 }
 
 model jmktstdpayinfo {
   pay_id       Int        @id @default(autoincrement())
   payment_date DateTime   @default(now())
   pay_amount   Int
-  transaction  String     @db.VarChar(100)
+  std_id       Int
   pay_verified Boolean    @default(false)
   crs_id       Int
-  std_id       Int
-  student      jmkstdinfo @relation(fields: [std_id], references: [std_id])
-  course       jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
   created_at   DateTime   @default(now())
+  transaction  String     @db.VarChar(100)
+  course       jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
+  student      jmkstdinfo @relation(fields: [std_id], references: [std_id])
+
+  @@index([crs_id], map: "jmktstdpayinfo_crs_id_fkey")
+  @@index([std_id], map: "jmktstdpayinfo_std_id_fkey")
 }
 
 model jmkstdproj {
@@ -598,9 +618,11 @@ model jmk_crs_categories {
   icon        String       @db.LongText
   icon_key    String       @db.LongText
   company_id  Int
-  company     jmkcompany   @relation(fields: [company_id], references: [serial])
   created_at  DateTime     @default(now())
+  company     jmkcompany   @relation(fields: [company_id], references: [serial])
   courses     jmkcrsinfo[]
+
+  @@index([company_id], map: "jmk_crs_categories_company_id_fkey")
 }
 
 model jmk_services {
@@ -736,6 +758,8 @@ model jmk_ticket_image {
   url       String
   key       String
   ticket    jmk_ticket @relation(fields: [ticket_id], references: [serial], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([ticket_id], map: "jmk_ticket_image_ticket_id_fkey")
 }
 
 model jmk_company_package_req {
@@ -748,6 +772,8 @@ model jmk_company_package_req {
   status       jmk_company_package_req_type  @default(Pending)
   created_at   DateTime                      @default(now())
   company      jmkcompany                    @relation(fields: [company_id], references: [serial])
+
+  @@index([company_id], map: "jmk_company_package_req_company_id_fkey")
 }
 
 model jmk_std_todos {
@@ -758,8 +784,11 @@ model jmk_std_todos {
   is_complete Boolean    @default(false)
   created_at  DateTime   @default(now())
   updated_at  DateTime   @default(now())
-  student     jmkstdinfo @relation(fields: [std_id], references: [std_id])
   course      jmkcrsinfo @relation(fields: [crs_id], references: [crs_id])
+  student     jmkstdinfo @relation(fields: [std_id], references: [std_id])
+
+  @@index([crs_id], map: "jmk_std_todos_crs_id_fkey")
+  @@index([std_id], map: "jmk_std_todos_std_id_fkey")
 }
 
 model jmk_com_cer_layout {
@@ -776,17 +805,20 @@ model jmk_com_cer_layout {
   created_at     DateTime   @default(now())
   updated_at     DateTime   @default(now())
   company        jmkcompany @relation(fields: [company_id], references: [serial])
+
+  @@index([company_id], map: "jmk_com_cer_layout_company_id_fkey")
 }
 
 model jmk_ai_chats {
-  id        String   @id @default(uuid())
-  user_id   Int
+  id        String      @id @default(uuid())
   crs_id    Int?
   role      String
   message   String
-  createdAt DateTime @default(now())
+  createdAt DateTime    @default(now())
+  user_id   Int
+  course    jmkcrsinfo? @relation(fields: [crs_id], references: [crs_id])
 
-  course  jmkcrsinfo? @relation(fields: [crs_id], references: [crs_id])
+  @@index([crs_id], map: "jmk_ai_chats_crs_id_fkey")
 }
 
 enum jmk_std_ques_severity_level_enum {
