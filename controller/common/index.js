@@ -4,7 +4,7 @@ import {
   ForbiddenError,
 } from 'apollo-server-express'
 import prisma from '../../database.js'
-import { ROLES } from '../../utils/helper.js'
+import { defaultPackages, ROLES } from '../../utils/helper.js'
 import { uploadImgToAWS } from '../../utils/imageHandler.js'
 
 const commonQueryTypesAndInputs = `
@@ -265,6 +265,27 @@ const commonQueryTypesAndInputs = `
     signature_url: String!
     created_at: Date!
   }
+
+  type OurPackages {
+    id: String!
+    title: String!
+    icon: String!
+    description: String!
+    monthly_price: Float!
+    monthly_nepal_price: Float!
+    free_month: Int!
+    index: Int!
+    discount: Float
+    recomendes: Boolean!
+    monthly_features: [PackageFeatures]!
+    yearly_features: [PackageFeatures]!
+    createdAt: Date!
+  }
+
+  type PackageFeatures {
+    id: String!
+    title: String!
+  }
 `
 
 const commonQuery = `
@@ -289,6 +310,9 @@ const commonQuery = `
 
     getCertLayout:CertLayout
 
+    getOurPackages:[OurPackages]
+    getOurPackageById(id:String!):OurPackages
+    
     checkValidCompany(username:String!):invalid_company_access_type
 `
 
@@ -1253,6 +1277,41 @@ const commonResolversQuery = {
     throw new ForbiddenError('Invalid token');
   },
 
+
+  getOurPackages: async (_, { args }) => {
+    const packages = await prisma.jmk_packages.findMany({ include: { monthly_features: true, yearly_features: true } });
+
+    if (packages.length === 0) {
+      for (const packageData of defaultPackages) {
+        const newPackage = await prisma.jmk_packages.create({
+          data: {
+            title: packageData.title,
+            description: packageData.description,
+            icon: packageData.icon,
+            monthly_price: packageData.monthly_price,
+            monthly_nepal_price: packageData.monthly_nepal_price,
+            free_month: packageData.free_month,
+            index: packageData.index,
+            discount: packageData.discount,
+            recomendes: packageData.recomendes,
+            createdAt: new Date(),
+          },
+        });
+
+        await prisma.jmk_packages_features.createMany({ data: packageData.monthly_features?.map(item => ({ title: item, monthly_package_id: newPackage.id })) });
+        await prisma.jmk_packages_features.createMany({ data: packageData.yearly_features?.map(item => ({ title: item, yearly_package_id: newPackage.id })) });
+      }
+
+      return await prisma.jmk_packages.findMany({ include: { monthly_features: true, yearly_features: true } });
+    }
+
+    return packages;
+  },
+
+  getOurPackageById: async (_, { id }) => {
+    const findPackage = await prisma.jmk_packages.findFirst({ where: { id }, include: { monthly_features: true, yearly_features: true } });
+    return findPackage;
+  },
 }
 
 export {

@@ -35,6 +35,105 @@ function generatePasswordFromUsername(username) {
   return hash.substring(0, 12) + randomPart; // Use first 12 characters of hash and add random part
 }
 
+const defaultPackages = [
+  {
+    title: "Basic",
+    description:
+      "The most basic plan for starters like small Institutes and training. You can upgrade it anytime.",
+    icon: "/defaulticon.svg",
+    monthly_price: 7.99,
+    monthly_nepal_price: 6000,
+    free_month: 1,
+    index: 1,
+    discount: 0,
+    recomendes: false,
+    monthly_features: [
+      "0 - 25 User",
+      "User Management",
+      "Core Learning Tools",
+      "Messaging & Discussion Boards",
+      "Attendance & Tracking",
+      "Student Payments & Certificates",
+      "Basic Support & Blog Access",
+      "Storage: Included (100MB) -Free",
+    ],
+    yearly_features: [
+      "0 - 25 User",
+      "User Management",
+      "Core Learning Tools",
+      "Messaging & Discussion Boards",
+      "Attendance & Tracking",
+      "Student Payments & Certificates",
+      "Basic Support & Blog Access",
+      "Storage: Included (20GB) -Free",
+    ],
+  },
+  {
+    title: "Premium",
+    description:
+      "Best for medium scale institutes, companies, and small schools. You can upgrade it anytime.",
+    icon: "/defaulticon.svg",
+    monthly_price: 6.99,
+    monthly_nepal_price: 8000,
+    free_month: 1,
+    index: 2,
+    discount: 0,
+    recomendes: true,
+    monthly_features: [
+      "25 - 50 User",
+      "User Management",
+      "Core Learning Tools",
+      "Messaging & Discussion Boards",
+      "Attendance & Tracking",
+      "Student Payments & Certificates",
+      "Basic Support & Blog Access",
+      "Storage: Included (200MB) -Free",
+    ],
+    yearly_features: [
+      "25 - 50 User",
+      "User Management",
+      "Core Learning Tools",
+      "Messaging & Discussion Boards",
+      "Attendance & Tracking",
+      "Student Payments & Certificates",
+      "Basic Support & Blog Access",
+      "Storage: Included (40GB) -Free",
+    ],
+  },
+  {
+    title: "Advance",
+    description:
+      "For big companies and institutes like Universities, Medical training, IT Staffing.",
+    icon: "/defaulticon.svg",
+    monthly_price: 5.99,
+    monthly_nepal_price: 5000,
+    free_month: 1,
+    index: 3,
+    discount: 0,
+    recomendes: false,
+    monthly_features: [
+      "50+ User",
+      "User Management",
+      "Core Learning Tools",
+      "Messaging & Discussion Boards",
+      "Attendance & Tracking",
+      "Student Payments & Certificates",
+      "Basic Support & Blog Access",
+      "Storage: Included (300MB) -Free",
+    ],
+    yearly_features: [
+      "50+ User",
+      "User Management",
+      "Core Learning Tools",
+      "Messaging & Discussion Boards",
+      "Attendance & Tracking",
+      "Student Payments & Certificates",
+      "Basic Support & Blog Access",
+      "Storage: Included (60GB) -Free",
+    ],
+  },
+];
+
 const user_access = [
   {
     name: "Dashboard",
@@ -254,5 +353,6 @@ export {
   ROLES,
   getRandomItemsFromArray,
   generatePasswordFromUsername,
-  DefaultUserAccess
+  DefaultUserAccess,
+  defaultPackages,
 }

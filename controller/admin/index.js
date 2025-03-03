@@ -54,6 +54,21 @@ const adminQueryTypesAndInputs = `
         crs_complete: Boolean
         crs_complete_date: Date
      }
+
+      input updateOurPackageInput {
+        id: String!
+        title: String
+        description: String
+        icon: Upload
+        monthly_price: Float
+        monthly_nepal_price: Float
+        free_month: Int
+        index: Int
+        discount: Float
+        recomendes: Boolean
+        monthly_features: [String]
+        yearly_features: [String]
+      }
    
      type Admin {
         usr_id: Int!
@@ -693,6 +708,9 @@ const adminMutation = `
     createOrUpdateCertLayout(data:CertLayoutInput):String!
 
     updatePaymentStatus(pay_id:Int!): String
+
+    updateOurPackage(data:updateOurPackageInput!): String
+
 `
 
 const adminResolvers = {
@@ -1987,6 +2005,54 @@ const adminResolvers = {
 
     throw new AuthenticationError('Invalid token');
   },
+
+  updateOurPackage: async (_, { data }, { userId, role, platform }) => {
+    if (!userId) throw new ForbiddenError('Invalid token');
+    if (platform === 'external' && role !== 'admin') {
+      throw new ApolloError('only internal admin can update.');
+    }
+    const admin = await prisma.jmkuserinfo.findFirst({ where: { usr_id: userId } });
+    if (!admin) throw new ForbiddenError('Invalid token');
+    const { id, monthly_features, yearly_features, ...packageData } = data;
+
+    const findPackage = await prisma.jmk_packages.findFirst({ where: { id } });
+    if (!findPackage) throw new ForbiddenError('Invalid package id');
+
+    if (data?.icon) {
+      if (findPackage.icon_key) {
+        await deleteImgToAWS(findPackage.icon_key);
+      }
+      const uploadIcon = await uploadImgToAWS(data.icon, 'package_icon/');
+      packageData.icon = uploadIcon.data.Location;
+      packageData.icon_key = uploadIcon.data.key;
+    }
+
+    await prisma.jmk_packages.update({
+      where: { id },
+      data: {
+        ...packageData,
+        monthly_features: {
+          deleteMany: {},
+          create: monthly_features?.map(title => ({
+            title,
+          })),
+        },
+        yearly_features: {
+          deleteMany: {},
+          create: yearly_features?.map(title => ({
+            title,
+          })),
+        },
+      },
+      include: {
+        monthly_features: true,
+        yearly_features: true,
+      },
+    });
+
+    return 'updated';
+
+  }
 }
 
 const adminResolversQuery = {

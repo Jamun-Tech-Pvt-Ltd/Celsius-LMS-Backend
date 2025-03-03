@@ -821,6 +821,38 @@ model jmk_ai_chats {
   @@index([crs_id], map: "jmk_ai_chats_crs_id_fkey")
 }
 
+model jmk_packages {
+  id                  String  @id @default(uuid())
+  title               String
+  icon                String
+  icon_key            String?
+  description         String
+  monthly_price       Float
+  monthly_nepal_price Float
+  free_month          Int
+  index               Int     @default(1)
+  discount            Float?
+  recomendes          Boolean @default(false)
+
+  monthly_features jmk_packages_features[] @relation("MonthlyFeatures")
+  yearly_features jmk_packages_features[] @relation("YearlyFeatures")
+
+  createdAt DateTime @default(now())
+}
+
+model jmk_packages_features {
+  id    String @id @default(uuid())
+  title String
+
+  monthly_package_id String?
+  yearly_package_id  String?
+
+  monthly_package jmk_packages? @relation("MonthlyFeatures", fields: [monthly_package_id], references: [id], map: "monthly_package_id_fkey")
+  yearly_package  jmk_packages? @relation("YearlyFeatures", fields: [yearly_package_id], references: [id], map: "yearly_package_id_fkey")
+
+  createdAt DateTime @default(now())
+}
+
 enum jmk_std_ques_severity_level_enum {
   Red
   Green
