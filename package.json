@@ -8,7 +8,9 @@
     "dev": "nodemon server",
     "start": "node server",
     "pm2": "pm2 start npm --name 'backend' -- start",
-    "test": "jest --config jest.config.cjs"
+    "test": "jest --config jest.config.cjs",
+    "seed": "node prisma/seed.js",
+    "generate": "npx prisma generate"
   },
   "keywords": [],
   "author": "",
