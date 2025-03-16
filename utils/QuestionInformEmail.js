@@ -1,4 +1,4 @@
-const QuestionInformTemplate = (poster, name, userImage, questionId) => `
+const QuestionInformTemplate = (poster, name, userImage, questionId, username) => `
 
 <!DOCTYPE html>
 
@@ -621,7 +621,7 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                   class="pad"
                                   style="text-align: center; width: 100%"
                                 >
-                                  <div
+                                  ${userImage && `<div
                                     align="center"
                                     class="alignment"
                                     style="line-height: 10px"
@@ -641,7 +641,7 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                       title="Company Logo"
                                       width="91"
                                     />
-                                  </div>
+                                  </div>`}
                                   <h1
                                     style="
                                       margin: 0;
@@ -829,9 +829,9 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                         You can now access the question by
                                         going to
                                         <a
-                                          href="http://student.jaamun.com/discussion_panel"
+                                          href="http://${username}.student.celsiuslms.com/discussion_panel"
                                         >
-                                        http://student.jaamun.com/discussion_panel</a
+                                        http://${username}.student.celsiuslms.com/discussion_panel</a
                                         >
                                       </p>
                                     </div>
@@ -865,7 +865,7 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                 <td class="pad">
                                   <div align="center" class="alignment">
                                     <a
-                                      href="http://student.jaamun.com/discussion_panel/${questionId}"
+                                      href="http://${username}.student.jaamun.com/discussion_panel/${questionId}"
                                       style="
                                         text-decoration: none;
 
@@ -1352,7 +1352,7 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                           <!--[if mso]><table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style=""><tr style="text-align:center;"><!
                                           [endif]-->[endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><!
                                           [endif]--><a
-                                            href="https://www.jaamun.com/helpCenter"
+                                            href="https://www.jaamun.com/contact"
                                             style="
                                               mso-hide: false;
                                               padding-top: 5px;
@@ -1372,7 +1372,7 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                           >><!--[if mso]></td><!
                                           [endif]-->[endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><!
                                           [endif]--><a
-                                            href="https://student.jaamun.com/"
+                                            href="https://${username}.student.celsiuslms.com/"
                                             style="
                                               mso-hide: false;
                                               padding-top: 5px;
@@ -1392,7 +1392,7 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                           >><!--[if mso]></td><!
                                           [endif]-->[endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><!
                                           [endif]--><a
-                                            href="https://www.jaamun.com/about"
+                                            href="https://www.jaamun.com/contact"
                                             style="
                                               mso-hide: false;
                                               padding-top: 5px;
@@ -1415,14 +1415,6 @@ const QuestionInformTemplate = (poster, name, userImage, questionId) => `
                                       </td>
                                     </tr>
                                   </table>
-                                  <div
-                                    style="
-                                      margin-top: 10px;
-                                      font-family: inherit;
-                                    "
-                                  >
-                                    #1 Elearning Platform
-                                  </div>
                                 </td>
                               </tr>
                             </table>

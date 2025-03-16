@@ -511,16 +511,14 @@ const contactForm = `
                                                                                         style="display:none;mso-hide:all;font-size:26px;line-height:36px;">✕</span></label>
                                                                             </div>
                                                                             <div class="menu-links">
-                                                                                <!--[if mso]><table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style=""><tr style="text-align:center;"><![endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><![endif]--><a
-                                                                                    href="https://www.jaamun.com/helpCenter"
+                                                                                <a
+                                                                                    href="https://www.jaamun.com/contact"
                                                                                     style="mso-hide:false;padding-top:5px;padding-bottom:5px;padding-left:15px;padding-right:15px;display:inline-block;color:#101010;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:14px;text-decoration:none;letter-spacing:normal;"
-                                                                                    target="_self">Help</a><!--[if mso]></td><![endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><![endif]--><a
-                                                                                    href="https://student.jaamun.com/"
+                                                                                    target="_self">Help</a>
+                                                                                    <a
+                                                                                    href="https://www.jaamun.com/contact"
                                                                                     style="mso-hide:false;padding-top:5px;padding-bottom:5px;padding-left:15px;padding-right:15px;display:inline-block;color:#101010;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:14px;text-decoration:none;letter-spacing:normal;"
-                                                                                    target="_self">Login</a><!--[if mso]></td><![endif]--><!--[if mso]><td style="padding-top:5px;padding-right:15px;padding-bottom:5px;padding-left:15px"><![endif]--><a
-                                                                                    href="https://www.jaamun.com/about"
-                                                                                    style="mso-hide:false;padding-top:5px;padding-bottom:5px;padding-left:15px;padding-right:15px;display:inline-block;color:#101010;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:14px;text-decoration:none;letter-spacing:normal;"
-                                                                                    target="_self">About</a><!--[if mso]></td><![endif]--><!--[if mso]></tr></table><![endif]-->
+                                                                                    target="_self">About</a>
                                                                             </div>
                                                                         </td>
                                                                     </tr>

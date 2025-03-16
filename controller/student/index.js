@@ -8,7 +8,6 @@ import jwt from 'jsonwebtoken'
 import { ROLES, getRandomItemsFromArray } from '../../utils/helper.js'
 import { deleteImgToAWS, uploadImgToAWS } from '../../utils/imageHandler.js'
 import { sendMail } from '../../utils/mailHandler.js'
-import forgotPasswordHTML from '../../utils/forgotPassword.js'
 import QuestionInformTemplate from '../../utils/QuestionInformEmail.js'
 import { PubSub } from 'graphql-subscriptions'
 import OpenAI from "openai";
@@ -48,16 +47,6 @@ const studentQueryTypesAndInputs = `
       proj_id:Int!
       proj_git_link:String!
      }
-
-    input forgotPPEmailCheckInput {
-        std_email: String!
-    }
-  
-    input forgotPasswordInput {
-        token: String!
-        new_password: String!
-    }
-
   
      input addNewCourseInput {
         crs_id: Int!
@@ -551,9 +540,6 @@ const studentMutation = `
     addNewCourse(data:addNewCourseInput):String!
     changeActiveCourse(data:changeActiveCourseInput):User!
 
-    forgotPPEmailCheck(data:forgotPPEmailCheckInput): String!
-    forgotPassword(data:forgotPasswordInput):String!
-
     submitProject(data:studentProjectInput):String!
 
     createStdQuestion(data:stdQuestionInput!):String!
@@ -641,49 +627,6 @@ const studentResolvers = {
     })
     if (!update) throw new Error('something went wrong!!')
     return 'successfully changed'
-  },
-
-  forgotPPEmailCheck: async (_, { data }) => {
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_email: data.std_email },
-    })
-    if (!user) throw new AuthenticationError("user doesn't exist !!")
-    const token = jwt.sign(
-      { userId: user.std_id },
-      process.env.JWT_SECRET_KEY_FORGOT_PP,
-      {
-        expiresIn: '1d',
-      }
-    )
-    const url = `${process.env.CLIENT_URL}forgotpassword/verification?token=${token}`
-    await sendMail(
-      user.std_email,
-      'Reset your password !',
-      forgotPasswordHTML(url)
-    )
-    return 'Email send !!'
-  },
-
-  forgotPassword: async (_, { data }) => {
-    if (!data.token) throw new AuthenticationError('Bad request !')
-    const { userId } = jwt.verify(
-      data.token,
-      process.env.JWT_SECRET_KEY_FORGOT_PP
-    )
-    const user = await prisma.jmkstdinfo.findFirst({
-      where: { std_id: userId },
-    })
-    if (!user) throw new AuthenticationError("user doesn't exist !!")
-    const reg = await prisma.jmkstdinfo.update({
-      data: {
-        std_password: data.new_password,
-      },
-      where: {
-        std_id: userId,
-      },
-    })
-    if (!reg) throw new AuthenticationError('someting went wrong !!')
-    return 'success'
   },
 
   uploadFile: async (_, { file }, { userId }) => {
@@ -838,6 +781,7 @@ const studentResolvers = {
     if (!userId) throw new ForbiddenError('user need to login')
     const user = await prisma.jmkstdinfo.findFirst({
       where: { std_id: userId },
+      include: { company: true }
     })
     if (!user) throw new AuthenticationError('invalid user')
 
@@ -883,7 +827,7 @@ const studentResolvers = {
             is_read: false,
           }
         });
-        await sendMail(user.std_email, `Question was posted`, QuestionInformTemplate(`${user.std_fname} ${user.std_lname}`, `${user.std_fname} ${user.std_lname}`, `${user.std_pic}`, question.ques_id));
+        await sendMail(user.std_email, `Question was posted`, QuestionInformTemplate(`${user.std_fname} ${user.std_lname}`, `${user.std_fname} ${user.std_lname}`, `${user.std_pic}`, question.ques_id, user.company.c_username));
       }
     });
 
@@ -1692,7 +1636,7 @@ const studentResolvers = {
     if (oldData) {
       throw new ApolloError('You have already taken attendance today.');
     }
-    
+
     await prisma.jmk_std_attendance.create({
       data: {
         crs_id: user.crs_id,

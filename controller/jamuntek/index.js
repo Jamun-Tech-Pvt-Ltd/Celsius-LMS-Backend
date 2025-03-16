@@ -1,9 +1,7 @@
 import { ApolloError } from 'apollo-server-express'
 import prisma from '../../database.js'
 import { sendMail } from '../../utils/mailHandler.js'
-import demoRequestHTML from '../../utils/demoRequest.js'
 import contackFormHTML from '../../utils/contackForm.js'
-import { getRandomItemsFromArray } from '../../utils/helper.js'
 import { uploadImgToAWS } from '../../utils/imageHandler.js'
 
 const jamuntekQueryTypesAndInputs = `
@@ -14,20 +12,6 @@ const jamuntekQueryTypesAndInputs = `
         cemail: String!
         csubject: String!
         cmessage: String!
-    }
-
-    input businessFormInput{
-        bfname: String!
-        blname: String!
-        bmobile: String!
-        bemail: String!
-        bcompname: String!
-        bgovnpr: String!
-        bcompsize: String!
-        blrnum: String!
-        bcountry: String!
-        bneeds: String!
-        bjobrole: String!
     }
 
     input signupPartnerInput{
@@ -98,7 +82,6 @@ const jamuntekQuery = `
 
 const jamuntekMutation = `
     contactForm(data:contactFormInput):String
-    businessForm(data:businessFormInput):String
     signupPartner(data:signupPartnerInput!):String!
     jobReq(data:jobReqInput!):String!
 
@@ -115,42 +98,6 @@ const jamuntekResolvers = {
       contackFormHTML
     )
 
-    const admins = await prisma.jmkuserinfo.findMany();
-    for (let index = 0; index < admins.length; index++) {
-      const admin = admins[index];
-      const accessData = JSON.parse(admin.usr_access);
-      if (admin?.usr_access?.[0]) {
-        const findRegistrationAccess = accessData.find((item) => item.name === 'RegistrationInfo');
-        if (findRegistrationAccess && findRegistrationAccess?.option) {
-          const registration = findRegistrationAccess.option.find((item) => item.name === 'Contact Request');
-          if (registration?.access?.[0]?.read) {
-            await prisma.jmk_notifications.create({
-              data: {
-                user_id: admin.usr_id,
-                label1: `${contactForm.cfname}`,
-                label2: '',
-                user_type: "Admin",
-                category: 'contact',
-                message: `has filled the contact us form. Please check what he/she is looking for.`,
-                link: `/contactRequest/${contactForm.serial}`,
-                is_read: false,
-              }
-            });
-          }
-        }
-      }
-    }
-    return 'Success'
-  },
-
-  businessForm: async (_, { data }) => {
-    const businessForm = await prisma.jmkcontactb.create({ data })
-    if (!businessForm) throw new ApolloError('Something wrong !!')
-    await sendMail(
-      businessForm.bemail,
-      'Your Bussiness Form Has Been Received',
-      contackFormHTML
-    )
     const admins = await prisma.jmkuserinfo.findMany();
     for (let index = 0; index < admins.length; index++) {
       const admin = admins[index];
