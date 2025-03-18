@@ -55,5 +55,7 @@ sudo certbot certonly \
   -d www.celsiuslms.com \
   -d celsiuslms.com \
   -d www.jaamun.com \
+  -d www.arlcg.net \
+  -d arlcg.net \
   -d www.jobsupport.us
   ````
