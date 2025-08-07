@@ -13,7 +13,7 @@ const adminQueryTypesAndInputs = `
 
     input signinAdminInput {
         username: String
-        usr_email: String!
+        usr_email: String! 
         usr_password: String!
     }
 
