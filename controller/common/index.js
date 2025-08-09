@@ -10,7 +10,7 @@ import { uploadImgToAWS } from '../../utils/imageHandler.js'
 const commonQueryTypesAndInputs = `
   type Token {
     token: String!
-  } 
+  }
 
   enum invalid_company_access_type {
     Payment
