@@ -78,11 +78,11 @@ async function startServer() {
     schema,
     context,
     cors,
-    csrfPrevention: false,
+    csrfPrevention: true,
     cache: 'bounded',
-    // plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
-    introspection: false,
-    playground: false,
+    plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
+    introspection: true,
+    playground: true,
   });
 
   await server.start();
