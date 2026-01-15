@@ -39,5 +39,5 @@ jobs:
           script: |
             cd ~/Celsius-LMS-Backend
             pm2 delete celsius-lms-api || true
-            pm2 start npm --name celsius-lms-api -- start
+            npm run pm2
             pm2 save
