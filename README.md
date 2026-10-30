@@ -7,6 +7,26 @@
 3. Run: npm run dev
 4. open [`http://localhost:4000/graphql`](http://localhost:4000/graphql)
 
+## Tests and coverage
+
+```bash
+npm ci --ignore-scripts
+npm test -- --runInBand
+npm run test:coverage
+```
+
+The coverage command enforces at least 80% statements, branches, functions, and
+lines **for each application JavaScript file**, including controllers, utilities,
+server startup, database lifecycle, schema/resolvers, and the seed script.
+Configuration, test helpers, dependencies, assets, and generated files are excluded.
+Open `coverage/index.html` for the HTML report; machine-readable results are in
+`coverage/coverage-summary.json`.
+
+Tests mock Prisma, S3, Mailgun, OpenAI, and server listeners. They need no `.env`
+file, credentials, running database, or external services. They cover resolver
+behavior and error handling; they do not replace integration tests against real
+services. The deployment workflow runs the coverage check before copying files.
+
 ## Database checkup
 - npx prisma studio ( open databse on port:5555 )
 - npx prisma db pull ( pull all table and column from databse )

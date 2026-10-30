@@ -10,7 +10,8 @@
     "pm2": "pm2 start npm --name 'backend' -- start",
     "test": "jest --config jest.config.cjs",
     "seed": "node prisma/seed.js",
-    "generate": "npx prisma generate"
+    "generate": "npx prisma generate",
+    "test:coverage": "jest --config jest.config.cjs --coverage --runInBand"
   },
   "keywords": [],
   "author": "",
