@@ -79,3 +79,6 @@ sudo certbot certonly \
   -d arlcg.net \
   -d www.jobsupport.us
   ````
+
+  run
+  
