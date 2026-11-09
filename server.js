@@ -25,8 +25,11 @@ new PrismaClient();
 const port = process.env.PORT || 8080;
 
 const cors = {
-  origin: ['https://jaamun.com', 'https://celsiuslms.com', 'https://*.celsiuslms.com', 'https://*.jaamun.com', 'http://43.204.184.252'],
-  credentials: true,
+  origin: [
+    /^https:\/\/([a-z0-9-]+\.)*jaamun\.com$/i,
+    /^https:\/\/([a-z0-9-]+\.)*celsiuslms\.com$/i,
+    'http://43.204.184.252',
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -77,7 +80,6 @@ async function startServer() {
   const server = new ApolloServer({
     schema,
     context,
-    cors,
     csrfPrevention: true,
     cache: 'bounded',
     plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
@@ -87,7 +89,7 @@ async function startServer() {
 
   await server.start();
 
-  server.applyMiddleware({ app });
+  server.applyMiddleware({ app, cors });
 
   // Create a SubscriptionServer for WebSocket support
   SubscriptionServer.create(

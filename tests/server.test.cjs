@@ -2,7 +2,7 @@ require('./setup.cjs');
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 jest.mock('@prisma/client', () => ({ PrismaClient: jest.fn() }));
 jest.mock('express', () => Object.assign(jest.fn(() => ({ use: jest.fn() })), { json: jest.fn(() => 'json') }));
-jest.mock('http', () => ({ createServer: jest.fn(() => ({ listen: jest.fn((_port, callback) => callback()) })) }));
+jest.mock('http', () => ({ ...jest.requireActual('http'), createServer: jest.fn(() => ({ listen: jest.fn((_port, callback) => callback()) })) }));
 jest.mock('@graphql-tools/schema', () => ({ makeExecutableSchema: jest.fn(() => 'schema') }));
 jest.mock('subscriptions-transport-ws', () => ({ SubscriptionServer: { create: jest.fn() } }));
 jest.mock('graphql-rate-limit-directive', () => ({ rateLimitDirective: () => ({ rateLimitDirectiveTransformer: jest.fn(schema => schema), rateLimitDirectiveTypeDefs: 'directive @rateLimit(limit: Int, duration: Int) on OBJECT | FIELD_DEFINITION' }) }));
@@ -25,7 +25,31 @@ test('server wires HTTP, uploads, GraphQL, websocket subscriptions and authentic
   const log = jest.spyOn(console, 'log').mockImplementation(() => {});
   require('../server.js'); await flush();
   const options = ApolloServer.mock.calls[0][0]; const server = ApolloServer.mock.results[0].value;
-  expect(server.start).toHaveBeenCalled(); expect(server.applyMiddleware).toHaveBeenCalled();
+  expect(server.start).toHaveBeenCalled();
+  expect(server.applyMiddleware).toHaveBeenCalledWith({ app: expect.any(Object), cors: expect.any(Object) });
+  const { cors } = server.applyMiddleware.mock.calls[0][0];
+  const app = jest.requireActual('express')();
+  app.use(require('cors')(cors));
+  app.post('/graphql', (_req, res) => res.json({ data: { __typename: 'Query' } }));
+  const request = require('supertest');
+  const corsServer = jest.requireActual('http').createServer(app);
+  for (const origin of ['https://www.jaamun.com', 'https://jaamun.com', 'https://admin.jaamun.com', 'https://school.student.celsiuslms.com']) {
+    const preflight = await request(corsServer).options('/graphql')
+      .set('Origin', origin)
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'content-type,authorization');
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers['access-control-allow-origin']).toBe(origin);
+    expect(preflight.headers['access-control-allow-credentials']).toBe('true');
+    expect(preflight.headers['access-control-allow-methods']).toContain('POST');
+    expect(preflight.headers['access-control-allow-headers']).toBe('Content-Type,Authorization');
+  }
+  const response = await request(corsServer).post('/graphql').set('Origin', 'https://www.jaamun.com').send({ query: '{ __typename }' });
+  expect(response.headers['access-control-allow-origin']).toBe('https://www.jaamun.com');
+  for (const origin of ['https://jaamun.com.evil.example', 'https://eviljaamun.com', 'http://www.jaamun.com']) {
+    const response = await request(corsServer).options('/graphql').set('Origin', origin).set('Access-Control-Request-Method', 'POST');
+    expect(response.headers['access-control-allow-origin']).toBeUndefined();
+  }
   expect(require('http').createServer.mock.results[0].value.listen).toHaveBeenCalledWith(process.env.PORT || 8080, expect.any(Function));
   expect(require('subscriptions-transport-ws').SubscriptionServer.create).toHaveBeenCalledWith(expect.objectContaining({ schema: 'schema' }), expect.objectContaining({ path: '/graphql' }));
   expect(options.context({ req: { headers: {} } })).toBeNull();
