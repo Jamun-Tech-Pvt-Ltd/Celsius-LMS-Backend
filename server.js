@@ -22,7 +22,7 @@ const { rateLimitDirectiveTransformer } = rateLimitDirective();
 
 new PrismaClient();
 
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 4000;
 
 const cors = {
   origin: [

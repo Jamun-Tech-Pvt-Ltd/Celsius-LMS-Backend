@@ -50,7 +50,7 @@ test('server wires HTTP, uploads, GraphQL, websocket subscriptions and authentic
     const response = await request(corsServer).options('/graphql').set('Origin', origin).set('Access-Control-Request-Method', 'POST');
     expect(response.headers['access-control-allow-origin']).toBeUndefined();
   }
-  expect(require('http').createServer.mock.results[0].value.listen).toHaveBeenCalledWith(process.env.PORT || 8080, expect.any(Function));
+  expect(require('http').createServer.mock.results[0].value.listen).toHaveBeenCalledWith(process.env.PORT || 4000, expect.any(Function));
   expect(require('subscriptions-transport-ws').SubscriptionServer.create).toHaveBeenCalledWith(expect.objectContaining({ schema: 'schema' }), expect.objectContaining({ path: '/graphql' }));
   expect(options.context({ req: { headers: {} } })).toBeNull();
   for (const role of ['student', 'trainer', 'admin']) {
